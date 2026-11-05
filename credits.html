@@ -1,0 +1,42 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Credits and Data</title>
+  <link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+  <a class="skip-link" href="#main">Skip to content</a>
+  <header class="site-header">
+    <nav aria-label="Main">
+      <a class="brand" href="index.html">TerraSense Jukebox</a>
+      <ul>
+        <li><a href="gallery.html">Gallery</a></li>
+        <li><a href="player.html">Player</a></li>
+        <li><a href="how-it-works.html">How it works</a></li>
+        <li><a href="accessibility.html">Accessibility</a></li>
+        <li><a href="credits.html" aria-current="page">Credits</a></li>
+      </ul>
+    </nav>
+  </header>
+
+  <main id="main">
+    <h1>Credits and data</h1>
+    <p class="note">TerraSense Jukebox is a hackathon project for the NASA Space Apps Challenge 2026. It is not endorsed by NASA.</p>
+
+    <h2>Visualizations</h2>
+    <p>All frames come from the Daily Visualizations gallery of NASA's Scientific Visualization Studio, made for NASA's Earth Information Center. Credit text is copied from each source page.</p>
+    <p id="status" role="status">Loading credits…</p>
+    <ul id="credit-list" class="credit-list"></ul>
+
+    <h2>Libraries and fonts</h2>
+    <p>None. The site uses only plain HTML, CSS and JavaScript, with the browser's built-in Web Audio and Canvas APIs, and the device's system font.</p>
+  </main>
+
+  <footer class="site-footer">
+    TerraSense Jukebox is a hackathon project. It is not endorsed by NASA.
+  </footer>
+  <script type="module" src="js/credits.js"></script>
+</body>
+</html>

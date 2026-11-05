@@ -1,0 +1,51 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>How It Works</title>
+  <link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+  <a class="skip-link" href="#main">Skip to content</a>
+  <header class="site-header">
+    <nav aria-label="Main">
+      <a class="brand" href="index.html">TerraSense Jukebox</a>
+      <ul>
+        <li><a href="gallery.html">Gallery</a></li>
+        <li><a href="player.html">Player</a></li>
+        <li><a href="how-it-works.html" aria-current="page">How it works</a></li>
+        <li><a href="accessibility.html">Accessibility</a></li>
+        <li><a href="credits.html">Credits</a></li>
+      </ul>
+    </nav>
+  </header>
+
+  <main id="main">
+    <h1>How a colour becomes a sound</h1>
+    <ol>
+      <li><strong>The frame is a picture with a colour legend.</strong> NASA colours each point of the map by its value, and the legend says which colour means which value.</li>
+      <li><strong>The app finds the pixel under your pointer.</strong> It reads that pixel's colour straight from the image, which is stored on this site.</li>
+      <li><strong>It matches that colour to the closest legend colour.</strong> That gives an approximate value. If no legend colour is close enough, the app says "no data" instead of guessing.</li>
+      <li><strong>It turns the value into a pitch.</strong> Higher values play higher notes, on the same scale for every frame.</li>
+    </ol>
+
+    <h2>What this cannot tell you</h2>
+    <div class="note">
+      <ul>
+        <li>Values are approximate. They are decoded from the colours of the visualization, not from the underlying measurements.</li>
+        <li>Image compression adds noise to the colours, so the app takes the middle colour of a small 3 by 3 pixel square.</li>
+        <li>Some colours look alike. On the air temperature frame, the coldest dark blue is closer to a mid-range purple-blue than we would like, so check surprising readings.</li>
+        <li>Land, water, logos and date labels are reported as "no data", never as a low value.</li>
+        <li>The vegetation frame's legend has no numbers, only Low and High, so its sound is relative.</li>
+      </ul>
+    </div>
+
+    <p>To see every step for any point, use the <a href="decoder-test.html">decoder test page</a>. The method and measurements are described in the README.</p>
+  </main>
+
+  <footer class="site-footer">
+    TerraSense Jukebox is a hackathon project. It is not endorsed by NASA. Visualizations are credited to their original sources on the <a href="credits.html">Credits</a> page.
+  </footer>
+</body>
+</html>

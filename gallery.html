@@ -1,0 +1,36 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Frame Gallery</title>
+  <link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+  <a class="skip-link" href="#main">Skip to content</a>
+  <header class="site-header">
+    <nav aria-label="Main">
+      <a class="brand" href="index.html">TerraSense Jukebox</a>
+      <ul>
+        <li><a href="gallery.html" aria-current="page">Gallery</a></li>
+        <li><a href="player.html">Player</a></li>
+        <li><a href="how-it-works.html">How it works</a></li>
+        <li><a href="accessibility.html">Accessibility</a></li>
+        <li><a href="credits.html">Credits</a></li>
+      </ul>
+    </nav>
+  </header>
+
+  <main id="main">
+    <h1>Choose a frame</h1>
+    <p>Each frame is a NASA Earth Information Center visualization. Open one to hear it.</p>
+    <p id="status" role="status">Loading frames…</p>
+    <ul id="cards" class="cards"></ul>
+  </main>
+
+  <footer class="site-footer">
+    TerraSense Jukebox is a hackathon project. It is not endorsed by NASA. Visualizations are credited to their original sources on the <a href="credits.html">Credits</a> page.
+  </footer>
+  <script type="module" src="js/gallery.js"></script>
+</body>
+</html>

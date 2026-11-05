@@ -1,0 +1,91 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Decoder Test</title>
+  <link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+  <a class="skip-link" href="#main">Skip to content</a>
+  <header class="site-header">
+    <nav aria-label="Main">
+      <a class="brand" href="index.html">TerraSense Jukebox</a>
+      <ul>
+        <li><a href="gallery.html">Gallery</a></li>
+        <li><a href="player.html">Player</a></li>
+        <li><a href="how-it-works.html">How it works</a></li>
+        <li><a href="accessibility.html">Accessibility</a></li>
+        <li><a href="credits.html">Credits</a></li>
+      </ul>
+    </nav>
+  </header>
+
+  <main id="main">
+    <h1>Decoder test</h1>
+    <p>
+      Shows how each pixel colour is turned into a value, so you can check the decoder
+      against NASA's colourbar by eye. Values are approximate: a colour is not a measurement.
+    </p>
+
+    <p>
+      <label for="frame-select">Frame</label>
+      <select id="frame-select"></select>
+    </p>
+    <p id="status" role="status"></p>
+    <p id="frame-meta" class="muted"></p>
+
+    <h2>Explore</h2>
+    <p class="muted">
+      Move the pointer over the frame, or focus it and use the arrow keys (Shift + arrow moves faster).
+      Click, or press Enter, to add the point to the check below.
+    </p>
+    <div class="explore">
+      <div id="frame-wrap" class="frame-wrap" tabindex="0" role="group"
+           aria-label="Frame. Arrow keys move the cursor, Enter adds the point to the check.">
+        <img id="frame-img" alt="">
+        <div id="cursor" class="cursor" hidden></div>
+      </div>
+      <div class="readout-panel">
+        <div id="readout">Move over the frame to read a value.</div>
+        <dl id="readout-detail" class="readout-detail"></dl>
+        <canvas id="zoom" width="168" height="168" aria-hidden="true"></canvas>
+        <p class="muted">Zoom: 21 by 21 pixels. The box shows the 3 by 3 square the decoder reads.</p>
+      </div>
+    </div>
+    <div id="live" class="sr-only" aria-live="polite" aria-atomic="true"></div>
+
+    <h2>Legend</h2>
+    <p class="muted">
+      Top: the legend table the decoder uses, drawn from data/frames.json, with a marker at the last decoded value.
+      Below: NASA's original colourbar. The two should look the same.
+    </p>
+    <canvas id="legend-strip" class="legend-strip" height="44" aria-hidden="true"></canvas>
+    <div id="colorbars" class="colorbars"></div>
+
+    <h2>Ten-point check</h2>
+    <p>
+      Add the points you want to check by clicking the frame, or fill the table with ten points spread
+      across the legend range plus two no-data examples. For each row, compare the zoomed pixel with NASA's
+      colourbar and type the value you read by eye. Rows more than one legend step apart are flagged.
+    </p>
+    <p>
+      <button id="fill-btn">Fill with 10 points across the range</button>
+      <button id="clear-btn" class="secondary">Clear table</button>
+      <button id="export-btn" class="secondary">Show as Markdown</button>
+    </p>
+    <div class="table-wrap"><table id="check-table"></table></div>
+    <textarea id="export" class="export" rows="10" hidden aria-label="Check results as Markdown"></textarea>
+
+    <h2>Automatic self-tests</h2>
+    <ul id="selftests"></ul>
+
+    <pre id="auto-results" hidden></pre>
+  </main>
+
+  <footer class="site-footer">
+    TerraSense Jukebox is a hackathon project. It is not endorsed by NASA. Visualizations are credited to their original sources on the <a href="credits.html">Credits</a> page.
+  </footer>
+  <script type="module" src="js/decoder-test.js"></script>
+</body>
+</html>
