@@ -47,20 +47,22 @@ Markdown export here. The plan asks for this to be done by people, not only by t
 
 ### Sea surface temperature
 
-| # | Place | Pixel x, y | Pixel colour | Legend colour | Distance | Decoded | By eye | Within one step? |
-|---|---|---|---|---|---|---|---|---|
-| 1 | 83° N, 79° W | 286, 18 | 2, 52, 94 | 0, 51, 93 | 2.4 | about −3 °C |  |  |
-| 2 | 78° N, 1° W | 510, 34 | 0, 96, 170 | 0, 99, 167 | 4.2 | about 1 °C |  |  |
-| 3 | 72° N, 21° E | 570, 50 | 10, 142, 207 | 0, 140, 210 | 10.6 | about 5 °C |  |  |
-| 4 | 65° N, 7° E | 530, 70 | 106, 177, 228 | 102, 181, 230 | 6 | about 9 °C |  |  |
-| 5 | 54° N, 4° E | 522, 102 | 178, 212, 242 | 178, 216, 246 | 5.7 | about 13 °C |  |  |
-| 6 | 50° N, 1° W | 510, 114 | 246, 223, 180 | 254, 221, 176 | 9.2 | about 17 °C |  |  |
-| 7 | 44° N, 39° E | 622, 130 | 212, 178, 120 | 226, 172, 119 | 15.3 | about 21 °C |  |  |
-| 8 | 37° N, 65° W | 326, 150 | 191, 117, 79 | 194, 116, 81 | 3.7 | about 25 °C |  |  |
-| 9 | 27° N, 72° W | 306, 178 | 151, 54, 44 | 152, 54, 48 | 4.1 | about 29 °C |  |  |
-| 10 | 26° N, 53° E | 662, 182 | 99, 35, 38 | 98, 34, 38 | 1.4 | about 33 °C |  |  |
-| 11 | 83° N, 75° W | 298, 18 | 35, 62, 99 |  | 35.7 | no data (colour is not on the legend) |  |  |
-| 12 | 83° N, 37° W | 406, 18 | 88, 91, 97 | 103, 103, 103 | 20.1 | no data (Land, no sea temperature data) |  |  |
+| # | Place | Pixel x, y | Pixel colour | Legend colour | Distance | Decoded | Real (MUR 2026-11-04) | By eye | Within one step? |
+|---|---|---|---|---|---|---|---|---|---|
+| 1 | 83° N, 79° W | 286, 18 | 2, 52, 94 | 0, 51, 93 | 2.4 | about −3 °C | −1.8 °C |  |  |
+| 2 | 78° N, 1° W | 510, 34 | 0, 96, 170 | 0, 99, 167 | 4.2 | about 1 °C | 1.5 °C |  |  |
+| 3 | 72° N, 21° E | 570, 50 | 10, 142, 207 | 0, 140, 210 | 10.6 | about 5 °C | 6.5 °C |  |  |
+| 4 | 65° N, 7° E | 530, 70 | 106, 177, 228 | 102, 181, 230 | 6 | about 9 °C | 9.8 °C |  |  |
+| 5 | 54° N, 4° E | 522, 102 | 178, 212, 242 | 178, 216, 246 | 5.7 | about 13 °C | 14.0 °C |  |  |
+| 6 | 50° N, 1° W | 510, 114 | 246, 223, 180 | 254, 221, 176 | 9.2 | about 17 °C | 15.7 °C |  |  |
+| 7 | 44° N, 39° E | 622, 130 | 212, 178, 120 | 226, 172, 119 | 15.3 | about 21 °C | 19.0 °C |  |  |
+| 8 | 37° N, 65° W | 326, 150 | 191, 117, 79 | 194, 116, 81 | 3.7 | about 25 °C | 24.6 °C |  |  |
+| 9 | 27° N, 72° W | 306, 178 | 151, 54, 44 | 152, 54, 48 | 4.1 | about 29 °C | 28.3 °C |  |  |
+| 10 | 26° N, 53° E | 662, 182 | 99, 35, 38 | 98, 34, 38 | 1.4 | about 33 °C | 32.1 °C |  |  |
+| 11 | 83° N, 75° W | 298, 18 | 35, 62, 99 |  | 35.7 | no data (colour is not on the legend) | n/a |  |  |
+| 12 | 83° N, 37° W | 406, 18 | 88, 91, 97 | 103, 103, 103 | 20.1 | no data (Land, no sea temperature data) | n/a |  |  |
+
+The "Real" column is the MUR SST analysis at the same point (NOAA CoastWatch ERDDAP, `jplMURSST41`). All ten decoded values are within 2.0 °C of it; one legend step is 5 °C.
 
 ### Near-surface air temperature
 
