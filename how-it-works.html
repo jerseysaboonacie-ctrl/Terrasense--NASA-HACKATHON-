@@ -24,24 +24,35 @@
   <main id="main">
     <h1>How a colour becomes a sound</h1>
     <ol>
-      <li><strong>The frame is a picture with a colour legend.</strong> NASA colours each point of the map by its value, and the legend says which colour means which value.</li>
-      <li><strong>The app finds the pixel under your pointer.</strong> It reads that pixel's colour straight from the image, which is stored on this site.</li>
-      <li><strong>It matches that colour to the closest legend colour.</strong> That gives an approximate value. If no legend colour is close enough, the app says "no data" instead of guessing.</li>
-      <li><strong>It turns the value into a pitch.</strong> Higher values play higher notes, on the same scale for every frame.</li>
+      <li><strong>The frame is a picture with a colour legend.</strong> NASA colours each point of the map by its value, and the legend says which colour means which value. We store every frame's legend as a table of colours and values, read from NASA's own colourbar.</li>
+      <li><strong>The app finds the pixel under your pointer.</strong> It reads that pixel's colour straight from the image, which is stored on this site. For compressed (JPEG) frames it takes the middle colour of the 3 by 3 pixels around the point, which removes compression noise.</li>
+      <li><strong>It matches that colour to the closest legend colour.</strong> That gives an approximate value. If no legend colour is close enough, or the colour means land or water, or the point is under a logo or date label, the app says "no data" instead of guessing.</li>
+      <li><strong>It turns the value into a pitch.</strong> The lowest value on the legend plays 220 Hz and the highest 880 Hz, two octaves higher, on the same scale for every frame. Left and right on the map are heard as left and right in headphones. No data is silence with one soft click.</li>
     </ol>
+
+    <p>In the Player, press <strong>Explain this sound</strong> to see these four steps for the exact point under your pointer: the pixel colour, the closest legend colour, the value, and the frequency.</p>
+
+    <h2>How we checked it</h2>
+    <p>
+      For the sea surface temperature frame we compared the decoded values with NASA's real measurements (the MUR analysis) at 336 ocean points.
+      The typical difference was 0.7 °C and the largest 1.8 °C, smaller than one step on the legend (5 °C).
+      The full results are in the project's <code>docs/accuracy-check.md</code>.
+    </p>
 
     <h2>What this cannot tell you</h2>
     <div class="note">
       <ul>
-        <li>Values are approximate. They are decoded from the colours of the visualization, not from the underlying measurements.</li>
-        <li>Image compression adds noise to the colours, so the app takes the middle colour of a small 3 by 3 pixel square.</li>
+        <li>Values are approximate. They are decoded from the colors of the visualization, not from the underlying measurements.</li>
+        <li>Image compression adds noise to the colours, which is why the app reads a small square, not one pixel.</li>
         <li>Some colours look alike. On the air temperature frame, the coldest dark blue is closer to a mid-range purple-blue than we would like, so check surprising readings.</li>
+        <li>A colour at either end of a legend only tells you "this much or more" (or less), because the legend cannot show anything beyond its ends.</li>
         <li>Land, water, logos and date labels are reported as "no data", never as a low value.</li>
         <li>The vegetation frame's legend has no numbers, only Low and High, so its sound is relative.</li>
+        <li>On the precipitation frame, "no precipitation shown" can mean less than 0.1 mm per hour or missing data; the image does not tell them apart.</li>
       </ul>
     </div>
 
-    <p>To see every step for any point, use the <a href="decoder-test.html">decoder test page</a>. The method and measurements are described in the README.</p>
+    <p>The method and every measurement are described in the project README and <code>docs/legends.md</code>.</p>
   </main>
 
   <footer class="site-footer">

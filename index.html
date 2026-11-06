@@ -26,13 +26,17 @@
     <section class="hero">
       <h1>Hear the Earth.</h1>
       <p class="sub">Explore NASA Earth Information Center visualizations by sound, touch or keyboard, with no sight needed.</p>
-      <p><a class="big-button" href="player.html?frame=sst">Open the player</a></p>
+      <div class="hero-actions">
+        <button id="start-btn" type="button" class="big-button">Start audio</button>
+        <a class="big-button secondary-link" href="player.html?frame=sst">Open the player</a>
+      </div>
+      <p id="audio-msg" role="status" class="muted">Start audio plays a short sound check (low, middle and high notes) so you can set your volume. Start with your volume low.</p>
     </section>
 
     <ul class="points">
       <li><strong>Real NASA frames.</strong> Visualizations from NASA's Earth Information Center, served from this site.</li>
       <li><strong>Sound made live.</strong> The tone is generated in your browser from the colour under your finger or cursor.</li>
-      <li><strong>Works your way.</strong> Keyboard, touch or screen reader.</li>
+      <li><strong>Built for every way in.</strong> Designed for keyboard, touch or screen reader.</li>
     </ul>
 
     <p><strong>Try this:</strong> close your eyes and find the highest region on the map.</p>
@@ -43,5 +47,6 @@
   <footer class="site-footer">
     TerraSense Jukebox is a hackathon project. It is not endorsed by NASA. Visualizations are credited to their original sources on the <a href="credits.html">Credits</a> page.
   </footer>
+  <script type="module" src="js/home.js"></script>
 </body>
 </html>

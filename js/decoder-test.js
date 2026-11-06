@@ -7,6 +7,7 @@
 import {
   loadFrameList, loadFrame, decodeAt, classifyColour, nearestLegendEntry, describePlace,
 } from './decoder.js';
+import { drawLegend } from './legend.js';
 
 const $ = (id) => document.getElementById(id);
 const els = {
@@ -199,58 +200,9 @@ function drawZoom(canvas, cx, cy, size) {
   ctx.strokeRect((half - r) * cell - 2, (half - r) * cell - 2, (2 * r + 1) * cell + 4, (2 * r + 1) * cell + 4);
 }
 
-/** Draw the legend table as a strip; mark the decoded value if there is one. */
+/** Draw the legend table (shared code in legend.js) with a marker at the decoded value. */
 function drawLegendStrip(result) {
-  if (!frame) return;
-  const canvas = els.strip;
-  const dpr = window.devicePixelRatio || 1;
-  canvas.width = Math.round(canvas.clientWidth * dpr);
-  canvas.height = Math.round(44 * dpr);
-  const ctx = canvas.getContext('2d');
-  const W = canvas.width, H = canvas.height;
-  const legend = frame.meta.legend;
-  const discrete = frame.meta.legendInfo.kind === 'discrete';
-
-  if (!discrete) {
-    // Continuous: each column shows the entry nearest to that position.
-    for (let x = 0; x < W; x++) {
-      const t = x / (W - 1);
-      const i = Math.round(t * (legend.length - 1));
-      ctx.fillStyle = css(legend[i].color);
-      ctx.fillRect(x, 0, 1, H);
-    }
-  } else {
-    // Discrete: one row per family (rain on top, frozen below), one block per class.
-    const families = [...new Set(legend.map((c) => c.family))];
-    const rowH = H / families.length;
-    families.forEach((fam, fi) => {
-      const classes = legend.filter((c) => c.family === fam);
-      const n = Math.round(1 / (2 * classes[0].t)); // t = (i + 0.5) / n
-      classes.forEach((c, k) => {
-        const i = Math.round(c.t * n - 0.5);
-        // The last class may cover several blocks (frozen: "20 or more").
-        const span = k === classes.length - 1 ? n - i : 1;
-        ctx.fillStyle = css(c.color);
-        ctx.fillRect((i / n) * W, fi * rowH, (span / n) * W + 1, rowH);
-      });
-    });
-  }
-
-  if (result && result.status === 'value') {
-    let x = result.t * W;
-    let y0 = 0, y1 = H;
-    if (discrete) {
-      const families = [...new Set(legend.map((c) => c.family))];
-      const fi = families.indexOf(result.entry.family);
-      y0 = (fi * H) / families.length; y1 = ((fi + 1) * H) / families.length;
-    }
-    ctx.lineWidth = 3 * dpr;
-    ctx.strokeStyle = '#000';
-    ctx.strokeRect(x - 5 * dpr, y0 + 2, 10 * dpr, y1 - y0 - 4);
-    ctx.strokeStyle = '#fff';
-    ctx.lineWidth = 1.5 * dpr;
-    ctx.strokeRect(x - 5 * dpr, y0 + 2, 10 * dpr, y1 - y0 - 4);
-  }
+  if (frame) drawLegend(els.strip, frame.meta, result);
 }
 
 // ---------------------------------------------------------------------------

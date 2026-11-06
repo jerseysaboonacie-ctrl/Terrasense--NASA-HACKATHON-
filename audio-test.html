@@ -1,0 +1,62 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Audio Test</title>
+  <link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+  <a class="skip-link" href="#main">Skip to content</a>
+  <header class="site-header">
+    <nav aria-label="Main">
+      <a class="brand" href="index.html">TerraSense Jukebox</a>
+      <ul>
+        <li><a href="gallery.html">Gallery</a></li>
+        <li><a href="player.html">Player</a></li>
+        <li><a href="how-it-works.html">How it works</a></li>
+        <li><a href="accessibility.html">Accessibility</a></li>
+        <li><a href="credits.html">Credits</a></li>
+      </ul>
+    </nav>
+  </header>
+
+  <main id="main">
+    <h1>Audio test</h1>
+    <p>Move the slider through a frame's legend range and hear the tone for each value. Use this to tune the settings in <code>js/settings.js</code>.</p>
+
+    <p id="audio-msg" class="note" role="status">Sound is off. Press Start audio.</p>
+    <p>
+      <button id="start-btn" type="button">Start audio</button>
+      <button id="mute-btn" type="button" class="secondary" aria-pressed="false">Mute</button>
+    </p>
+
+    <div class="controls">
+      <p class="control-row">
+        <label for="frame-select">Legend of</label>
+        <select id="frame-select"></select>
+      </p>
+      <p class="control-row">
+        <label for="value-slider">Value</label>
+        <input type="range" id="value-slider" min="0" max="1000" value="500" aria-describedby="value-out">
+      </p>
+      <p id="value-out" class="narration" aria-live="polite"></p>
+      <p class="control-row">
+        <label for="volume">Volume</label>
+        <input type="range" id="volume" min="0" max="100" step="5" value="30">
+        <output id="volume-out" for="volume">30%</output>
+      </p>
+      <p class="control-row">
+        <label for="pan-slider">Position (left to right)</label>
+        <input type="range" id="pan-slider" min="0" max="100" value="50">
+      </p>
+      <p><button id="play-btn" type="button" class="secondary">Play this value</button></p>
+    </div>
+  </main>
+
+  <footer class="site-footer">
+    TerraSense Jukebox is a hackathon project. It is not endorsed by NASA.
+  </footer>
+  <script type="module" src="js/audio-test.js"></script>
+</body>
+</html>

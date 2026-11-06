@@ -1,0 +1,215 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Player Tests</title>
+  <link rel="stylesheet" href="../css/styles.css">
+  <style>
+    iframe { width: 1100px; height: 900px; border: 2px solid var(--border); }
+  </style>
+</head>
+<body>
+  <main id="main">
+    <h1>Player tests</h1>
+    <p>
+      Loads the Player for every frame in the frame below and checks it with simulated key and pointer
+      events. For audio checks, run Chrome with <code>--autoplay-policy=no-user-gesture-required</code>
+      (simulated events are not real gestures), or click the page once before the tests start.
+      These tests check our code; they do not replace testing with real screen readers and real people.
+    </p>
+    <p id="summary" role="status">Running…</p>
+    <div class="table-wrap"><table id="results"><thead><tr><th>Frame</th><th>Check</th><th>Result</th><th>Evidence</th></tr></thead><tbody></tbody></table></div>
+    <iframe id="player" title="Player under test"></iframe>
+  </main>
+  <script type="module">
+    import { SETTINGS as S } from '../js/settings.js';
+
+    const iframe = document.getElementById('player');
+    const tbody = document.querySelector('#results tbody');
+    const results = [];
+    const wait = (ms) => new Promise((r) => setTimeout(r, ms));
+    const freqFor = (t) => S.minFrequency * Math.pow(S.maxFrequency / S.minFrequency, t);
+
+    function record(frame, check, pass, evidence) {
+      results.push({ frame, check, pass, evidence });
+      const tr = document.createElement('tr');
+      for (const [i, v] of [frame, check, pass ? 'PASS' : 'FAIL', evidence].entries()) {
+        const td = document.createElement('td');
+        td.textContent = v;
+        if (i === 2) td.className = pass ? 'flag-good' : 'flag-bad';
+        tr.append(td);
+      }
+      tbody.append(tr);
+    }
+
+    async function load(url) {
+      iframe.src = url;
+      await new Promise((r) => iframe.addEventListener('load', r, { once: true }));
+      const w = iframe.contentWindow;
+      w.__errors = [];
+      w.addEventListener('error', (e) => w.__errors.push(String(e.message)));
+      w.addEventListener('unhandledrejection', (e) => w.__errors.push(String(e.reason)));
+      for (let i = 0; i < 100 && !(w.__jukebox && w.__jukebox.ready); i++) await wait(100);
+      return w;
+    }
+
+    const key = (target, k, extra = {}) => target.dispatchEvent(new KeyboardEvent('keydown', { key: k, bubbles: true, ...extra }));
+
+    async function testFrame(id) {
+      const w = await load('../player.html?frame=' + id);
+      const doc = w.document;
+      const J = w.__jukebox;
+      if (!J) { record(id, 'Player loads', false, doc.getElementById('status').textContent || 'not ready after 10 s'); return; }
+      record(id, 'Player loads', true, 'frame ' + J.size().join(' × '));
+      const st = () => J.getState();
+      const wrap = doc.getElementById('frame-wrap');
+      const [W, H] = J.size();
+
+      // 1. Audio does not start by itself
+      record(id, 'Audio waits for a gesture', !st().audio.started, 'started = ' + st().audio.started + ' before any key or click');
+
+      // 2. Keyboard moves the pointer, starts audio, narrates exactly what the panel says
+      const before = st().point.x;
+      wrap.focus();
+      key(wrap, 'ArrowRight');
+      await wait(250);
+      let s = st();
+      const step = Math.max(1, Math.round(W / 100));
+      record(id, 'Arrow key moves the pointer', s.point.x === before + step, `x ${before} → ${s.point.x} (step ${step})`);
+      key(wrap, 'ArrowRight', { shiftKey: true });
+      await wait(100);
+      record(id, 'Shift + arrow moves faster', st().point.x === before + step * 9, `x → ${st().point.x}`);
+      s = st();
+      record(id, 'Audio starts on a key press', s.audio.started, 'started = ' + s.audio.started);
+      const live = s.live.replace(/ $/, '');
+      record(id, 'Narration matches the panel exactly', live === s.narrationLine && live.includes(s.infoValue) && live.includes(s.infoPlace),
+        `live: "${live}"`);
+
+      // 3. Grid of points: higher value -> higher pitch, same scale; pan follows x
+      const values = [], noData = [];
+      for (let j = 0; j < 16; j++) for (let i = 0; i < 32; i++) {
+        const x = Math.floor(((i + 0.5) * W) / 32), y = Math.floor(((j + 0.5) * H) / 16);
+        J.moveTo(x, y);
+        const r = st().result;
+        (r.status === 'value' ? values : noData).push({ x, y, t: r.t, text: r.text, reason: r.reason });
+      }
+      const lo = Math.min(...values.map((v) => v.t)), hi = Math.max(...values.map((v) => v.t));
+      const picks = [];
+      for (let k = 0; k < 10; k++) {
+        const target = lo + ((hi - lo) * k) / 9;
+        const best = values.filter((v) => !picks.includes(v)).reduce((a, b) => (Math.abs(b.t - target) < Math.abs(a.t - target) ? b : a));
+        picks.push(best);
+      }
+      const rows = picks.map((p) => { J.moveTo(p.x, p.y); const a = st().audio; return { ...p, f: a.frequency, pan: a.pan }; })
+        .sort((a, b) => a.t - b.t);
+      let ordered = true, onScale = true, panOk = true;
+      rows.forEach((r, i) => {
+        if (i > 0 && r.t > rows[i - 1].t && !(r.f > rows[i - 1].f)) ordered = false;
+        if (Math.abs(r.f - freqFor(r.t)) > 0.5) onScale = false;
+        const expectPan = ((r.x / (W - 1)) * 2 - 1) * S.panRange;
+        if (Math.abs(r.pan - expectPan) > 0.01) panOk = false;
+      });
+      record(id, 'Higher value always higher pitch (10 points)', ordered && onScale,
+        rows.map((r) => `${r.text} → ${Math.round(r.f)} Hz`).join('; '));
+      record(id, 'Stereo pan follows horizontal position', panOk,
+        rows.slice(0, 3).map((r) => `x ${r.x} → pan ${r.pan.toFixed(2)}`).join('; '));
+
+      // 4. No data: silence plus one click, and only one click while staying in no data
+      if (noData.length >= 2 && values.length) {
+        J.moveTo(picks[5].x, picks[5].y);
+        const c0 = st().audio.clicks;
+        J.moveTo(noData[0].x, noData[0].y);
+        const a1 = st().audio;
+        J.moveTo(noData[1].x, noData[1].y);
+        const a2 = st().audio;
+        record(id, 'No data: silence plus one click', !a1.toneOn && a1.clicks === c0 + 1 && a2.clicks === c0 + 1,
+          `tone off = ${!a1.toneOn}; clicks ${c0} → ${a1.clicks} → ${a2.clicks}; reason: ${noData[0].reason}`);
+      } else {
+        record(id, 'No data: silence plus one click', true, 'not applicable: fewer than two no-data grid points');
+      }
+
+      // 5. Leaving the frame stops the tone
+      J.moveTo(picks[5].x, picks[5].y);
+      const onBefore = st().audio.toneOn;
+      wrap.dispatchEvent(new w.PointerEvent('pointerleave', { pointerType: 'mouse' }));
+      await wait(50);
+      record(id, 'Tone stops when the pointer leaves', onBefore && !st().audio.toneOn, `tone on ${onBefore} → ${st().audio.toneOn}`);
+
+      // 6. Volume limit and compressor
+      const vol = doc.getElementById('volume');
+      vol.value = 100; vol.dispatchEvent(new Event('input', { bubbles: true }));
+      const a = st().audio;
+      record(id, 'Volume never above the limit', a.masterTarget <= S.maxGain + 1e-9 && a.hasCompressor,
+        `slider 100% → master gain ${a.masterTarget} (limit ${S.maxGain}), compressor ${a.hasCompressor}`);
+      vol.value = 30; vol.dispatchEvent(new Event('input', { bubbles: true }));
+
+      // 7. Mute with M
+      J.moveTo(picks[5].x, picks[5].y);
+      key(doc.body, 'm');
+      await wait(50);
+      const m = st().audio;
+      const muteBtn = doc.getElementById('mute-btn');
+      record(id, 'M mutes', m.muted && m.masterTarget === 0 && !m.toneOn && muteBtn.getAttribute('aria-pressed') === 'true',
+        `muted ${m.muted}, gain ${m.masterTarget}, button "${muteBtn.textContent}"`);
+      key(doc.body, 'm');
+      await wait(50);
+      record(id, 'M unmutes', !st().audio.muted && st().audio.masterTarget > 0, `gain ${st().audio.masterTarget}`);
+
+      // 8. Scan with S
+      key(doc.body, 's');
+      await wait(600);
+      const sc = st();
+      key(doc.body, 's');
+      await wait(100);
+      record(id, 'S starts and stops the scan', sc.scanning && sc.point.x > 0 && !st().scanning && !st().audio.toneOn,
+        `scanning ${sc.scanning}, x after 0.6 s = ${sc.point.x}; then scanning ${st().scanning}`);
+
+      // 9. Reference tone
+      const ref = doc.querySelector('#ref-buttons button');
+      ref.click();
+      await wait(150);
+      const rf = st().audio;
+      await wait(S.referenceSeconds * 1000 + 200);
+      record(id, 'Low reference tone plays for about 1 s', rf.toneOn && Math.abs(rf.frequency - S.minFrequency) < 30 && !st().audio.toneOn,
+        `"${ref.textContent}" → ${Math.round(rf.frequency)} Hz, then off = ${!st().audio.toneOn}`);
+
+      // 10. Explain this sound
+      J.moveTo(picks[5].x, picks[5].y);
+      doc.getElementById('explain-btn').click();
+      const ex = doc.getElementById('explain');
+      const hz = String(Math.round(st().audio.frequency));
+      record(id, 'Explain this sound shows the steps', !ex.hidden && ex.textContent.includes(hz + ' Hz'),
+        ex.textContent.slice(0, 160).replace(/\s+/g, ' ') + '…');
+
+      // 11. Help dialog with ?
+      key(doc.body, '?');
+      const dlg = doc.getElementById('help-dialog');
+      record(id, '? opens keyboard help', dlg.open, 'dialog open = ' + dlg.open);
+      dlg.close();
+
+      // 12. Touch drag does not scroll the page
+      record(id, 'touch-action none on the map', w.getComputedStyle(wrap).touchAction === 'none', w.getComputedStyle(wrap).touchAction);
+
+      // 13. No script errors
+      record(id, 'No script errors', w.__errors.length === 0, w.__errors.join(' | ') || 'none');
+    }
+
+    async function testBadFrame() {
+      const w = await load('../player.html?frame=does-not-exist');
+      const msg = w.document.getElementById('status').textContent;
+      record('(bad id)', 'Unknown frame shows a clear message', /no frame called/i.test(msg), msg);
+    }
+
+    const frames = (await (await fetch('../data/frames.json')).json()).frames.map((f) => f.id);
+    for (const id of frames) await testFrame(id);
+    await testBadFrame();
+
+    const failed = results.filter((r) => !r.pass).length;
+    document.getElementById('summary').textContent = `${results.length} checks, ${failed} failed.`;
+    document.title = 'TESTS DONE';
+    const post = new URLSearchParams(location.search).get('post');
+    if (post) fetch(post, { method: 'POST', body: JSON.stringify(results) }).catch(() => {});
+  </script>
+</body>
+</html>

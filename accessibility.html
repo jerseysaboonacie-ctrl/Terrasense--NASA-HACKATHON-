@@ -26,13 +26,52 @@
     <p>TerraSense Jukebox is designed to be used by sound, touch, keyboard or screen reader, with no sight needed.</p>
 
     <h2>Keyboard</h2>
-    <p>The full list of shortcuts will appear here when the player is finished. On the decoder test page, focus the frame and use the arrow keys to move; hold Shift to move faster.</p>
+    <p>In the Player, press Tab to reach the map, then:</p>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th scope="col">Key</th><th scope="col">Action</th></tr></thead>
+        <tbody>
+          <tr><td>Arrow keys</td><td>Move the pointer on the map</td></tr>
+          <tr><td>Shift + arrow</td><td>Move faster</td></tr>
+          <tr><td>Enter or Space</td><td>Play the current point again</td></tr>
+          <tr><td>S</td><td>Start or stop the scan (left to right along the chosen row)</td></tr>
+          <tr><td>M</td><td>Mute or unmute</td></tr>
+          <tr><td>Escape</td><td>Stop the sound</td></tr>
+          <tr><td>?</td><td>Open keyboard help</td></tr>
+          <tr><td>Tab</td><td>Leave the map and go to the controls</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h2>With a screen reader</h2>
+    <ul>
+      <li>The map is an interactive region, so your screen reader passes the arrow keys to it. Press Tab to leave it.</li>
+      <li>Each move is announced politely, without interrupting: the variable, the approximate value, and where you are, for example "Sea surface temperature: about 28 °C, near the equator, 3° S, 140° W."</li>
+      <li>The announcement uses exactly the same words as the panel on screen.</li>
+      <li>You can switch announcements off under Controls, and switch on "Speak narration aloud" if you are not using a screen reader.</li>
+    </ul>
+
+    <h2>Touch</h2>
+    <p>Drag a finger across the map to hear it. The page does not scroll while you drag on the map. The tone stops when you lift your finger. On Android phones that support it, a short vibration marks very high values; iPhones do not support this, and nothing depends on it.</p>
 
     <h2>Headphones and volume</h2>
-    <p>Headphones give the best result, because left and right on the map will be heard as left and right. Start with your volume low.</p>
+    <ul>
+      <li>Headphones give the best result: left and right on the map are heard as left and right.</li>
+      <li>Start with your volume low. The Home page's Start audio button plays a short sound check.</li>
+      <li>The volume slider is capped below full volume, and a compressor on the output evens out sudden loud sounds.</li>
+      <li>Play the low, middle and high reference tones in the Sound legend before exploring, to tune your ear.</li>
+    </ul>
 
     <h2>What has been tested</h2>
-    <p>Nothing has been tested with users yet. This section will say exactly what was tested, and with whom, once testing has happened.</p>
+    <p>
+      We have run automated tests in Chrome on macOS that use the Player with simulated keyboard and pointer input:
+      arrow keys and Shift, the narration text matching the panel, mute, the volume limit, scan, reference tones,
+      and the "no data" sound. We have also checked the layout at phone width.
+    </p>
+    <p>
+      Not yet tested: real screen readers (VoiceOver, NVDA, JAWS, TalkBack), real phones, other browsers,
+      and use by blind and low-vision people. This section will be updated with exactly what is tested, and with whom.
+    </p>
   </main>
 
   <footer class="site-footer">

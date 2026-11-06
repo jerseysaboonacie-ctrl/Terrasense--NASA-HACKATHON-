@@ -14,14 +14,15 @@
 
 /** Load the list of frames from data/frames.json. */
 export async function loadFrameList() {
-  const res = await fetch('data/frames.json');
+  // no-cache: always check for a newer frames.json, so edits show up at once.
+  const res = await fetch('data/frames.json', { cache: 'no-cache' });
   if (!res.ok) throw new Error('Could not load data/frames.json (' + res.status + ')');
   return (await res.json()).frames;
 }
 
 /**
  * Load one frame's raw pixels. Returns the object decodeAt() works on:
- *   { meta, width, height, data }   (data = RGBA bytes, 4 per pixel)
+ *   { meta, width, height, data, bitmap }   (data = RGBA bytes, 4 per pixel)
  */
 export async function loadFrame(meta) {
   const pixels = await loadPixels(meta.image);
@@ -51,7 +52,8 @@ async function loadPixels(url) {
   const ctx = canvas.getContext('2d', { willReadFrequently: true });
   ctx.drawImage(bitmap, 0, 0);
   const { data } = ctx.getImageData(0, 0, bitmap.width, bitmap.height);
-  return { width: bitmap.width, height: bitmap.height, data };
+  // bitmap is returned too, so the Player can draw the frame on its canvas.
+  return { width: bitmap.width, height: bitmap.height, data, bitmap };
 }
 
 // ---------------------------------------------------------------------------
@@ -232,7 +234,10 @@ export function describeValue(meta, entry) {
 
 /** "12° N, 46° W" style text for a position. */
 export function describePlace(lon, lat) {
-  const ns = lat >= 0 ? 'N' : 'S';
-  const ew = lon >= 0 ? 'E' : 'W';
-  return `${Math.abs(lat).toFixed(0)}° ${ns}, ${Math.abs(lon).toFixed(0)}° ${ew}`;
+  const la = Math.round(Math.abs(lat));
+  const lo = Math.round(Math.abs(lon));
+  // 0° has no north/south, and 0° or 180° longitude no east/west.
+  const latText = la === 0 ? '0°' : `${la}° ${lat > 0 ? 'N' : 'S'}`;
+  const lonText = lo === 0 || lo === 180 ? `${lo}°` : `${lo}° ${lon > 0 ? 'E' : 'W'}`;
+  return `${latText}, ${lonText}`;
 }

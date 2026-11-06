@@ -8,13 +8,20 @@ TerraSense Jukebox is a hackathon project. It is not endorsed by NASA.
 
 ## Status
 
+All ten build steps in the website plan are built. Time stepping (step 9) is not
+offered because none of our frames has dated versions yet; see Known limitations.
+
 | Plan step | State |
 |---|---|
 | 2. Skeleton: six pages, navigation, skip link, mobile layout | Done |
-| 3. Data and gallery: `data/frames.json`, gallery and credits read from it | Done |
-| 4. Decoder and test page | Done, validated (see [docs/accuracy-check.md](docs/accuracy-check.md)) |
-| 5. Audio engine | Next |
-| 6–10. Player, keyboard and narration, legends, scan and time, polish | Not started |
+| 3. Data and gallery from `data/frames.json` | Done |
+| 4. Decoder and test page | Done, validated against real data ([docs/accuracy-check.md](docs/accuracy-check.md)) |
+| 5. Audio engine and audio test page | Done |
+| 6. Player: canvas, pointer events, info panel | Done |
+| 7. Keyboard and narration | Done |
+| 8. Colour legend, reference tones, Explain this sound | Done |
+| 9. Scan (row and overview) | Done. Time stepping: not applicable yet |
+| 10. Pages, README, verification | Done ([docs/verification.md](docs/verification.md)) |
 
 ## Run it
 
@@ -28,11 +35,32 @@ python3 -m http.server 8000
 Then open <http://localhost:8000>. The site must be served, not opened as a file:
 browsers block pixel reading on `file://` pages.
 
-Useful pages while building:
+Open a frame directly with `player.html?frame=sst` (or `t2m`, `ndvi`, `precip`).
+
+Pages for the team (not linked from the site menu):
 
 - `decoder-test.html`: explore any frame, see every decoding step, run the ten-point check
 - `decoder-test.html?frame=t2m&fill=1`: open a frame with the ten-point table filled in
-- `decoder-test.html?auto=1`: run every frame's self-tests and print the results as JSON
+- `decoder-test.html?auto=1`: run every frame's decoder self-tests and print the results as JSON
+- `audio-test.html`: a slider that plays the tone for any value in a legend range
+- `tests/player-test.html`: 77 automated checks of the Player (see below)
+
+## Tests
+
+`tests/player-test.html` loads the Player for every frame and checks it with simulated
+key and pointer events: audio waits for a gesture, arrow keys and Shift, narration identical
+to the panel, higher value always higher pitch on one scale, stereo pan, no-data click,
+tone stops on leaving the map, volume limit and compressor, M, S, ?, reference tones,
+Explain this sound, `touch-action: none`, no script errors, and a clear message for an
+unknown frame. Simulated events do not count as user gestures, so run Chrome with
+`--autoplay-policy=no-user-gesture-required`, or click the test page once as it starts:
+
+```sh
+"/Applications/Google Chrome.app/Contents/MacOS/Google Chrome" --autoplay-policy=no-user-gesture-required http://localhost:8000/tests/player-test.html
+```
+
+These tests check our code. They do not replace testing with real screen readers, real
+phones, and blind and low-vision people.
 
 ## How it works
 
@@ -42,18 +70,33 @@ Useful pages while building:
    (colour distance over `maxColorDistance`), or the colour is a known no-data colour
    (land, water) or the point is under a logo or date label, it reports **no data**.
 4. The matched legend entry gives an approximate value and a position `t` from 0 (lowest)
-   to 1 (highest). From step 5, `t` sets the pitch.
+   to 1 (highest). Pitch = 220 Hz × 4^t (220 to 880 Hz, the same for every frame);
+   stereo pan = −0.8 at the left edge to +0.8 at the right. No data = silence plus one click.
+
+## Sound settings
+
+All in `js/settings.js`, starting from the plan's values: 220–880 Hz exponential, sine
+wave (triangle for snow), pan ±0.8, volume starts at 30% with a hard cap on the master
+gain and a compressor, 30 ms ramps, 8-second scan, 1-second reference tones. None have
+been changed after user testing yet; record any change and the reason here.
 
 ## Files
 
 ```
 index.html  gallery.html  player.html  how-it-works.html  accessibility.html  credits.html
-decoder-test.html        decoder test page (step 4)
+decoder-test.html  audio-test.html  tests/player-test.html   team test pages
 css/styles.css           all styles; light and dark, high contrast
+js/settings.js           every sound setting in one place
 js/decoder.js            pixel colour -> legend value (the core)
+js/audio.js              Web Audio engine: one voice, ramps, pan, compressor, mute, click
+js/player.js             the Player: pointer, keyboard, scan, reference tones, Explain panel
+js/narrator.js           info panel and narration text (same strings), optional speech
+js/legend.js             draws legends, builds low/middle/high reference tones
+js/home.js               Home page sound check
 js/gallery.js            gallery cards from data/frames.json
 js/credits.js            credits from data/frames.json
 js/decoder-test.js       decoder test page
+js/audio-test.js         audio test page
 data/frames.json         one entry per frame: facts, legend table, no-data colours, masks
 frames/<id>/             self-hosted frame images and NASA colourbars
 tools/build_legends.py   rebuilds the legend tables from NASA's colourbars (needs Pillow)
@@ -69,7 +112,8 @@ docs/accuracy-check.md   ten-point checks and the comparison with real data
 `t` on each legend entry (position on the legend, used for pitch), `legendInfo`
 (units, range, legend step, display rounding), `masks` (logo and date boxes),
 labels on `noDataColors` (so the app can say "land" instead of just "no data"),
-`smoothRadius`, `transparent`, `dateNote` and `listenFor`.
+`smoothRadius`, `transparent`, `dateNote`, `listenFor` and `spokenName` (the short
+name used at the start of each narration line).
 
 To rebuild the legends after changing a colourbar measurement:
 
@@ -114,7 +158,11 @@ ERDDAP server (dataset `jplMURSST41`); it is not used by the website itself.
 - **Dates.** The air temperature (2023) and NDVI (June 2026) frames are the preview stills
   SVS publishes, not today's data. The SST image has no printed date.
 - **Time stepping.** SVS does not list the individual daily frames, so we do not yet have
-  several dates of one frame. Time stepping is not built.
+  several dates of one frame. The Player therefore shows no date controls, as the plan says
+  for frames without dated versions.
+- **Home page sound check.** Browsers start sound fresh on every page, so the Player has its
+  own Start audio button. Tapping the map or pressing a key on it also starts sound.
+- **Vibration** works only in browsers that support it (mostly Android); not on iPhone.
 - **Nothing has been tested with blind or low-vision users yet.**
 
 ## Credits

@@ -5,6 +5,7 @@
       "id": "sst",
       "title": "Sea Surface Temperature",
       "variable": "Sea surface temperature",
+      "spokenName": "Sea surface temperature",
       "units": "°C",
       "date": "Most recent frame on 2026-11-05",
       "dateNote": "The date is not printed on this image. SVS file sst_mur_no-dates_most_recent_print.jpg, last modified 2026-11-05 13:48 UTC, downloaded 2026-11-05.",
@@ -23,7 +24,7 @@
       "smoothRadius": 1,
       "maxColorDistance": 30,
       "transparent": null,
-      "noDataColors": [{"color": [103, 103, 103], "maxDistance": 30, "label": "Land, no sea temperature data"}],
+      "noDataColors": [{"color": [103, 103, 103], "maxDistance": 30, "label": "land, no sea temperature data"}],
       "masks": [],
       "legendInfo": {
         "kind": "continuous",
@@ -207,6 +208,7 @@
       "id": "t2m",
       "title": "Near-Surface Air Temperature",
       "variable": "Air temperature 3 m above the surface (GEOS-FP model)",
+      "spokenName": "Air temperature",
       "units": "°C",
       "date": "15 Aug 2023, 09:00 EDT",
       "dateNote": "Date and time as printed on the frame. This is the preview still on the SVS page, not today's forecast.",
@@ -412,6 +414,7 @@
       "id": "ndvi",
       "title": "Land Vegetation (NDVI)",
       "variable": "Vegetation index (NDVI), relative",
+      "spokenName": "Vegetation",
       "units": "relative, Low to High",
       "date": "13 Jun 2026",
       "dateNote": "Date as printed on the frame (SVS preview still).",
@@ -431,16 +434,16 @@
       "maxColorDistance": 30,
       "transparent": null,
       "noDataColors": [
-        {"color": [8, 123, 177], "maxDistance": 40, "label": "Water, no vegetation value"},
+        {"color": [8, 123, 177], "maxDistance": 40, "label": "water, no vegetation value"},
         {
           "color": [255, 255, 255],
           "maxDistance": 20,
-          "label": "Shown white, not on the legend (ice or snow here)"
+          "label": "shown white, not on the legend (ice or snow here)"
         },
         {
           "color": [255, 236, 232],
           "maxDistance": 12,
-          "label": "Shown pale pink, not on the legend (Antarctic ice here)"
+          "label": "shown pale pink, not on the legend (Antarctic ice here)"
         }
       ],
       "masks": [{"x": 0, "y": 461, "width": 172, "height": 51, "label": "date label"}],
@@ -566,6 +569,7 @@
       "id": "precip",
       "title": "Precipitation: Rain and Snow",
       "variable": "Precipitation rate, liquid and frozen (IMERG)",
+      "spokenName": "Precipitation",
       "units": "mm/hour",
       "date": "2026-11-05 09:30",
       "dateNote": "As printed on the SVS date overlay that comes with this frame (frames/precip/date-stamp.png). The time zone is not stated. Downloaded 2026-11-05.",
@@ -583,7 +587,7 @@
       "sourceFile": "https://svs.gsfc.nasa.gov/vis/a000000/a004200/a004285/imergert_alpha.now.png",
       "smoothRadius": 0,
       "maxColorDistance": 3,
-      "transparent": {"label": "No precipitation shown (below 0.1 mm/hour, or no data)"},
+      "transparent": {"label": "none shown, below 0.1 mm/hour or missing"},
       "noDataColors": [],
       "masks": [],
       "legendInfo": {
