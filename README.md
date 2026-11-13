@@ -124,6 +124,7 @@ tools/compare_sst_with_mur.py  checks decoded SST against the real MUR data
 tools/sources/           full-resolution colourbars used for measuring
 docs/legends.md          how every legend number was measured
 docs/accuracy-check.md   ten-point checks and the comparison with real data
+docs/LOG.md              project log: status board, your tasks, history
 ```
 
 `data/frames.json` follows the plan's format (`legend: [{color, value}]`,
