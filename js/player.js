@@ -12,6 +12,7 @@ import {
 } from './audio.js';
 import { drawLegend, referenceTones } from './legend.js';
 import { describeResult, speak, speechSupported, stopSpeaking } from './narrator.js';
+import { analyseFrame, describePattern, describeDifference } from './analysis.js';
 import { SETTINGS as S } from './settings.js';
 
 const $ = (id) => document.getElementById(id);
@@ -29,6 +30,11 @@ const els = {
   helpBtn: $('help-btn'), helpDialog: $('help-dialog'),
   legendCanvas: $('legend-canvas'), legendEnds: $('legend-ends'), colorbars: $('colorbars'),
   refButtons: $('ref-buttons'), live: $('live'),
+  summaryBtn: $('summary-btn'), highBtn: $('high-btn'), nextHighBtn: $('next-high-btn'), lowBtn: $('low-btn'),
+  summaryBox: $('summary-box'), summaryText: $('summary-text'),
+  markABtn: $('mark-a-btn'), markBBtn: $('mark-b-btn'), compareBtn: $('compare-btn'),
+  compareA: $('compare-a'), compareB: $('compare-b'), compareResult: $('compare-result'),
+  markerA: $('marker-a'), markerB: $('marker-b'),
 };
 
 let frame = null;          // { meta, width, height, data, bitmap }
@@ -87,16 +93,25 @@ function setLive(text) {
   els.live.textContent = same && !els.live.textContent.endsWith(' ') ? text + ' ' : text;
 }
 
-/** Announce a point's narration (only if narration / speech are switched on). */
-function announce(text) {
-  if (els.narrationToggle.checked) setLive(text);
+/**
+ * Every announcement goes through here: the same text is written to the info
+ * panel's "Last announcement" line and to the polite live region, so what a
+ * screen reader says always matches the panel exactly.
+ */
+function say(text, { always = false } = {}) {
+  els.narration.textContent = text;
+  if (always || els.narrationToggle.checked) setLive(text);
   if (els.speakToggle.checked) speak(text);
 }
 
-/** Announce a status change (muted, scan finished...). Always announced. */
+/** A point's narration (live region only if narration is switched on). */
+function announce(text) {
+  say(text);
+}
+
+/** A status change or a requested result (muted, summary, comparison). Always announced. */
 function announceStatus(text) {
-  setLive(text);
-  if (els.speakToggle.checked) speak(text);
+  say(text, { always: true });
 }
 
 // ---------------------------------------------------------------------------
@@ -136,8 +151,9 @@ function toggleMute() {
  *   announce  'now' | 'later' (after the pointer rests) | false
  *   hold      seconds the tone lasts (keyboard); omitted = until the pointer leaves
  *   force     play the no-data click even if we were already in no data
+ *   prefix    words before the narration, e.g. "Warmest ocean area, 1 of 5: "
  */
-function showPoint({ announce: when = false, hold, force = false } = {}) {
+function showPoint({ announce: when = false, hold, force = false, prefix = '', always = false } = {}) {
   if (!frame || !point) return;
   const r = decodeAt(frame, point.x, point.y);
   last = r;
@@ -147,11 +163,11 @@ function showPoint({ announce: when = false, hold, force = false } = {}) {
   els.cursor.style.left = ((point.x + 0.5) / frame.width) * 100 + '%';
   els.cursor.style.top = ((point.y + 0.5) / frame.height) * 100 + '%';
 
-  // Info panel and narration line: the same strings
+  // Info panel: the same strings the narration is built from. The
+  // "Last announcement" line changes only when something is announced.
   const d = describeResult(frame.meta, r);
   els.infoValue.textContent = d.value;
   els.infoPlace.textContent = d.place;
-  els.narration.textContent = d.narration;
   els.infoSwatch.replaceChildren();
   if (r.status === 'value') {
     els.infoSwatch.append(swatch(r.matchedColor), ' matched legend colour');
@@ -166,8 +182,9 @@ function showPoint({ announce: when = false, hold, force = false } = {}) {
   vibrate(r);
 
   clearTimeout(narrateTimer);
-  if (when === 'now') announce(d.narration);
-  else if (when === 'later') narrateTimer = setTimeout(() => announce(d.narration), S.narrationDelayMs);
+  const sentence = prefix + d.narration;
+  if (when === 'now') say(sentence, { always });
+  else if (when === 'later') narrateTimer = setTimeout(() => announce(sentence), S.narrationDelayMs);
 }
 
 /** Sound for one decode result: a tone for a value, silence plus one click for no data. */
@@ -317,6 +334,9 @@ document.addEventListener('keydown', (e) => {
   if (typing) return;
   if (e.key === 'm' || e.key === 'M') { e.preventDefault(); toggleMute(); }
   else if (e.key === 's' || e.key === 'S') { e.preventDefault(); toggleScan(); }
+  else if (e.key === 'a' || e.key === 'A') { e.preventDefault(); mark('A'); }
+  else if (e.key === 'b' || e.key === 'B') { e.preventDefault(); mark('B'); }
+  else if (e.key === 'c' || e.key === 'C') { e.preventDefault(); compare(); }
   else if (e.key === '?') { e.preventDefault(); els.helpDialog.showModal(); }
   else if (e.key === 'Escape') { stopScan(true); stopTone(); stopSpeaking(); }
 });
@@ -410,6 +430,135 @@ document.addEventListener('visibilitychange', () => {
 });
 
 // ---------------------------------------------------------------------------
+// Summary and "go to" the warmest / coolest areas
+// (all computed from decoded values in analysis.js)
+// ---------------------------------------------------------------------------
+
+let analysis = null;       // computed once per frame, on first use
+let highIndex = -1;        // which "warmest" area we are on, for Next warmest
+
+const cap = (s) => s.charAt(0).toUpperCase() + s.slice(1);
+
+function getAnalysis() {
+  if (!analysis) analysis = analyseFrame(frame);
+  return analysis;
+}
+
+/** Value and place of a point, in exactly the words the info panel uses. */
+function pointWords(p) {
+  const d = describeResult(frame.meta, decodeAt(frame, p.x, p.y));
+  return `${d.value}, ${d.place}`;
+}
+
+function buildSummary() {
+  const meta = frame.meta;
+  const T = meta.terms;
+  const A = getAnalysis();
+  // "Most recent frame on ..." reads better mid-sentence in lower case.
+  const date = /^[A-Z][a-z]/.test(meta.date) ? meta.date.charAt(0).toLowerCase() + meta.date.slice(1) : meta.date;
+  if (!A.high.length || !A.low.length) {
+    return `Summary of ${meta.title}, ${date}: there is not enough decoded data to find areas.`;
+  }
+  return [
+    `Summary of ${meta.title}, ${date}.`,
+    `${cap(T.high)} ${T.area}: ${pointWords(A.high[0].rep)}.`,
+    `${cap(T.low)} ${T.area}: ${pointWords(A.low[0].rep)}.`,
+    describePattern(meta, A.bands),
+    `Based on ${A.points.toLocaleString('en-US')} decoded points; values are approximate.`,
+  ].join(' ');
+}
+
+els.summaryBtn.addEventListener('click', () => {
+  if (!frame) return;
+  stopScan(false);
+  const text = buildSummary();
+  els.summaryText.textContent = text;
+  els.summaryBox.hidden = false;
+  announceStatus(text);
+});
+
+/** Move to the i-th warmest ('high') or coolest ('low') area and announce it. */
+async function goToArea(kind, i) {
+  if (!frame) return;
+  stopScan(false);
+  await ensureAudio();
+  const list = getAnalysis()[kind];
+  const T = frame.meta.terms;
+  if (!list.length) { announceStatus(`There is not enough decoded data to find the ${T[kind]} ${T.area}.`); return; }
+  const area = list[i % list.length];
+  point = { x: area.rep.x, y: area.rep.y };
+  const rank = list.length > 1 ? `, ${(i % list.length) + 1} of ${list.length}` : '';
+  showPoint({ announce: 'now', hold: S.referenceSeconds, prefix: `${cap(T[kind])} ${T.area}${rank}: `, always: true });
+}
+
+els.highBtn.addEventListener('click', () => { highIndex = 0; goToArea('high', 0); });
+els.nextHighBtn.addEventListener('click', () => { highIndex += 1; goToArea('high', highIndex); });
+els.lowBtn.addEventListener('click', () => goToArea('low', 0));
+
+// ---------------------------------------------------------------------------
+// Compare two points
+// ---------------------------------------------------------------------------
+
+const marks = { A: null, B: null };   // { result, words }
+let compareTimers = [];
+
+function placeMarker(el, r) {
+  el.hidden = false;
+  el.style.left = ((r.x + 0.5) / frame.width) * 100 + '%';
+  el.style.top = ((r.y + 0.5) / frame.height) * 100 + '%';
+}
+
+function mark(which) {
+  if (!frame || !point) return;
+  const r = decodeAt(frame, point.x, point.y);
+  const d = describeResult(frame.meta, r);
+  const words = `${d.value}, ${d.place}`;
+  marks[which] = { result: r, words };
+  const dd = which === 'A' ? els.compareA : els.compareB;
+  dd.replaceChildren();
+  if (r.status === 'value') dd.append(swatch(r.matchedColor), ' ');
+  dd.append(words);
+  placeMarker(which === 'A' ? els.markerA : els.markerB, r);
+  announceStatus(`Point ${which} marked: ${words}.`);
+}
+
+/** Play A's sound, then B's, then announce the difference. */
+async function compare() {
+  if (!frame) return;
+  if (!marks.A || !marks.B) { announceStatus('Mark point A and point B first.'); return; }
+  stopScan(false);
+  await ensureAudio();
+  compareTimers.forEach(clearTimeout);
+  const { A, B } = marks;
+  const play = (r) => {
+    if (!isStarted() || isMuted()) return;
+    if (r.status === 'value') playTone({ t: r.t, xFraction: xFraction(r.x), family: r.entry.family, holdSeconds: 0.8 });
+    else { stopTone(); playClick(xFraction(r.x)); }
+  };
+  lastStatus = null;
+  play(A.result);
+  compareTimers = [
+    setTimeout(() => play(B.result), 1100),
+    setTimeout(() => {
+      let ending;
+      if (A.result.status !== 'value' || B.result.status !== 'value') {
+        const which = A.result.status !== 'value' ? (B.result.status !== 'value' ? 'both points have' : 'point A has') : 'point B has';
+        ending = `They cannot be compared, because ${which} no data.`;
+      } else {
+        ending = describeDifference(frame.meta, A.result, B.result);
+      }
+      const text = `Compare. A: ${A.words}. B: ${B.words}. ${ending}`;
+      els.compareResult.textContent = text;
+      announceStatus(text);
+    }, 2100),
+  ];
+}
+
+els.markABtn.addEventListener('click', () => mark('A'));
+els.markBBtn.addEventListener('click', () => mark('B'));
+els.compareBtn.addEventListener('click', compare);
+
+// ---------------------------------------------------------------------------
 // Controls
 // ---------------------------------------------------------------------------
 
@@ -498,6 +647,10 @@ async function init() {
   els.infoDate.textContent = meta.date;
   buildLegendText(meta);
   buildReferenceButtons(meta);
+  // Button labels use the frame's own words (warmest / greenest / heaviest...).
+  els.highBtn.textContent = `Go to ${meta.terms.high}`;
+  els.nextHighBtn.textContent = `Next ${meta.terms.high}`;
+  els.lowBtn.textContent = `Go to ${meta.terms.low}`;
 
   els.status.textContent = 'Loading the frame…';
   try {
@@ -522,7 +675,17 @@ async function init() {
     moveTo(x, y) { point = { x, y }; showPoint({ announce: 'now' }); },
     getState: () => ({
       point: { ...point },
-      result: last && { status: last.status, t: last.t ?? null, text: last.text, reason: last.reason ?? null, x: last.x, y: last.y },
+      result: last && {
+        status: last.status, t: last.t ?? null, text: last.text, reason: last.reason ?? null,
+        x: last.x, y: last.y, lat: last.lat, lon: last.lon, value: last.entry ? last.entry.value : null,
+      },
+      summaryText: els.summaryBox.hidden ? null : els.summaryText.textContent,
+      compareText: els.compareResult.textContent,
+      areas: analysis && {
+        points: analysis.points,
+        high: analysis.high.map((c) => ({ x: c.rep.x, y: c.rep.y, t: c.rep.t, latC: c.latC, lonC: c.lonC, meanT: c.meanT })),
+        low: analysis.low.map((c) => ({ x: c.rep.x, y: c.rep.y, t: c.rep.t, latC: c.latC, lonC: c.lonC, meanT: c.meanT })),
+      },
       narrationLine: els.narration.textContent,
       infoValue: els.infoValue.textContent,
       infoPlace: els.infoPlace.textContent,

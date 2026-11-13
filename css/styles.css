@@ -286,3 +286,30 @@ dialog form { margin-top: 12px; }
 .hero-actions { display: flex; flex-wrap: wrap; gap: 12px; margin: 16px 0 8px; }
 a.big-button.secondary-link { background: transparent; color: var(--text); border: 2px solid var(--border); }
 button.big-button { border-radius: var(--radius); }
+
+/* Find and compare: right column holds info, find, controls; the legends
+   block spans the left column below the map. DOM order (and so Tab order)
+   stays frame, info, find, controls, legends. */
+.player-grid {
+  grid-template-areas:
+    "frame info"
+    "lower find"
+    "lower controls";
+}
+.area-lower { grid-area: lower; align-self: start; }
+.area-lower section + section { margin-top: 24px; }
+@media (max-width: 800px) {
+  .player-grid { grid-template-areas: "frame" "info" "find" "controls" "lower"; }
+}
+.area-find { grid-area: find; }
+.area-find h3 { font-size: 1.05rem; margin: 14px 0 4px; }
+.button-row { display: flex; flex-wrap: wrap; gap: 8px; margin: 8px 0; }
+.summary-box { border-left: 4px solid var(--accent); padding: 2px 0 2px 10px; margin: 8px 0; }
+.summary-box h3 { margin-top: 4px; }
+.compare-result { font-weight: 600; min-height: 1.5em; }
+.info-panel .label { margin: 0; text-transform: uppercase; letter-spacing: 0.04em; }
+.mark-pin {
+  position: absolute; width: 22px; height: 22px; margin: -11px 0 0 -11px;
+  border-radius: 50%; background: #fff; color: #000; border: 2px solid #000;
+  font: 700 13px/18px system-ui, sans-serif; text-align: center; pointer-events: none;
+}

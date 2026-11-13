@@ -6,6 +6,7 @@
       "title": "Sea Surface Temperature",
       "variable": "Sea surface temperature",
       "spokenName": "Sea surface temperature",
+      "terms": {"high": "warmest", "low": "coolest", "higher": "warmer", "lower": "cooler", "area": "ocean area"},
       "units": "°C",
       "date": "Most recent frame on 2026-11-05",
       "dateNote": "The date is not printed on this image. SVS file sst_mur_no-dates_most_recent_print.jpg, last modified 2026-11-05 13:48 UTC, downloaded 2026-11-05.",
@@ -209,6 +210,7 @@
       "title": "Near-Surface Air Temperature",
       "variable": "Air temperature 3 m above the surface (GEOS-FP model)",
       "spokenName": "Air temperature",
+      "terms": {"high": "warmest", "low": "coldest", "higher": "warmer", "lower": "colder", "area": "area"},
       "units": "°C",
       "date": "15 Aug 2023, 09:00 EDT",
       "dateNote": "Date and time as printed on the frame. This is the preview still on the SVS page, not today's forecast.",
@@ -415,6 +417,13 @@
       "title": "Land Vegetation (NDVI)",
       "variable": "Vegetation index (NDVI), relative",
       "spokenName": "Vegetation",
+      "terms": {
+        "high": "greenest",
+        "low": "least green",
+        "higher": "greener",
+        "lower": "less green",
+        "area": "land area"
+      },
       "units": "relative, Low to High",
       "date": "13 Jun 2026",
       "dateNote": "Date as printed on the frame (SVS preview still).",
@@ -570,6 +579,13 @@
       "title": "Precipitation: Rain and Snow",
       "variable": "Precipitation rate, liquid and frozen (IMERG)",
       "spokenName": "Precipitation",
+      "terms": {
+        "high": "heaviest",
+        "low": "lightest",
+        "higher": "heavier",
+        "lower": "lighter",
+        "area": "precipitation area"
+      },
       "units": "mm/hour",
       "date": "2026-11-05 09:30",
       "dateNote": "As printed on the SVS date overlay that comes with this frame (frames/precip/date-stamp.png). The time zone is not stated. Downloaded 2026-11-05.",

@@ -36,6 +36,8 @@
           <tr><td>Enter or Space</td><td>Play the current point again</td></tr>
           <tr><td>S</td><td>Start or stop the scan (left to right along the chosen row)</td></tr>
           <tr><td>M</td><td>Mute or unmute</td></tr>
+          <tr><td>A, B</td><td>Mark the current point as A or B</td></tr>
+          <tr><td>C</td><td>Compare A and B: plays both, then says the approximate difference</td></tr>
           <tr><td>Escape</td><td>Stop the sound</td></tr>
           <tr><td>?</td><td>Open keyboard help</td></tr>
           <tr><td>Tab</td><td>Leave the map and go to the controls</td></tr>
@@ -47,7 +49,8 @@
     <ul>
       <li>The map is an interactive region, so your screen reader passes the arrow keys to it. Press Tab to leave it.</li>
       <li>Each move is announced politely, without interrupting: the variable, the approximate value, and where you are, for example "Sea surface temperature: about 28 °C, near the equator, 3° S, 140° W."</li>
-      <li>The announcement uses exactly the same words as the panel on screen.</li>
+      <li>The announcement uses exactly the same words as the panel on screen ("Last announcement").</li>
+      <li>Under "Find and compare", the Summary button reads out the warmest and coolest areas and the pattern from the equator to the poles; the Go to buttons jump to those areas; Compare tells you the difference between two points you mark. All of it is worked out from the decoded colours.</li>
       <li>You can switch announcements off under Controls, and switch on "Speak narration aloud" if you are not using a screen reader.</li>
     </ul>
 
@@ -66,7 +69,7 @@
     <p>
       We have run automated tests in Chrome on macOS that use the Player with simulated keyboard and pointer input:
       arrow keys and Shift, the narration text matching the panel, mute, the volume limit, scan, reference tones,
-      and the "no data" sound. We have also checked the layout at phone width.
+      the "no data" sound, Summary, the Go to buttons, and Compare (keys A, B and C). We have also checked the layout at phone width.
     </p>
     <p>
       Not yet tested: real screen readers (VoiceOver, NVDA, JAWS, TalkBack), real phones, other browsers,

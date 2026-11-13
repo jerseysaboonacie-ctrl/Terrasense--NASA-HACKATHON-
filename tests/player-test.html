@@ -182,6 +182,81 @@
       record(id, 'Explain this sound shows the steps', !ex.hidden && ex.textContent.includes(hz + ' Hz'),
         ex.textContent.slice(0, 160).replace(/\s+/g, ' ') + '…');
 
+      // 10b. Summary, Go to warmest / Next warmest / Go to coolest, Compare
+      const meta = metas[id];
+      const T = meta.terms;
+      const cap = (x) => x.charAt(0).toUpperCase() + x.slice(1);
+      const matches = () => { const q = st(); return q.live.replace(/ $/, '') === q.narrationLine; };
+      const gridTs = values.map((v) => v.t).sort((p, q) => p - q);
+      const above = (t) => gridTs.filter((g) => g > t).length / gridTs.length;
+      const below = (t) => gridTs.filter((g) => g < t).length / gridTs.length;
+
+      doc.getElementById('summary-btn').click();
+      await wait(100);
+      s = st();
+      record(id, 'Summary is displayed and announced identically',
+        s.summaryText && s.summaryText === s.narrationLine && matches() &&
+        s.summaryText.includes(cap(T.high)) && s.summaryText.includes(cap(T.low)) && s.summaryText.includes('Pattern:'),
+        s.summaryText || 'no summary');
+
+      doc.getElementById('high-btn').click();
+      await wait(200);
+      s = st();
+      const top = s.areas.high[0];
+      const fTop = s.audio.frequency;
+      record(id, 'Go to warmest moves, plays and announces', s.point.x === top.x && s.point.y === top.y && s.audio.toneOn &&
+        Math.abs(fTop - freqFor(s.result.t)) < 0.5 && matches() && s.narrationLine.startsWith(`${cap(T.high)} ${T.area}`),
+        `"${s.narrationLine}" ${Math.round(fTop)} Hz (pixel x ${top.x}, y ${top.y})`);
+      record(id, 'Warmest point is high on independent grid', above(s.result.t) <= 0.1,
+        `"${s.result.text}": only ${Math.round(above(s.result.t) * 100)}% of ${gridTs.length} separate grid points decode higher`);
+      const firstLat = s.result.lat, firstLon = s.result.lon, firstT = s.areas.high[0].meanT;
+
+      doc.getElementById('next-high-btn').click();
+      await wait(200);
+      s = st();
+      const dLon = Math.min(Math.abs(s.result.lon - firstLon), 360 - Math.abs(s.result.lon - firstLon));
+      const far = Math.abs(s.result.lat - firstLat) >= 10 || dLon >= 10;
+      record(id, 'Next warmest goes to a different, less warm area', far && s.areas.high[1].meanT <= firstT && matches() &&
+        s.narrationLine.includes(`2 of ${s.areas.high.length}`), `"${s.narrationLine}"`);
+
+      doc.getElementById('low-btn').click();
+      await wait(200);
+      s = st();
+      record(id, 'Go to coolest moves, plays and announces', s.point.x === s.areas.low[0].x && s.audio.toneOn && matches() &&
+        s.narrationLine.startsWith(`${cap(T.low)} ${T.area}`), `"${s.narrationLine}" (pixel x ${s.areas.low[0].x}, y ${s.areas.low[0].y})`);
+      record(id, 'Coolest point is low on independent grid', below(s.result.t) <= 0.1,
+        `"${s.result.text}": only ${Math.round(below(s.result.t) * 100)}% of ${gridTs.length} separate grid points decode lower`);
+
+      // Compare: A = warmest, B = coolest, using the A / B / C keys
+      J.moveTo(top.x, top.y);
+      const vA = st().result.value, tA = st().result.t;
+      key(doc.body, 'a');
+      await wait(50);
+      const markedA = matches() && st().narrationLine.startsWith('Point A marked:');
+      J.moveTo(s.areas.low[0].x, s.areas.low[0].y);
+      const vB = st().result.value, tB = st().result.t;
+      key(doc.body, 'b');
+      await wait(50);
+      key(doc.body, 'c');
+      await wait(400);
+      const f1 = st().audio.frequency;
+      await wait(1100);
+      const f2 = st().audio.frequency;
+      await wait(900);
+      s = st();
+      const info = meta.legendInfo;
+      let expectText = 'B is';
+      if (info.kind === 'continuous' && info.scale !== 'relative') {
+        const shown = (v) => Math.round(v / info.displayStep) * info.displayStep;
+        const diff = Math.abs(shown(vB) - shown(vA));
+        expectText = `about ${diff} ${meta.units} ${vB > vA ? T.higher : T.lower} than A`;
+      }
+      record(id, 'Compare plays A then B', markedA && Math.abs(f1 - freqFor(tA)) < 0.5 && Math.abs(f2 - freqFor(tB)) < 0.5,
+        `A ${Math.round(f1)} Hz (expected ${Math.round(freqFor(tA))}), B ${Math.round(f2)} Hz (expected ${Math.round(freqFor(tB))})`);
+      record(id, 'Compare announces the difference, matching the panel',
+        matches() && s.compareText === s.narrationLine && s.compareText.includes(expectText),
+        `"${s.compareText}" (expected to contain "${expectText}"; values A ${vA}, B ${vB})`);
+
       // 11. Help dialog with ?
       key(doc.body, '?');
       const dlg = doc.getElementById('help-dialog');
@@ -201,7 +276,9 @@
       record('(bad id)', 'Unknown frame shows a clear message', /no frame called/i.test(msg), msg);
     }
 
-    const frames = (await (await fetch('../data/frames.json')).json()).frames.map((f) => f.id);
+    const allFrames = (await (await fetch('../data/frames.json', { cache: 'no-cache' })).json()).frames;
+    const metas = Object.fromEntries(allFrames.map((f) => [f.id, f]));
+    const frames = allFrames.map((f) => f.id);
     for (const id of frames) await testFrame(id);
     await testBadFrame();
 

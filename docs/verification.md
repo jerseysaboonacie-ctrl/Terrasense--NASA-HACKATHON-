@@ -1,9 +1,10 @@
 # Verification report
 
-The plan's verification prompt, run on 2026-11-06 against the code in this repository.
+The plan's verification prompt, run on 2026-11-06 against the code in this repository,
+and run again on 2026-11-13 after adding Summary, Go to and Compare (section 7).
 Each check is PASS, FAIL or NOT TESTED, with the evidence. "Simulated" means automated
 tests in headless Chrome on macOS using synthetic key and pointer events
-(`tests/player-test.html`, 77 checks, 0 failed; `decoder-test.html?auto=1`, 20 self-tests, 0 failed).
+(`tests/player-test.html`, 109 checks, 0 failed, on 2026-11-13; `decoder-test.html?auto=1`, 20 self-tests, 0 failed).
 
 ## Results
 
@@ -30,6 +31,25 @@ tests in headless Chrome on macOS using synthetic key and pointer events
 | 6.1 | Runs without console errors | PASS for the Player | Simulated: no script errors or unhandled rejections on the Player for all four frames. Home, Gallery, Credits, How it works, Accessibility and Audio test render fully with no error messages (headless DOM check). |
 | 6.2 | Broken links, missing files | PASS | Script check: every local `href` and `src` in all 9 HTML pages, and every image in `frames.json`, exists. |
 | 6.3 | API keys in the code | PASS | `git grep` for key, secret, token and password: none. The site uses no API keys. |
+
+## 7. Summary, Go to and Compare (added 2026-11-13)
+
+All computed in `js/analysis.js` from decoded values only; the wording ("warmest", "ocean area")
+is the only per-frame text, stored as `terms` in `frames.json`.
+
+| # | Check | Result | Evidence |
+|---|---|---|---|
+| 7.1 | Summary shown and announced with identical text | PASS (simulated, 4 frames) | Summary box text = "Last announcement" line = live region text. |
+| 7.2 | Warmest / coolest really are extreme (independent check) | PASS (simulated, 4 frames) | On a separate 32 × 16 grid, no point decodes higher than the "warmest" point and none lower than the "coolest" on SST and T2M; at most 6% lower on precipitation and 1% on NDVI (ties at the bottom of the legend). |
+| 7.3 | SST summary against real data (MUR 2026-11-04) | PASS | Warmest area point (28.3° N, 50.4° E, Persian Gulf): decoded about 32 °C, MUR 31.45 °C. Coolest (79.6° N, 140.4° E): decoded about −2 °C, MUR −1.8 °C. Pattern, on MUR's own 342-point ocean grid: highest MUR value 31.6 °C, lowest −1.8 °C; equator band (10° S–10° N) average 29.1 °C (app: about 30 °C); 80°–90° N average −1.8 °C (app: about −2 °C); 70°–80° S average −1.8 °C (app: about −2 °C). The app's "steadily fall toward both poles" agrees; its equator average is about 1 °C warmer than MUR's coarse grid. |
+| 7.4 | Go to warmest / Next warmest / Go to coolest move, play and announce | PASS (simulated, 4 frames) | Pointer moves to the area's point, the tone plays at 220 × 4^t Hz, the announcement starts "Warmest ocean area, 1 of 5:" (frame's own words) and matches the panel; Next goes to an area at least 10° away with a lower area average. |
+| 7.5 | Compare plays A then B and announces the difference | PASS (simulated, 4 frames) | Tone A at 0.4 s and tone B at 1.5 s match their expected frequencies; e.g. SST: "B is about 34 °C cooler than A" for about 32 °C and about −2 °C. The difference uses the rounded values that are announced, so the numbers add up; a legend end gives "at least" (T2M: "at least about 79 °C colder"); precipitation gives a range from the class edges. |
+| 7.6 | All announcements through the polite live region, matching the panel | PASS (simulated) | Every announcement is written by one function to both the panel's "Last announcement" line and the `aria-live="polite"` region; checked after every action above. |
+
+Known limits of these features: an "area" is a 5° box, so a small warm sea (the Persian Gulf, the
+Red Sea) can rank as the warmest area; the summary says "ocean area" from the frame's wording, and
+the decoded value is approximate like every other value. On the precipitation frame, rain and snow
+classes are ranked by legend position together.
 
 ## Could not verify
 

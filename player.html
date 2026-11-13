@@ -47,6 +47,8 @@
              aria-roledescription="map" aria-describedby="frame-help">
           <canvas id="frame-canvas" aria-hidden="true"></canvas>
           <div id="cursor" class="cursor" hidden></div>
+          <div id="marker-a" class="mark-pin" hidden aria-hidden="true">A</div>
+          <div id="marker-b" class="mark-pin" hidden aria-hidden="true">B</div>
         </div>
         <p id="frame-help" class="muted">
           Drag, move the mouse, or use the arrow keys (Shift + arrow moves faster).
@@ -57,6 +59,7 @@
       <!-- Info panel: what is under the pointer -->
       <section class="area-info info-panel" aria-labelledby="info-heading">
         <h2 id="info-heading">Under the pointer</h2>
+        <p class="muted small label">Last announcement</p>
         <p id="narration-line" class="narration">Move over the map to hear and read a value.</p>
         <dl class="info-list">
           <dt>Variable</dt><dd id="info-variable"></dd>
@@ -70,6 +73,34 @@
         <div id="explain" class="explain" hidden>
           <ol id="explain-steps"></ol>
         </div>
+      </section>
+
+      <!-- Find and compare: summary, extremes, two-point comparison -->
+      <section class="area-find controls" aria-labelledby="find-heading">
+        <h2 id="find-heading">Find and compare</h2>
+        <div class="button-row">
+          <button id="summary-btn" type="button">Summary</button>
+          <button id="high-btn" type="button" class="secondary">Go to warmest</button>
+          <button id="next-high-btn" type="button" class="secondary">Next warmest</button>
+          <button id="low-btn" type="button" class="secondary">Go to coolest</button>
+        </div>
+        <div id="summary-box" class="summary-box" hidden>
+          <h3>Summary</h3>
+          <p id="summary-text"></p>
+        </div>
+
+        <h3>Compare two points</h3>
+        <p class="muted small">Move to a point and mark it A, move to another and mark it B, then compare. Keys: A, B, C.</p>
+        <div class="button-row">
+          <button id="mark-a-btn" type="button" class="secondary">Mark A</button>
+          <button id="mark-b-btn" type="button" class="secondary">Mark B</button>
+          <button id="compare-btn" type="button">Compare A and B</button>
+        </div>
+        <dl class="info-list compare-list">
+          <dt>A</dt><dd id="compare-a">not marked</dd>
+          <dt>B</dt><dd id="compare-b">not marked</dd>
+        </dl>
+        <p id="compare-result" class="compare-result"></p>
       </section>
 
       <!-- Controls -->
@@ -92,6 +123,8 @@
         <p><button id="help-btn" type="button" class="secondary">Keyboard help</button></p>
       </section>
 
+      <!-- Legends (left column on a laptop, last on a phone) -->
+      <div class="area-lower">
       <!-- Colour legend -->
       <section class="area-legend" aria-labelledby="legend-heading">
         <h2 id="legend-heading">Colour legend</h2>
@@ -106,6 +139,7 @@
         <p class="muted">Play the reference tones to tune your ear before exploring. Higher values play higher notes.</p>
         <div id="ref-buttons" class="ref-buttons"></div>
       </section>
+      </div>
     </div>
 
     <!-- Narration for screen readers. Polite, so it never interrupts. -->
@@ -121,6 +155,8 @@
           <tr><td>Enter or Space</td><td>Play the current point again</td></tr>
           <tr><td>S</td><td>Start or stop the scan</td></tr>
           <tr><td>M</td><td>Mute or unmute</td></tr>
+          <tr><td>A, B</td><td>Mark the current point as A or B</td></tr>
+          <tr><td>C</td><td>Compare A and B (plays both, then says the difference)</td></tr>
           <tr><td>Escape</td><td>Stop the sound</td></tr>
           <tr><td>?</td><td>Open this help</td></tr>
           <tr><td>Tab</td><td>Leave the map and go to the controls</td></tr>

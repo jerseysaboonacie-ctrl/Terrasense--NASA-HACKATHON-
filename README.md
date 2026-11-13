@@ -23,6 +23,24 @@ offered because none of our frames has dated versions yet; see Known limitations
 | 9. Scan (row and overview) | Done. Time stepping: not applicable yet |
 | 10. Pages, README, verification | Done ([docs/verification.md](docs/verification.md)) |
 
+## Find and compare (Player)
+
+- **Summary** reads out and shows the warmest and coolest areas (with approximate value and
+  latitude/longitude) and the pattern from the equator to the poles.
+- **Go to warmest / Next warmest / Go to coolest** move the pointer to those areas, play the
+  tone and announce them. Labels follow the frame: greenest for NDVI, heaviest for precipitation.
+- **Compare**: mark point A and point B (buttons or keys A, B), then Compare (key C) plays both
+  tones in order and announces the approximate difference in the frame's units.
+
+How it is computed (`js/analysis.js`): the frame is decoded on a grid of about 512 × 256 points.
+Points are grouped into 5° × 5° areas; an area counts if at least 25% of its points have a value.
+Areas are ranked by their average legend position; each is represented by its most typical point
+(the one closest to the area average), and "next" areas must be at least 15° away. The
+equator-to-pole pattern compares 10° latitude bands (average value; for precipitation, the share
+of the area with precipitation). Differences are computed from the rounded values that are
+announced, so the spoken numbers add up; a value at the end of a legend makes the difference
+"at least". Wording only ("warmest", "ocean area") is stored per frame in `frames.json` as `terms`.
+
 ## Run it
 
 No build step and no internet needed once the files are on your computer.
@@ -43,7 +61,7 @@ Pages for the team (not linked from the site menu):
 - `decoder-test.html?frame=t2m&fill=1`: open a frame with the ten-point table filled in
 - `decoder-test.html?auto=1`: run every frame's decoder self-tests and print the results as JSON
 - `audio-test.html`: a slider that plays the tone for any value in a legend range
-- `tests/player-test.html`: 77 automated checks of the Player (see below)
+- `tests/player-test.html`: 109 automated checks of the Player (see below)
 
 ## Tests
 
@@ -51,8 +69,8 @@ Pages for the team (not linked from the site menu):
 key and pointer events: audio waits for a gesture, arrow keys and Shift, narration identical
 to the panel, higher value always higher pitch on one scale, stereo pan, no-data click,
 tone stops on leaving the map, volume limit and compressor, M, S, ?, reference tones,
-Explain this sound, `touch-action: none`, no script errors, and a clear message for an
-unknown frame. Simulated events do not count as user gestures, so run Chrome with
+Explain this sound, Summary, Go to warmest / Next warmest / Go to coolest, Compare,
+`touch-action: none`, no script errors, and a clear message for an unknown frame. Simulated events do not count as user gestures, so run Chrome with
 `--autoplay-policy=no-user-gesture-required`, or click the test page once as it starts:
 
 ```sh
@@ -91,6 +109,7 @@ js/decoder.js            pixel colour -> legend value (the core)
 js/audio.js              Web Audio engine: one voice, ramps, pan, compressor, mute, click
 js/player.js             the Player: pointer, keyboard, scan, reference tones, Explain panel
 js/narrator.js           info panel and narration text (same strings), optional speech
+js/analysis.js           whole-frame facts from decoded values: areas, pattern, differences
 js/legend.js             draws legends, builds low/middle/high reference tones
 js/home.js               Home page sound check
 js/gallery.js            gallery cards from data/frames.json
@@ -112,8 +131,8 @@ docs/accuracy-check.md   ten-point checks and the comparison with real data
 `t` on each legend entry (position on the legend, used for pitch), `legendInfo`
 (units, range, legend step, display rounding), `masks` (logo and date boxes),
 labels on `noDataColors` (so the app can say "land" instead of just "no data"),
-`smoothRadius`, `transparent`, `dateNote`, `listenFor` and `spokenName` (the short
-name used at the start of each narration line).
+`smoothRadius`, `transparent`, `dateNote`, `listenFor`, `spokenName` (the short
+name used at the start of each narration line) and `terms` (words such as "warmest").
 
 To rebuild the legends after changing a colourbar measurement:
 
