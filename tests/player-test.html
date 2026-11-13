@@ -272,14 +272,162 @@
 
     async function testBadFrame() {
       const w = await load('../player.html?frame=does-not-exist');
-      const msg = w.document.getElementById('status').textContent;
-      record('(bad id)', 'Unknown frame shows a clear message', /no frame called/i.test(msg), msg);
+      for (let i = 0; i < 30 && !w.document.getElementById('alert').textContent; i++) await wait(100);
+      const al = w.document.getElementById('alert');
+      record('(bad id)', 'Unknown frame: clear message in the alert region', /no frame called/i.test(al.textContent) && al.getAttribute('role') === 'alert',
+        `role="${al.getAttribute('role')}": ${al.textContent}`);
+    }
+
+    // Navigation for blind users: voice mode, reading order, detail, edges,
+    // Where am I, tour, volume keys, settings remembered, opening message.
+    async function testNavigation(id) {
+      const w = await load('../player.html?frame=' + id);
+      const doc = w.document, J = w.__jukebox;
+      if (!J) { record(id, 'Navigation: Player loads', false, 'not ready'); return; }
+      const st = () => J.getState();
+      const wrap = doc.getElementById('frame-wrap');
+      const [W, H] = J.size();
+      const meta = metas[id];
+      const clean = (t) => t.replace(/ $/, '');
+
+      // Opening message
+      for (let i = 0; i < 20 && !st().narrationLine.startsWith('Player ready'); i++) await wait(100);
+      record(id, 'Opening message announced', clean(st().live) === st().narrationLine && st().narrationLine.startsWith(`Player ready: ${meta.title}.`),
+        `"${st().narrationLine}"`);
+
+      // Reading order: Start here (voice, tour, summary) comes before the map
+      const order = (a, b) => Boolean(a.compareDocumentPosition(b) & w.Node.DOCUMENT_POSITION_FOLLOWING);
+      const fs = doc.querySelector('fieldset.voice-mode');
+      record(id, 'Reading order: voice, tour and summary before the map',
+        order(doc.getElementById('frame-title'), fs) && order(fs, doc.getElementById('tour-btn')) &&
+        order(doc.getElementById('summary-btn'), wrap) && order(wrap, doc.getElementById('info-heading')),
+        [...doc.querySelectorAll('main h1, main h2')].map((h) => h.textContent).join(' > '));
+
+      // Every control has a name
+      const unnamed = [...doc.querySelectorAll('main button, main select, main input')].filter((c) => {
+        if (c.closest('[hidden]')) return false;
+        if (c.tagName === 'BUTTON') return !c.textContent.trim() && !c.getAttribute('aria-label');
+        return !(c.labels && c.labels.length) && !c.getAttribute('aria-label');
+      });
+      record(id, 'Every button, menu and input has a name', unnamed.length === 0, unnamed.map((c) => c.id || c.tagName).join(', ') || 'all named');
+
+      // Frame menu
+      const fsel = doc.getElementById('frame-select');
+      record(id, 'Frame menu lists every frame, current selected', fsel.options.length === allFrames.length && fsel.value === id,
+        [...fsel.options].map((o) => o.textContent).join(' | '));
+
+      // Voice mode: exactly one channel per announcement
+      let spoken = [];
+      w.speechSynthesis.speak = (u) => spoken.push(u.text);
+      w.speechSynthesis.cancel = () => {};
+      record(id, 'Voice mode defaults to screen reader', st().prefs.voiceMode === 'screenreader' && doc.querySelector('input[value="screenreader"]').checked,
+        'voiceMode = ' + st().prefs.voiceMode);
+      J.moveTo(Math.floor(W / 2), Math.floor(H / 3));
+      record(id, 'Screen reader mode: live region, no built-in voice', clean(st().live) === st().narrationLine && spoken.length === 0,
+        `live "${clean(st().live).slice(0, 60)}…", spoken ${spoken.length}`);
+      const pick = (v) => { const r = doc.querySelector(`input[name="voice-mode"][value="${v}"]`); r.click(); };
+      pick('voice');
+      spoken = []; doc.getElementById('live').textContent = '';
+      J.moveTo(Math.floor(W / 3), Math.floor(H / 3));
+      record(id, 'Built-in voice mode: spoken, live region silent', spoken.length === 1 && spoken[0] === st().narrationLine && st().live === '',
+        `spoken: "${(spoken[0] || '').slice(0, 60)}…", live "${st().live}"`);
+      pick('off');
+      spoken = [];
+      J.moveTo(Math.floor(W / 4), Math.floor(H / 3));
+      record(id, 'Off mode: panel only, nothing spoken or live', spoken.length === 0 && st().live === '' && st().narrationLine.length > 0,
+        `panel "${st().narrationLine.slice(0, 50)}…"`);
+      pick('screenreader');
+
+      // Find a point with a value for the detail checks
+      let vx = Math.floor(W / 2), vy = Math.floor(H / 2);
+      outer: for (let j = 1; j < 16; j++) for (let i = 1; i < 32; i++) {
+        J.moveTo(Math.floor((i * W) / 32), Math.floor((j * H) / 16));
+        if (st().result.status === 'value') { vx = st().point.x; vy = st().point.y; break outer; }
+      }
+      const dsel = doc.getElementById('detail-select');
+      dsel.value = 'short'; dsel.dispatchEvent(new Event('change'));
+      J.moveTo(vx, vy);
+      record(id, 'Detail short: value only', st().narrationLine === st().infoValue + '.', `"${st().narrationLine}"`);
+      dsel.value = 'full'; dsel.dispatchEvent(new Event('change'));
+      J.moveTo(vx, vy);
+      record(id, 'Detail full: adds legend position', st().narrationLine.includes(st().infoPlace) && /\d+ percent of the way up the legend\.$/.test(st().narrationLine),
+        `"${st().narrationLine}"`);
+      dsel.value = 'normal'; dsel.dispatchEvent(new Event('change'));
+
+      // Edges: arrow key at the edge says so and bumps
+      wrap.focus();
+      key(wrap, 'ArrowRight'); await wait(150); // starts audio
+      J.moveTo(0, Math.floor(H / 2));
+      const e0 = st().audio.cues.edge || 0;
+      key(wrap, 'ArrowLeft'); await wait(100);
+      const atLeft = st();
+      J.moveTo(Math.floor(W / 2), 0);
+      key(wrap, 'ArrowUp'); await wait(100);
+      const atTop = st();
+      key(wrap, 'ArrowDown'); await wait(100);
+      record(id, 'Edge of the map announced with a bump',
+        atLeft.narrationLine.startsWith('Edge of the map, left side, west.') && atTop.narrationLine.startsWith('Edge of the map, top, far north.') &&
+        (atTop.audio.cues.edge || 0) === e0 + 2 && !st().narrationLine.startsWith('Edge'),
+        `"${atLeft.narrationLine.slice(0, 70)}…"; bumps ${e0} → ${atTop.audio.cues.edge}; moving away: "${st().narrationLine.slice(0, 40)}…"`);
+
+      // Where am I
+      J.moveTo(vx, vy);
+      key(doc.body, 'w'); await wait(100);
+      record(id, 'W: Where am I, in full, with the tone', st().narrationLine.startsWith('You are here. ') &&
+        st().narrationLine.includes('percent of the way up') && st().audio.toneOn && clean(st().live) === st().narrationLine,
+        `"${st().narrationLine}"`);
+
+      // Volume keys
+      key(doc.body, '+'); await wait(50);
+      const vol = doc.getElementById('volume');
+      const up = st();
+      key(doc.body, '-'); await wait(50);
+      record(id, 'Plus and minus change the volume and say it', up.prefs.volume === 40 && up.narrationLine === 'Volume 40 percent.' &&
+        st().prefs.volume === 30 && vol.getAttribute('aria-valuetext') === '30 percent' && st().audio.masterTarget <= S.maxGain,
+        `+ → ${up.prefs.volume}% "${up.narrationLine}"; - → ${st().prefs.volume}%, valuetext "${vol.getAttribute('aria-valuetext')}"`);
+
+      // Mouse moves are silent for the screen reader by default
+      const beforeMove = st().narrationLine;
+      wrap.dispatchEvent(new w.PointerEvent('pointermove', { pointerType: 'mouse', clientX: wrap.getBoundingClientRect().left + 30, clientY: wrap.getBoundingClientRect().top + 30, bubbles: true }));
+      await wait(S.narrationDelayMs + 200);
+      record(id, 'Mouse movement not announced by default', st().narrationLine === beforeMove && st().prefs.announceMoving === false,
+        `still "${st().narrationLine.slice(0, 40)}…"`);
+
+      // Tour
+      key(doc.body, 't'); await wait(100);
+      const t1 = st();
+      key(doc.body, 't'); await wait(50);
+      key(doc.body, 't'); await wait(450);
+      const t3 = st();
+      const refs = [...doc.querySelectorAll('#ref-buttons button')].map((b) => b.textContent);
+      key(doc.body, 'Escape'); await wait(50);
+      const tourBtn = doc.getElementById('tour-btn').textContent;
+      record(id, 'T starts the tour, steps forward, Escape stops it',
+        t1.tourStep === 0 && t1.narrationLine.startsWith('Tour, step 1 of 6.') && t1.narrationLine.includes(meta.title) &&
+        t3.tourStep === 2 && t3.narrationLine.startsWith('Tour, step 3 of 6, the sound.') &&
+        st().tourStep === null && st().narrationLine === 'Tour stopped.' && tourBtn === 'Tour (T)',
+        `step 1: "${t1.narrationLine.slice(0, 70)}…"; step 3: "${t3.narrationLine.slice(0, 60)}…"`);
+      record(id, 'Tour step 3 plays the low tone', t3.audio.toneOn && Math.abs(t3.audio.frequency - freqFor(0)) < 30,
+        `${Math.round(t3.audio.frequency)} Hz at 0.45 s; reference buttons: ${refs.join(' | ')}`);
+
+      // Settings remembered after a reload, then Reset
+      dsel.value = 'full'; dsel.dispatchEvent(new Event('change'));
+      const w2 = await load('../player.html?frame=' + id);
+      const s2 = w2.__jukebox.getState();
+      record(id, 'Settings remembered after reload', s2.prefs.detail === 'full' && w2.document.getElementById('detail-select').value === 'full',
+        'detail = ' + s2.prefs.detail);
+      w2.document.getElementById('reset-btn').click();
+      const s3 = w2.__jukebox.getState();
+      record(id, 'Reset settings restores the defaults', s3.prefs.detail === 'normal' && s3.prefs.voiceMode === 'screenreader' &&
+        s3.prefs.volume === 30 && s3.narrationLine.startsWith('Settings reset'), `"${s3.narrationLine}"`);
+      record(id, 'Navigation: no script errors', w.__errors.length === 0 && w2.__errors.length === 0, [...w.__errors, ...w2.__errors].join(' | ') || 'none');
     }
 
     const allFrames = (await (await fetch('../data/frames.json', { cache: 'no-cache' })).json()).frames;
     const metas = Object.fromEntries(allFrames.map((f) => [f.id, f]));
     const frames = allFrames.map((f) => f.id);
     for (const id of frames) await testFrame(id);
+    for (const id of frames) await testNavigation(id);
     await testBadFrame();
 
     const failed = results.filter((r) => !r.pass).length;

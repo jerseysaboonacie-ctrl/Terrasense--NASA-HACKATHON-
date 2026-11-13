@@ -23,6 +23,26 @@ offered because none of our frames has dated versions yet; see Known limitations
 | 9. Scan (row and overview) | Done. Time stepping: not applicable yet |
 | 10. Pages, README, verification | Done ([docs/verification.md](docs/verification.md)) |
 
+## Navigating without sight (Player)
+
+- **Start here** is the first section after the title, before the map: the Voice switch, Tour (T),
+  Summary, Where am I? (W) and a menu to change frame.
+- **Voice** has three modes, and only one voice is ever used: Screen reader (polite live region),
+  Built-in voice (the browser's speech, no live region), Off (text on screen only).
+- **How much to say**: Short (value only), Normal (variable, value, place), Full (also the legend position).
+  Go to and Where am I always say the place.
+- **Edges**: an arrow key at the edge of the map says "Edge of the map, left side, west" and plays a low bump.
+- **Volume keys**: minus and plus, with the new level announced. The slider reads "30 percent".
+- **Errors** go to a `role="alert"` region with a short falling tone.
+- **Mouse movement** plays sound but is not announced unless "Read the value when the mouse stops moving"
+  is on; on touch screens the value is read when the finger lifts.
+- **Opening message** ("Player ready: …") once the frame has loaded, skipped if you have already started.
+- **Settings are remembered** in this browser (`js/prefs.js`, `localStorage`, safe if storage is blocked);
+  Reset settings restores the defaults.
+- **Tour**: six short steps (what the frame is, the layout, the sound with low/middle/high tones,
+  exploring, finding, settings). T goes forward, Escape stops. The layout text is built from
+  `frames.json` (projection, no-data labels, masks), not written per frame.
+
 ## Find and compare (Player)
 
 - **Summary** reads out and shows the warmest and coolest areas (with approximate value and
@@ -61,7 +81,8 @@ Pages for the team (not linked from the site menu):
 - `decoder-test.html?frame=t2m&fill=1`: open a frame with the ten-point table filled in
 - `decoder-test.html?auto=1`: run every frame's decoder self-tests and print the results as JSON
 - `audio-test.html`: a slider that plays the tone for any value in a legend range
-- `tests/player-test.html`: 109 automated checks of the Player (see below)
+- `tests/player-test.html`: automated checks of the Player (see below)
+- `tests/pages-test.html`: structure and accessibility checks of all six pages
 
 ## Tests
 
@@ -104,7 +125,8 @@ been changed after user testing yet; record any change and the reason here.
 index.html  gallery.html  player.html  how-it-works.html  accessibility.html  credits.html
 decoder-test.html  audio-test.html  tests/player-test.html   team test pages
 css/styles.css           all styles; light and dark, high contrast
-js/settings.js           every sound setting in one place
+js/settings.js           every sound setting in one place (including the sound cues)
+js/prefs.js              the listener's settings, remembered in this browser
 js/decoder.js            pixel colour -> legend value (the core)
 js/audio.js              Web Audio engine: one voice, ramps, pan, compressor, mute, click
 js/player.js             the Player: pointer, keyboard, scan, reference tones, Explain panel

@@ -7,7 +7,49 @@ same format (newest first under **History**) and tick your tasks in **Your tasks
 Status words: **Done** (built and tested), **Partly done** (some of it exists, see notes),
 **Not started**, **Yours** (only a person can do it).
 
-Last updated: 2026-11-13, after the upgrade plan was received.
+Last updated: 2026-11-13 22:08 (+07), during the work session.
+
+---
+
+## Heartbeat (current work session)
+
+Live progress for the current task, newest at the bottom. Times are the laptop's clock (+07).
+Each phase has an estimate; the heartbeat says when it actually started and finished.
+
+**Task (2026-11-13, from you):** make sure every feature works as expected and that the site is
+easy to navigate for a blind person.
+
+| Phase | What | Estimate | Status |
+|---|---|---|---|
+| 1 | Audit: run all automated tests, check every page for headings, landmarks, labels, focus order and live regions; list problems | 20 min | Done (21:08 to 21:10) |
+| 2 | Player navigation for blind users: Voice mode switch, reading order, opening message, Where am I, edges, volume announcements, error announcements, settings remembered | 60 min | Done (21:10 to 22:08) |
+| 3 | Tour (T key) and "how this map is laid out" message | 30 min | Code written, testing |
+| 4 | Tests for everything new, re-run all tests, fix failures | 30 min | In progress |
+| 5 | Update docs, this log, commit | 15 min | Waiting |
+
+Total estimate: about 2.5 hours, finishing around 23:45.
+
+- 21:08: Started. Plan and estimates written above.
+- 21:10: Phase 1 done. Baseline: 109 of 109 Player checks pass, 20 of 20 decoder self-tests pass.
+  Every page has one h1, a main landmark, a skip link and labelled navigation. Problems found
+  for a blind user, all on the Player:
+  1. Two narration checkboxes can both be on, so a screen reader and the built-in voice talk at once.
+  2. The map comes first; the Summary and voice settings are far down the page.
+  3. Nothing tells you the page is ready or how the map is laid out.
+  4. No way to ask "where am I?" without moving.
+  5. At the map edge the arrow keys silently stop; you can't tell you hit the edge.
+  6. Volume changes are read as a bare number; no volume keys while on the map.
+  7. Errors (frame failed to load, sound failed) go to a polite status, not an alert.
+  8. Moving the mouse announces after every 0.6 s pause (the plan wants this off by default); lifting a finger after a drag says nothing.
+  9. Settings are forgotten on reload; no Reset.
+  10. No way to change frame without going back to the gallery.
+  11. No guided tour.
+  Phase 2 started.
+- 22:08: Phase 2 code written: Voice mode switch (Screen reader / Built-in voice / Off, only one voice at a time),
+  "Start here" section before the map, opening message, Where am I (W), edge announcement with a bump,
+  volume keys (minus, plus) that say the level, errors in an alert region with an error tone, detail levels,
+  mouse movement not announced by default (touch reads the value when the finger lifts), frame menu,
+  settings remembered with a Reset button. Tour (T) also written (phase 3, started early). Writing tests (phase 4).
 
 ---
 

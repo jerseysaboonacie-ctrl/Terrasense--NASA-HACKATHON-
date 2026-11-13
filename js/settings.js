@@ -28,6 +28,17 @@ export const SETTINGS = {
   // No data: silence plus one short, soft click.
   click: { frequency: 1400, seconds: 0.015, level: 0.25 },
 
+  // Sound cues (short, soft, below the tone level; they obey mute and the cap).
+  //   edge:  a low bump when the arrow keys reach the edge of the map
+  //   error: two falling notes when something fails
+  cues: {
+    edge: { notes: [{ frequency: 140, seconds: 0.09, level: 0.5, type: 'triangle' }] },
+    error: { notes: [
+      { frequency: 330, seconds: 0.12, level: 0.3, type: 'triangle' },
+      { frequency: 247, seconds: 0.16, level: 0.3, type: 'triangle', delay: 0.15 },
+    ] },
+  },
+
   // Timing.
   scanSeconds: 8,           // one sweep across the frame
   referenceSeconds: 1,      // low / middle / high reference tones

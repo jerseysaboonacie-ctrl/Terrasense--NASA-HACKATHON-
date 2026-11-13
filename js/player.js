@@ -8,24 +8,28 @@
 import { loadFrameList, loadFrame, decodeAt } from './decoder.js';
 import {
   startAudio, isStarted, audioSupported, playTone, stopTone, playClick,
-  setVolume, setMuted, isMuted, frequencyFor, panFor, waveformFor, audioState,
+  setVolume, setMuted, isMuted, frequencyFor, panFor, waveformFor, audioState, playCue,
 } from './audio.js';
 import { drawLegend, referenceTones } from './legend.js';
-import { describeResult, speak, speechSupported, stopSpeaking } from './narrator.js';
+import { describeResult, describeLayout, speak, speechSupported, stopSpeaking } from './narrator.js';
 import { analyseFrame, describePattern, describeDifference } from './analysis.js';
 import { SETTINGS as S } from './settings.js';
+import { loadPrefs, savePrefs, clearPrefs, DEFAULTS } from './prefs.js';
 
 const $ = (id) => document.getElementById(id);
 const els = {
   title: $('frame-title'), date: $('frame-date'), startBtn: $('start-btn'), muteBtn: $('mute-btn'),
-  audioMsg: $('audio-msg'), status: $('status'),
+  audioMsg: $('audio-msg'), status: $('status'), alert: $('alert'),
+  intro: $('intro'), layoutText: $('layout-text'), tourBtn: $('tour-btn'), whereBtn: $('where-btn'),
+  frameSelect: $('frame-select'), voiceRadios: [...document.querySelectorAll('input[name="voice-mode"]')],
+  detailSelect: $('detail-select'), rateSelect: $('rate-select'), rateRow: $('rate-row'),
+  movingToggle: $('moving-toggle'), cuesToggle: $('cues-toggle'), resetBtn: $('reset-btn'),
   wrap: $('frame-wrap'), canvas: $('frame-canvas'), cursor: $('cursor'),
   narration: $('narration-line'), infoVariable: $('info-variable'), infoValue: $('info-value'),
   infoPlace: $('info-place'), infoDate: $('info-date'), infoSwatch: $('info-swatch'),
   explainBtn: $('explain-btn'), explain: $('explain'), explainSteps: $('explain-steps'),
   scanBtn: $('scan-btn'), rowSelect: $('row-select'), overview: $('overview-toggle'),
   volume: $('volume'), volumeOut: $('volume-out'),
-  narrationToggle: $('narration-toggle'), speakToggle: $('speak-toggle'),
   vibrateLabel: $('vibrate-label'), vibrateToggle: $('vibrate-toggle'),
   helpBtn: $('help-btn'), helpDialog: $('help-dialog'),
   legendCanvas: $('legend-canvas'), legendEnds: $('legend-ends'), colorbars: $('colorbars'),
@@ -45,6 +49,8 @@ let wasAboveThreshold = false;
 let narrateTimer = null;
 let scan = null;           // running scan: { start, row, overview, raf, lastNull }
 let overviewCache = null;  // average legend position per column, for overview scans
+let prefs = loadPrefs();   // voice mode, detail, speed, volume... (prefs.js)
+let dragMoved = false;     // a touch or pen drag moved since it started
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -66,9 +72,16 @@ function swatch(rgb) {
   return s;
 }
 
+/**
+ * An error: shown on screen and read at once (assertive role="alert"), with
+ * an error tone. In built-in voice mode it is spoken instead, so a screen
+ * reader and the voice never talk at the same time.
+ */
 function showError(message) {
-  els.status.className = 'error';
-  els.status.textContent = message;
+  els.status.textContent = '';
+  els.alert.textContent = message;
+  if (prefs.soundCues) playCue('error');
+  if (prefs.voiceMode === 'voice') speak(message, prefs.speechRate);
 }
 
 /** Horizontal position inside the map, 0 (left edge) to 1 (right edge). */
@@ -94,25 +107,23 @@ function setLive(text) {
 }
 
 /**
- * Every announcement goes through here: the same text is written to the info
- * panel's "Last announcement" line and to the polite live region, so what a
- * screen reader says always matches the panel exactly.
+ * Every announcement goes through here. The same text is always written to
+ * the info panel's "Last announcement" line, then, by Voice mode:
+ *   screenreader  the polite live region (the screen reader reads it)
+ *   voice         the browser's built-in voice (no live region)
+ *   off           nowhere else
+ * Only one of the two voices is ever used, so they never talk at once.
  */
-function say(text, { always = false } = {}) {
+let saidSomething = false; // anything announced yet (the opening message must not talk over it)
+
+function say(text) {
+  saidSomething = true;
   els.narration.textContent = text;
-  if (always || els.narrationToggle.checked) setLive(text);
-  if (els.speakToggle.checked) speak(text);
+  if (prefs.voiceMode === 'screenreader') setLive(text);
+  else if (prefs.voiceMode === 'voice') speak(text, prefs.speechRate);
 }
-
-/** A point's narration (live region only if narration is switched on). */
-function announce(text) {
-  say(text);
-}
-
-/** A status change or a requested result (muted, summary, comparison). Always announced. */
-function announceStatus(text) {
-  say(text, { always: true });
-}
+const announce = say;
+const announceStatus = say;
 
 // ---------------------------------------------------------------------------
 // Audio start, mute and volume
@@ -127,7 +138,8 @@ async function ensureAudio() {
     els.startBtn.hidden = true;
     els.audioMsg.textContent = 'Sound is on. Start with your volume low.';
   } else {
-    els.audioMsg.textContent = 'Sound could not start. Try pressing Start audio again.';
+    els.audioMsg.textContent = 'Sound is off.';
+    showError('Sound could not start. Check that the device is not muted, then press Start audio again.');
   }
   return ok;
 }
@@ -153,7 +165,7 @@ function toggleMute() {
  *   force     play the no-data click even if we were already in no data
  *   prefix    words before the narration, e.g. "Warmest ocean area, 1 of 5: "
  */
-function showPoint({ announce: when = false, hold, force = false, prefix = '', always = false } = {}) {
+function showPoint({ announce: when = false, hold, force = false, prefix = '', detail = prefs.detail } = {}) {
   if (!frame || !point) return;
   const r = decodeAt(frame, point.x, point.y);
   last = r;
@@ -165,7 +177,7 @@ function showPoint({ announce: when = false, hold, force = false, prefix = '', a
 
   // Info panel: the same strings the narration is built from. The
   // "Last announcement" line changes only when something is announced.
-  const d = describeResult(frame.meta, r);
+  const d = describeResult(frame.meta, r, detail);
   els.infoValue.textContent = d.value;
   els.infoPlace.textContent = d.place;
   els.infoSwatch.replaceChildren();
@@ -183,7 +195,7 @@ function showPoint({ announce: when = false, hold, force = false, prefix = '', a
 
   clearTimeout(narrateTimer);
   const sentence = prefix + d.narration;
-  if (when === 'now') say(sentence, { always });
+  if (when === 'now') say(sentence);
   else if (when === 'later') narrateTimer = setTimeout(() => announce(sentence), S.narrationDelayMs);
 }
 
@@ -203,7 +215,7 @@ function playPoint(r, { hold, force }) {
 /** Optional: one short pulse when the value rises past the threshold (Android only). */
 function vibrate(r) {
   const above = r.status === 'value' && r.t >= S.vibration.threshold;
-  if (above && !wasAboveThreshold && els.vibrateToggle.checked && 'vibrate' in navigator) {
+  if (above && !wasAboveThreshold && prefs.vibrate && 'vibrate' in navigator) {
     try { navigator.vibrate(S.vibration.pulseMs); } catch (e) { /* not allowed: ignore */ }
   }
   wasAboveThreshold = above;
@@ -275,6 +287,7 @@ els.wrap.addEventListener('pointerdown', (e) => {
   stopScan(false);
   try { els.wrap.setPointerCapture(e.pointerId); } catch (err) { /* synthetic events */ }
   const p = eventToPixel(e);
+  dragMoved = false;
   const go = () => { point = p; showPoint({ announce: 'now' }); };
   if (isStarted()) go(); else ensureAudio().then(go);
 });
@@ -284,11 +297,21 @@ els.wrap.addEventListener('pointermove', (e) => {
   // Touch and pen only explore while pressed; the mouse explores on hover.
   if (e.pointerType !== 'mouse' && !els.wrap.hasPointerCapture(e.pointerId)) return;
   point = eventToPixel(e);
-  showPoint({ announce: 'later' });
+  // Mouse: read the value when it stops, only if that setting is on.
+  // Touch and pen: read it when the finger lifts (endPress).
+  const mouse = e.pointerType === 'mouse';
+  if (!mouse) dragMoved = true;
+  showPoint({ announce: mouse && prefs.announceMoving ? 'later' : false });
 });
 
 function endPress(e) {
-  if (e.pointerType !== 'mouse') stopTone();
+  if (e.pointerType !== 'mouse') {
+    stopTone();
+    if (dragMoved && e.type === 'pointerup' && frame && point) {
+      say(describeResult(frame.meta, decodeAt(frame, point.x, point.y), prefs.detail).narration);
+    }
+    dragMoved = false;
+  }
   try { els.wrap.releasePointerCapture(e.pointerId); } catch (err) { /* not captured */ }
 }
 els.wrap.addEventListener('pointerup', endPress);
@@ -301,6 +324,11 @@ els.wrap.addEventListener('pointerleave', () => {
 // ---------------------------------------------------------------------------
 // Keyboard
 // ---------------------------------------------------------------------------
+
+const EDGE_NAMES = {
+  ArrowLeft: 'left side, west', ArrowRight: 'right side, east',
+  ArrowUp: 'top, far north', ArrowDown: 'bottom, far south',
+};
 
 els.wrap.addEventListener('keydown', (e) => {
   if (!frame || e.ctrlKey || e.metaKey || e.altKey) return;
@@ -315,12 +343,20 @@ els.wrap.addEventListener('keydown', (e) => {
   e.preventDefault();
   stopScan(false);
   const act = () => {
+    let prefix = '';
     if (move) {
       const a = frame.meta.mapArea;
-      point.x = Math.min(a.x + a.width - 1, Math.max(a.x, point.x + move[0]));
-      point.y = Math.min(a.y + a.height - 1, Math.max(a.y, point.y + move[1]));
+      const nx = Math.min(a.x + a.width - 1, Math.max(a.x, point.x + move[0]));
+      const ny = Math.min(a.y + a.height - 1, Math.max(a.y, point.y + move[1]));
+      // Already at the edge: say so, with a bump, instead of staying silent.
+      if ((move[0] && nx === point.x) || (move[1] && ny === point.y)) {
+        prefix = `Edge of the map, ${EDGE_NAMES[e.key]}. `;
+        if (prefs.soundCues) playCue('edge', xFraction(nx));
+      }
+      point.x = nx;
+      point.y = ny;
     }
-    showPoint({ announce: 'now', hold: S.keyToneSeconds, force: replay });
+    showPoint({ announce: 'now', hold: S.keyToneSeconds, force: replay || Boolean(prefix), prefix });
   };
   if (isStarted()) act(); else ensureAudio().then(act);
 });
@@ -330,15 +366,19 @@ document.addEventListener('keydown', (e) => {
   if (e.ctrlKey || e.metaKey || e.altKey || els.helpDialog.open) return;
   const t = e.target;
   const typing = t.tagName === 'TEXTAREA' || t.tagName === 'SELECT' ||
-    (t.tagName === 'INPUT' && !['checkbox', 'range', 'button'].includes(t.type));
+    (t.tagName === 'INPUT' && !['checkbox', 'radio', 'range', 'button'].includes(t.type));
   if (typing) return;
   if (e.key === 'm' || e.key === 'M') { e.preventDefault(); toggleMute(); }
+  else if (e.key === 't' || e.key === 'T') { e.preventDefault(); tourStep(); }
+  else if (e.key === 'w' || e.key === 'W') { e.preventDefault(); whereAmI(); }
+  else if (e.key === '-' || e.key === '_') { e.preventDefault(); changeVolume(-10); }
+  else if (e.key === '+' || e.key === '=') { e.preventDefault(); changeVolume(10); }
   else if (e.key === 's' || e.key === 'S') { e.preventDefault(); toggleScan(); }
   else if (e.key === 'a' || e.key === 'A') { e.preventDefault(); mark('A'); }
   else if (e.key === 'b' || e.key === 'B') { e.preventDefault(); mark('B'); }
   else if (e.key === 'c' || e.key === 'C') { e.preventDefault(); compare(); }
   else if (e.key === '?') { e.preventDefault(); els.helpDialog.showModal(); }
-  else if (e.key === 'Escape') { stopScan(true); stopTone(); stopSpeaking(); }
+  else if (e.key === 'Escape') { stopScan(true); stopTone(); stopSpeaking(); stopTour(true); }
 });
 
 // ---------------------------------------------------------------------------
@@ -488,7 +528,7 @@ async function goToArea(kind, i) {
   const area = list[i % list.length];
   point = { x: area.rep.x, y: area.rep.y };
   const rank = list.length > 1 ? `, ${(i % list.length) + 1} of ${list.length}` : '';
-  showPoint({ announce: 'now', hold: S.referenceSeconds, prefix: `${cap(T[kind])} ${T.area}${rank}: `, always: true });
+  showPoint({ announce: 'now', hold: S.referenceSeconds, prefix: `${cap(T[kind])} ${T.area}${rank}: `, detail: atLeastNormal() });
 }
 
 els.highBtn.addEventListener('click', () => { highIndex = 0; goToArea('high', 0); });
@@ -566,12 +606,9 @@ els.startBtn.addEventListener('click', async () => {
   if (await ensureAudio()) announceStatus('Sound is on.');
 });
 els.muteBtn.addEventListener('click', toggleMute);
-els.volume.addEventListener('input', () => {
-  setVolume(els.volume.value / 100);
-  els.volumeOut.textContent = els.volume.value + '%';
-});
-els.narrationToggle.addEventListener('change', () => { if (!els.narrationToggle.checked) els.live.textContent = ''; });
-els.speakToggle.addEventListener('change', () => { if (!els.speakToggle.checked) stopSpeaking(); });
+els.volume.addEventListener('input', () => setVolumePercent(Number(els.volume.value)));
+// A screen reader reads the slider itself; the built-in voice needs telling.
+els.volume.addEventListener('change', () => { if (prefs.voiceMode === 'voice') say(`Volume ${els.volume.value} percent.`); });
 els.helpBtn.addEventListener('click', () => els.helpDialog.showModal());
 window.addEventListener('resize', () => { if (frame) drawLegend(els.legendCanvas, frame.meta, last); });
 
@@ -612,13 +649,156 @@ function buildLegendText(meta) {
 }
 
 // ---------------------------------------------------------------------------
+// Settings: voice mode, detail, speed, volume, cues (remembered, prefs.js)
+// ---------------------------------------------------------------------------
+
+/** Go-to and Where am I always say the place, even on Short. */
+function atLeastNormal() {
+  return prefs.detail === 'short' ? 'normal' : prefs.detail;
+}
+
+function setPref(key, value) {
+  prefs[key] = value;
+  savePrefs(prefs);
+}
+
+function setVolumePercent(v) {
+  v = Math.max(0, Math.min(100, Math.round(v)));
+  els.volume.value = String(v);
+  els.volume.setAttribute('aria-valuetext', `${v} percent`);
+  els.volumeOut.textContent = v + '%';
+  setVolume(v / 100);
+  setPref('volume', v);
+}
+
+/** Minus / plus keys: change the volume by `delta` percent and say the new level. */
+function changeVolume(delta) {
+  setVolumePercent(Number(els.volume.value) + delta);
+  const v = Number(els.volume.value);
+  say(v === 0 ? 'Volume 0 percent, silent.' : v === 100 ? 'Volume 100 percent, the highest.' : `Volume ${v} percent.`);
+}
+
+/** Put every control in the state `prefs` says. */
+function applyPrefs() {
+  els.voiceRadios.forEach((r) => { r.checked = r.value === prefs.voiceMode; });
+  els.detailSelect.value = prefs.detail;
+  els.rateSelect.value = String(prefs.speechRate);
+  els.movingToggle.checked = prefs.announceMoving;
+  els.cuesToggle.checked = prefs.soundCues;
+  els.vibrateToggle.checked = prefs.vibrate;
+  setVolumePercent(prefs.volume);
+}
+
+els.voiceRadios.forEach((r) => r.addEventListener('change', () => {
+  if (!r.checked) return;
+  const before = prefs.voiceMode;
+  setPref('voiceMode', r.value);
+  if (before === 'voice') stopSpeaking();
+  if (before === 'screenreader') els.live.textContent = '';
+  // A screen reader already reads the radio button; only the built-in voice needs to confirm.
+  if (r.value === 'voice') say('Built-in voice on.');
+}));
+els.detailSelect.addEventListener('change', () => setPref('detail', els.detailSelect.value));
+els.rateSelect.addEventListener('change', () => {
+  setPref('speechRate', Number(els.rateSelect.value));
+  if (prefs.voiceMode === 'voice') say('This is the new speed.');
+});
+els.movingToggle.addEventListener('change', () => setPref('announceMoving', els.movingToggle.checked));
+els.cuesToggle.addEventListener('change', () => setPref('soundCues', els.cuesToggle.checked));
+els.vibrateToggle.addEventListener('change', () => setPref('vibrate', els.vibrateToggle.checked));
+els.resetBtn.addEventListener('click', () => {
+  clearPrefs();
+  stopSpeaking();
+  prefs = { ...DEFAULTS };
+  if (!speechSupported()) prefs.voiceMode = 'screenreader';
+  applyPrefs();
+  say(`Settings reset: voice for screen readers, normal detail, volume ${prefs.volume} percent.`);
+});
+
+// ---------------------------------------------------------------------------
+// Where am I, and the tour
+// ---------------------------------------------------------------------------
+
+function whereAmI() {
+  if (!frame || !point) return;
+  stopScan(false);
+  const go = () => showPoint({ announce: 'now', hold: S.keyToneSeconds, force: true, prefix: 'You are here. ', detail: 'full' });
+  if (isStarted()) go(); else ensureAudio().then(go);
+}
+
+let tour = null;           // { i, timers } while the tour runs
+
+function tourSteps() {
+  const meta = frame.meta;
+  const T = meta.terms;
+  const refs = referenceTones(meta);
+  const n = 6;
+  const head = (i, name) => `Tour, step ${i} of ${n}${name ? ', ' + name : ''}.`;
+  return [
+    { text: `${head(1)} This is ${meta.title}, ${meta.date}. ${meta.listenFor} Press T for the next step, or Escape to stop.` },
+    { text: `${head(2, 'the layout')} ${describeLayout(meta)}` },
+    { text: `${head(3, 'the sound')} Higher values play higher notes, on the same scale for every frame. ` +
+        refs.map((r) => `${r.name}: ${r.label}.`).join(' ') + ' You are hearing them now, low to high.', tones: refs },
+    { text: `${head(4, 'exploring')} Press Tab until you reach the map, then use the arrow keys. Shift and an arrow moves faster. ` +
+        'With headphones, the left of the map is in your left ear. Silent places give one soft click. ' +
+        'At the edge of the map you hear a bump. W tells you where you are; Enter plays the point again.' },
+    { text: `${head(5, 'finding')} Summary reads out the ${T.high} and ${T.low} ${T.area}s and the pattern from the equator to the poles. ` +
+        `Go to ${T.high} jumps there. To compare two places, press A at one and B at the other, then C.` },
+    { text: `${head(6, 'settings')} Under Controls you can change the voice, how much is said, and the volume; ` +
+        'minus and plus also change the volume, and M mutes. Question mark lists every key. End of tour.' },
+  ];
+}
+
+/** T: start the tour, or go to the next step (after the last step, start again). */
+async function tourStep() {
+  if (!frame) return;
+  stopScan(false);
+  await ensureAudio();
+  const steps = tourSteps();
+  const i = tour && tour.i + 1 < steps.length ? tour.i + 1 : 0;
+  if (tour) tour.timers.forEach(clearTimeout);
+  tour = { i, timers: [] };
+  const step = steps[i];
+  say(step.text);
+  if (step.tones && isStarted() && !isMuted()) {
+    step.tones.forEach((r, k) => tour.timers.push(setTimeout(() => {
+      playTone({ t: r.t, xFraction: 0.5, family: r.family, holdSeconds: 0.8 });
+    }, 300 + k * 1100)));
+  }
+  els.tourBtn.textContent = i === steps.length - 1 ? 'Tour again (T)' : `Next tour step, ${i + 2} of ${steps.length} (T)`;
+}
+
+/** Escape: stop the tour (says so only if it was not already finished). */
+function stopTour(announceIt) {
+  if (!tour) return;
+  tour.timers.forEach(clearTimeout);
+  const finished = tour.i === tourSteps().length - 1;
+  tour = null;
+  els.tourBtn.textContent = 'Tour (T)';
+  if (announceIt && !finished) say('Tour stopped.');
+}
+
+els.tourBtn.addEventListener('click', tourStep);
+els.whereBtn.addEventListener('click', whereAmI);
+els.frameSelect.addEventListener('change', () => {
+  location.href = 'player.html?frame=' + encodeURIComponent(els.frameSelect.value);
+});
+
+// ---------------------------------------------------------------------------
 // Start-up
 // ---------------------------------------------------------------------------
 
 async function init() {
   buildRowOptions();
-  setVolume(els.volume.value / 100);
-  if (!speechSupported()) els.speakToggle.closest('label').hidden = true;
+  if (!speechSupported()) {
+    // No built-in voice in this browser: offer only the other two modes.
+    const r = els.voiceRadios.find((x) => x.value === 'voice');
+    r.disabled = true;
+    r.closest('label').append(' (not available in this browser)');
+    els.rateRow.hidden = true;
+    if (prefs.voiceMode === 'voice') prefs.voiceMode = 'screenreader';
+  }
+  applyPrefs();
   if ('vibrate' in navigator) els.vibrateLabel.hidden = false;
   if (!audioSupported()) {
     els.startBtn.hidden = true;
@@ -636,8 +816,17 @@ async function init() {
   const meta = frames.find((f) => f.id === id);
   if (!meta) {
     showError(`There is no frame called "${id}". Choose one from the gallery.`);
+    els.intro.textContent = 'No frame is open.';
     return;
   }
+
+  els.frameSelect.replaceChildren(...frames.map((f) => {
+    const o = el('option', f.title); o.value = f.id; o.selected = f.id === meta.id; return o;
+  }));
+  const layout = describeLayout(meta);
+  els.layoutText.textContent = layout;
+  els.intro.textContent = `${meta.title}, ${meta.date}. ${meta.listenFor} ` +
+    'Press T for a short guided tour, or go to the map and use the arrow keys. Question mark lists every key.';
 
   els.title.textContent = meta.title;
   els.date.textContent = meta.date;
@@ -660,6 +849,9 @@ async function init() {
     return;
   }
   els.status.textContent = '';
+  // Opening message, once the page has settled (a screen reader reads the
+  // page title first; this polite message follows it).
+  setTimeout(() => saidSomething || say(`Player ready: ${meta.title}. Press T for a tour, or Tab to the map and use the arrow keys.`), 1000);
 
   els.canvas.width = frame.width;
   els.canvas.height = frame.height;
@@ -691,6 +883,9 @@ async function init() {
       infoPlace: els.infoPlace.textContent,
       live: els.live.textContent,
       scanning: Boolean(scan),
+      prefs: { ...prefs },
+      tourStep: tour ? tour.i : null,
+      alert: els.alert.textContent,
       audio: audioState(),
     }),
   };

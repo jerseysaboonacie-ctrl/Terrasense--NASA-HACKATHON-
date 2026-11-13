@@ -1,0 +1,154 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Page Tests</title>
+  <link rel="stylesheet" href="../css/styles.css">
+  <style>iframe { width: 1100px; height: 700px; border: 2px solid var(--border); }</style>
+</head>
+<body>
+  <main id="main">
+    <h1>Page tests</h1>
+    <p>
+      Loads every page of the site and checks its structure for screen-reader and keyboard use:
+      language, title, one main heading, no skipped heading levels, landmarks, a working skip link,
+      image text, named controls, unique ids, and no script errors. Then checks what each page
+      is for (gallery cards, credits, Home sound check). These are automated checks of our code;
+      they do not replace a person using a real screen reader.
+    </p>
+    <p id="summary" role="status">Running…</p>
+    <div class="table-wrap"><table id="results"><thead><tr><th>Page</th><th>Check</th><th>Result</th><th>Evidence</th></tr></thead><tbody></tbody></table></div>
+    <iframe id="page" title="Page under test"></iframe>
+  </main>
+  <script type="module">
+    const iframe = document.getElementById('page');
+    const tbody = document.querySelector('#results tbody');
+    const results = [];
+    const wait = (ms) => new Promise((r) => setTimeout(r, ms));
+
+    function record(page, check, pass, evidence) {
+      results.push({ frame: page, check, pass, evidence });
+      const tr = document.createElement('tr');
+      for (const [i, v] of [page, check, pass ? 'PASS' : 'FAIL', evidence].entries()) {
+        const td = document.createElement('td');
+        td.textContent = v;
+        if (i === 2) td.className = pass ? 'flag-good' : 'flag-bad';
+        tr.append(td);
+      }
+      tbody.append(tr);
+    }
+
+    async function load(url, settleMs = 1500) {
+      iframe.src = url;
+      await new Promise((r) => iframe.addEventListener('load', r, { once: true }));
+      const w = iframe.contentWindow;
+      w.__errors = [];
+      w.addEventListener('error', (e) => w.__errors.push(String(e.message)));
+      w.addEventListener('unhandledrejection', (e) => w.__errors.push(String(e.reason)));
+      await wait(settleMs);
+      return w;
+    }
+
+    /** Accessible name, roughly: label, aria-label, aria-labelledby, or text. */
+    function named(doc, c) {
+      if (c.getAttribute('aria-label')) return true;
+      const lb = c.getAttribute('aria-labelledby');
+      if (lb && lb.split(' ').every((id) => doc.getElementById(id))) return true;
+      if (c.labels && c.labels.length) return true;
+      return ['BUTTON', 'A', 'SUMMARY'].includes(c.tagName) && c.textContent.trim().length > 0;
+    }
+
+    async function testStructure(page) {
+      const w = await load('../' + page);
+      const doc = w.document;
+      const visible = (n) => !n.closest('[hidden]') && !n.closest('dialog:not([open])');
+
+      record(page, 'Language and title', doc.documentElement.lang === 'en' && doc.title.trim().length > 0, `lang="${doc.documentElement.lang}", title "${doc.title}"`);
+      const h1s = doc.querySelectorAll('h1');
+      record(page, 'Exactly one h1', h1s.length === 1, [...h1s].map((h) => h.textContent).join(' | '));
+
+      const levels = [...doc.querySelectorAll('h1, h2, h3, h4, h5, h6')].filter(visible).map((h) => Number(h.tagName[1]));
+      let skip = null;
+      levels.forEach((l, i) => { if (i > 0 && l > levels[i - 1] + 1 && !skip) skip = `h${levels[i - 1]} → h${l}`; });
+      record(page, 'No skipped heading levels', !skip, skip || levels.map((l) => 'h' + l).join(' '));
+
+      const main = doc.querySelectorAll('main');
+      const nav = doc.querySelector('nav[aria-label]');
+      record(page, 'Landmarks: one main, labelled navigation, footer', main.length === 1 && Boolean(nav) && Boolean(doc.querySelector('footer')),
+        `main ${main.length}, nav "${nav && nav.getAttribute('aria-label')}"`);
+
+      const skipLink = doc.querySelector('a.skip-link');
+      const target = skipLink && doc.getElementById(skipLink.getAttribute('href').slice(1));
+      record(page, 'Skip link is first and its target exists', Boolean(skipLink && target) &&
+        doc.querySelector('a, button, input, select, [tabindex]') === skipLink, skipLink ? `${skipLink.textContent} → #${target && target.id}` : 'no skip link');
+
+      const current = doc.querySelectorAll('nav a[aria-current="page"]');
+      record(page, 'Menu marks the current page', current.length === 1, current.length ? current[0].textContent : 'none');
+
+      const imgs = [...doc.querySelectorAll('img')];
+      const noAlt = imgs.filter((i) => !i.hasAttribute('alt'));
+      record(page, 'Every image has alt text (or alt="" if decorative)', noAlt.length === 0, `${imgs.length} images, ${noAlt.length} without alt`);
+
+      const controls = [...doc.querySelectorAll('button, select, input, textarea, a[href]')].filter(visible);
+      const unnamed = controls.filter((c) => !named(doc, c));
+      record(page, 'Every link and control has a name', unnamed.length === 0,
+        `${controls.length} checked; unnamed: ${unnamed.map((c) => c.id || c.tagName).join(', ') || 'none'}`);
+
+      const ids = [...doc.querySelectorAll('[id]')].map((n) => n.id);
+      const dup = ids.filter((id, i) => ids.indexOf(id) !== i);
+      record(page, 'No duplicate ids', dup.length === 0, dup.join(', ') || `${ids.length} ids, all unique`);
+
+      const fakeButtons = [...doc.querySelectorAll('[onclick], div[role="button"], span[role="button"]')];
+      record(page, 'No click-only fake buttons', fakeButtons.length === 0, `${fakeButtons.length} found`);
+
+      record(page, 'No script errors', w.__errors.length === 0, w.__errors.join(' | ') || 'none');
+      return w;
+    }
+
+    const frames = (await (await fetch('../data/frames.json', { cache: 'no-cache' })).json()).frames;
+    const pages = ['index.html', 'gallery.html', 'player.html?frame=sst', 'how-it-works.html', 'accessibility.html', 'credits.html'];
+
+    for (const page of pages) {
+      const w = await testStructure(page);
+      const doc = w.document;
+
+      if (page === 'gallery.html') {
+        const links = [...doc.querySelectorAll('#cards h2 a')];
+        const ok = frames.every((f) => links.some((a) => a.getAttribute('href') === 'player.html?frame=' + f.id && a.textContent === f.title));
+        record(page, 'One card per frame, each a heading link to the Player', links.length === frames.length && ok,
+          links.map((a) => `${a.textContent} → ${a.getAttribute('href')}`).join('; '));
+      }
+      if (page === 'credits.html') {
+        const text = doc.querySelector('main').textContent;
+        const missing = frames.filter((f) => !text.includes(f.title) || !text.includes(f.credit.split(/[.,]/)[0]));
+        record(page, 'Every frame and its credit is listed', missing.length === 0, missing.map((f) => f.id).join(', ') || `${frames.length} frames listed`);
+      }
+      if (page === 'accessibility.html') {
+        const keys = [...doc.querySelectorAll('table td:first-child')].map((td) => td.textContent);
+        const need = ['W', 'T', 'Minus, plus', 'A, B', 'C', 'M', 'S'];
+        const missing = need.filter((k) => !keys.includes(k));
+        record(page, 'Key table lists every Player key', missing.length === 0, missing.length ? 'missing: ' + missing.join(', ') : keys.join(', '));
+      }
+      if (page === 'index.html') {
+        const btn = doc.getElementById('start-btn');
+        const msg = doc.getElementById('audio-msg');
+        btn.click();
+        const heard = [];
+        for (let i = 0; i < 60 && !/done/i.test(msg.textContent); i++) {
+          if (!heard.includes(msg.textContent)) heard.push(msg.textContent);
+          await wait(100);
+        }
+        record(page, 'Start audio plays low, middle, high and says so', /Sound check done/.test(msg.textContent) && msg.getAttribute('role') === 'status' &&
+          ['low', 'middle', 'high'].every((n) => heard.some((h) => h.includes(n + ' note'))), heard.concat(msg.textContent).join(' → '));
+      }
+    }
+
+    const failed = results.filter((r) => !r.pass).length;
+    document.getElementById('summary').textContent = `${results.length} checks, ${failed} failed.`;
+    document.title = 'TESTS DONE';
+    const post = new URLSearchParams(location.search).get('post');
+    if (post) fetch(post, { method: 'POST', body: JSON.stringify(results) }).catch(() => {});
+  </script>
+</body>
+</html>

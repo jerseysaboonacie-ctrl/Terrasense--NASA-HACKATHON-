@@ -313,3 +313,23 @@ button.big-button { border-radius: var(--radius); }
   border-radius: 50%; background: #fff; color: #000; border: 2px solid #000;
   font: 700 13px/18px system-ui, sans-serif; text-align: center; pointer-events: none;
 }
+
+/* Start here: first section after the title (voice, tour, summary, frame).
+   Full width on a laptop, first on a phone, so DOM order = reading order. */
+.player-grid {
+  grid-template-areas:
+    "start start"
+    "frame info"
+    "lower find"
+    "lower controls";
+}
+@media (max-width: 800px) {
+  .player-grid { grid-template-areas: "start" "frame" "info" "find" "controls" "lower"; }
+}
+.area-start { grid-area: start; }
+.area-start #intro { max-width: 75ch; }
+.voice-mode { border: 2px solid var(--border); border-radius: var(--radius); padding: 4px 12px 6px; margin: 8px 0; }
+.voice-mode legend { font-weight: 700; padding: 0 4px; }
+.voice-mode label.check { margin: 6px 0; }
+.voice-mode input[type="radio"] { width: 1.2em; height: 1.2em; }
+#alert:empty { display: none; }

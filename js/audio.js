@@ -18,7 +18,7 @@ let toneOn = false;
 let stopTimer = null;
 
 // Last values we asked for, kept for the Explain panel and the tests.
-const state = { frequency: null, pan: 0, waveform: S.waveforms.default, clicks: 0 };
+const state = { frequency: null, pan: 0, waveform: S.waveforms.default, clicks: 0, cues: {} };
 
 const clamp01 = (v) => Math.min(1, Math.max(0, v));
 const timeConstant = () => S.rampSeconds / 3; // reaches ~95% of the target in rampSeconds
@@ -156,17 +156,19 @@ export function stopTone() {
   toneOn = false;
 }
 
-/** One short, soft click: the "no data" sound. */
-export function playClick(xFraction = 0.5) {
-  if (!isStarted() || muted) return;
-  const now = ctx.currentTime;
+/**
+ * One short blip through the master gain and compressor (so it obeys the
+ * volume cap and mute). Used for the no-data click and the sound cues.
+ */
+function blip({ frequency, seconds, level, type = 'triangle' }, xFraction = 0.5, delay = 0) {
+  const now = ctx.currentTime + delay;
   const c = ctx.createOscillator();
   const g = ctx.createGain();
-  c.type = 'triangle';
-  c.frequency.value = S.click.frequency;
+  c.type = type;
+  c.frequency.value = frequency;
   g.gain.setValueAtTime(0, now);
-  g.gain.linearRampToValueAtTime(S.click.level, now + 0.002);
-  g.gain.exponentialRampToValueAtTime(0.0001, now + S.click.seconds);
+  g.gain.linearRampToValueAtTime(level, now + 0.002);
+  g.gain.exponentialRampToValueAtTime(0.0001, now + seconds);
   let out = g;
   if (ctx.createStereoPanner) {
     const p = ctx.createStereoPanner();
@@ -177,8 +179,25 @@ export function playClick(xFraction = 0.5) {
   c.connect(g);
   out.connect(master);
   c.start(now);
-  c.stop(now + S.click.seconds + 0.02);
+  c.stop(now + seconds + 0.02);
+}
+
+/** One short, soft click: the "no data" sound. */
+export function playClick(xFraction = 0.5) {
+  if (!isStarted() || muted) return;
+  blip(S.click, xFraction);
   state.clicks++;
+}
+
+/**
+ * A short sound cue (see S.cues): 'edge' when the pointer hits the edge of
+ * the map, 'error' when something fails. Each cue is a list of notes.
+ */
+export function playCue(kind, xFraction = 0.5) {
+  const cue = S.cues[kind];
+  if (!cue || !isStarted() || muted) return;
+  cue.notes.forEach((n) => blip(n, xFraction, n.delay || 0));
+  state.cues[kind] = (state.cues[kind] || 0) + 1;
 }
 
 /** Snapshot for the Explain panel and automated tests. */
@@ -194,6 +213,7 @@ export function audioState() {
     pan: state.pan,
     waveform: state.waveform,
     clicks: state.clicks,
+    cues: { ...state.cues },
     hasCompressor: Boolean(compressor),
   };
 }

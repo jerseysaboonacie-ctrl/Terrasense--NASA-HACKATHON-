@@ -1,10 +1,12 @@
 # Verification report
 
 The plan's verification prompt, run on 2026-11-06 against the code in this repository,
-and run again on 2026-11-13 after adding Summary, Go to and Compare (section 7).
+run again on 2026-11-13 after adding Summary, Go to and Compare (section 7), and again on
+2026-11-13 after the navigation work for blind users (section 8).
 Each check is PASS, FAIL or NOT TESTED, with the evidence. "Simulated" means automated
 tests in headless Chrome on macOS using synthetic key and pointer events
-(`tests/player-test.html`, 109 checks, 0 failed, on 2026-11-13; `decoder-test.html?auto=1`, 20 self-tests, 0 failed).
+(`tests/player-test.html`, 185 checks, 0 failed; `tests/pages-test.html`, 70 checks, 0 failed;
+`decoder-test.html?auto=1`, 20 self-tests, 0 failed; all on 2026-11-13).
 
 ## Results
 
@@ -50,6 +52,29 @@ Known limits of these features: an "area" is a 5° box, so a small warm sea (the
 Red Sea) can rank as the warmest area; the summary says "ocean area" from the frame's wording, and
 the decoded value is approximate like every other value. On the precipitation frame, rain and snow
 classes are ranked by legend position together.
+
+## 8. Navigation for blind users (added 2026-11-13)
+
+Every row is simulated in headless Chrome on all four frames unless it says otherwise.
+
+| # | Check | Result | Evidence |
+|---|---|---|---|
+| 8.1 | Only one voice at a time | PASS (simulated) | Screen reader mode: live region updated, built-in voice not called. Built-in voice mode: spoken once, live region empty. Off: panel only. (The browser's speech was replaced by a counter; real speech not heard.) |
+| 8.2 | Reading order | PASS | Title, then "Start here" (Voice, Tour, Summary, Where am I, Frame), then the map, then the readout, Find and compare, Controls, legends. DOM order equals visual order. |
+| 8.3 | Opening message | PASS (simulated) | "Player ready: Sea Surface Temperature. Press T for a tour, or Tab to the map and use the arrow keys." Skipped if something was already announced (a bug found by the tests: on a slow load it talked over the user's first key press). |
+| 8.4 | Detail levels | PASS (simulated) | Short: "about 0.2 to 0.3 mm/hour, snow (frozen)." Full adds "14 percent of the way up the legend." Go to and Where am I never drop the place. |
+| 8.5 | Edges | PASS (simulated) | Arrow key at the left edge: "Edge of the map, left side, west. …" and a low bump (edge cue count +1 per edge); moving away is announced normally. |
+| 8.6 | Where am I (W) | PASS (simulated) | "You are here. …" in full detail, with the tone. |
+| 8.7 | Tour (T) | PASS (simulated) | Six steps; step 3 plays low, middle and high tones; Escape says "Tour stopped." |
+| 8.8 | Volume keys | PASS (simulated) | Plus: 40%, "Volume 40 percent."; minus back to 30%; slider `aria-valuetext` "30 percent"; output still capped. |
+| 8.9 | Mouse movement not announced by default | PASS (simulated) | No announcement 0.8 s after a mouse move. Touch "read on lift" is built but NOT TESTED (synthetic touch events cannot capture the pointer). |
+| 8.10 | Errors announced at once | PASS (simulated) | Unknown frame: message in the `role="alert"` region. Error tone not checked (audio has not started on that page). |
+| 8.11 | Settings remembered, Reset | PASS (simulated) | Detail "full" survives a reload; Reset restores screen reader, normal, 30%. |
+| 8.12 | Every page: one h1, no skipped heading levels, main and labelled nav, skip link first with a real target, current page marked, image alt, every control named, unique ids, no click-only fake buttons, no script errors | PASS (6 pages) | `tests/pages-test.html`. Also: gallery has one heading link per frame; credits list every frame; the Accessibility key table lists every key; Home sound check plays low, middle, high and says so. |
+
+Not tested: any of this with VoiceOver, NVDA, JAWS or TalkBack; real speech output; touch on a real phone;
+whether blind users find the tour and wording clear. Single-letter keys may be taken by a screen reader
+in browse mode outside the map; the help and the Accessibility page say so.
 
 ## Could not verify
 

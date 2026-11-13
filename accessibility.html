@@ -26,7 +26,7 @@
     <p>TerraSense Jukebox is designed to be used by sound, touch, keyboard or screen reader, with no sight needed.</p>
 
     <h2>Keyboard</h2>
-    <p>In the Player, press Tab to reach the map, then:</p>
+    <p>In the Player, press Tab to reach the map, then use these keys. At the edge of the map you hear a low bump and the edge is announced.</p>
     <div class="table-wrap">
       <table>
         <thead><tr><th scope="col">Key</th><th scope="col">Action</th></tr></thead>
@@ -34,11 +34,14 @@
           <tr><td>Arrow keys</td><td>Move the pointer on the map</td></tr>
           <tr><td>Shift + arrow</td><td>Move faster</td></tr>
           <tr><td>Enter or Space</td><td>Play the current point again</td></tr>
+          <tr><td>W</td><td>Where am I: repeat the value and place in full</td></tr>
+          <tr><td>T</td><td>Start the guided tour, or go to its next step</td></tr>
           <tr><td>S</td><td>Start or stop the scan (left to right along the chosen row)</td></tr>
           <tr><td>M</td><td>Mute or unmute</td></tr>
+          <tr><td>Minus, plus</td><td>Volume down, volume up (the new level is announced)</td></tr>
           <tr><td>A, B</td><td>Mark the current point as A or B</td></tr>
           <tr><td>C</td><td>Compare A and B: plays both, then says the approximate difference</td></tr>
-          <tr><td>Escape</td><td>Stop the sound</td></tr>
+          <tr><td>Escape</td><td>Stop the sound, the speech and the tour</td></tr>
           <tr><td>?</td><td>Open keyboard help</td></tr>
           <tr><td>Tab</td><td>Leave the map and go to the controls</td></tr>
         </tbody>
@@ -51,7 +54,13 @@
       <li>Each move is announced politely, without interrupting: the variable, the approximate value, and where you are, for example "Sea surface temperature: about 28 °C, near the equator, 3° S, 140° W."</li>
       <li>The announcement uses exactly the same words as the panel on screen ("Last announcement").</li>
       <li>Under "Find and compare", the Summary button reads out the warmest and coolest areas and the pattern from the equator to the poles; the Go to buttons jump to those areas; Compare tells you the difference between two points you mark. All of it is worked out from the decoded colours.</li>
-      <li>You can switch announcements off under Controls, and switch on "Speak narration aloud" if you are not using a screen reader.</li>
+      <li>The first section of the Player, "Start here", comes before the map. It has the Voice switch, the Tour, the Summary, "Where am I?" and a menu to change frame.</li>
+      <li>The Voice switch has three choices: Screen reader (announcements go to your screen reader), Built-in voice (the browser reads aloud, for people not using a screen reader), or Off (text on screen only). Only one voice is used at a time, so the two never talk over each other.</li>
+      <li>Under Controls, "How much to say" has three levels: Short (value only), Normal (variable, value and place) and Full (also how far up the legend). "Where am I?" and the Go to buttons always say the place.</li>
+      <li>Moving the mouse plays sound but is not announced, unless you switch on "Read the value when the mouse stops moving". On a touch screen, the value is read when you lift your finger.</li>
+      <li>Errors (a frame that will not load, sound that will not start) are announced at once and play a short falling tone.</li>
+      <li>Your settings are remembered in this browser; "Reset settings" puts them back.</li>
+      <li>Letter keys (M, S, T, W, A, B, C) reach the page when the map has focus. In other places your screen reader may use them itself (for example, to jump between headings); switch to focus or forms mode, or use the buttons.</li>
     </ul>
 
     <h2>Touch</h2>
@@ -69,7 +78,10 @@
     <p>
       We have run automated tests in Chrome on macOS that use the Player with simulated keyboard and pointer input:
       arrow keys and Shift, the narration text matching the panel, mute, the volume limit, scan, reference tones,
-      the "no data" sound, Summary, the Go to buttons, and Compare (keys A, B and C). We have also checked the layout at phone width.
+      the "no data" sound, Summary, the Go to buttons, Compare (keys A, B and C), the Voice switch (only one voice at a time),
+      detail levels, the edge announcement, Where am I, the tour, the volume keys and remembered settings.
+      We also check every page's structure: headings, landmarks, skip link, image text and control names.
+      We have also checked the layout at phone width.
     </p>
     <p>
       Not yet tested: real screen readers (VoiceOver, NVDA, JAWS, TalkBack), real phones, other browsers,
