@@ -7,7 +7,7 @@ same format (newest first under **History**) and tick your tasks in **Your tasks
 Status words: **Done** (built and tested), **Partly done** (some of it exists, see notes),
 **Not started**, **Yours** (only a person can do it).
 
-Last updated: 2026-11-14 19:14 (+07), session 7 in progress.
+Last updated: 2026-11-14 19:34 (+07), session 7 finished.
 
 ---
 
@@ -16,7 +16,7 @@ Last updated: 2026-11-14 19:14 (+07), session 7 in progress.
 Live progress, newest session first, newest line at the bottom of each session. Times are the
 laptop's clock (+07). Each phase has an estimate; the heartbeat says when it actually started and finished.
 
-### Session 7: 2026-11-14 night (in progress)
+### Session 7: 2026-11-14 night (finished)
 
 **Report (from you):** Terra still does not respond with a real microphone. Also: make sure the images are
 updated with the latest data.
@@ -25,8 +25,8 @@ updated with the latest data.
 |---|---|---|---|
 | 1 | Real-microphone test: Chrome's real speech recognition, fed with real recorded speech through a fake microphone device (macOS "say" makes the recordings) | 40 min | Done (19:01 to 19:14) |
 | 2 | Fix what it shows; a "Check the microphone" button that shows the sound level and each step, so any remaining problem is visible | 45 min | Done (19:14) |
-| 3 | Latest data: an update tool that downloads NASA's newest frames, then refresh the frames and re-check them | 45 min | In progress |
-| 4 | Tests, docs, log, commit | 30 min | Waiting |
+| 3 | Latest data: an update tool that downloads NASA's newest frames, then refresh the frames and re-check them | 45 min | Done |
+| 4 | Tests, docs, log, commit | 30 min | Done (19:34, commit 27b407d) |
 
 - 19:01: Started. The earlier tests used a stand-in for speech recognition, which cannot show what goes wrong
   with a real microphone. This time the real recognizer is used.
@@ -53,6 +53,18 @@ updated with the latest data.
   - New: "Check the microphone" button (and "Terra, check the microphone"): measures the sound level, then
     runs one recognition, and says and shows the result. Run on this Mac: "Sound: yes … Speech recognition:
     works. I heard: …".
+- 19:34: Latest data done:
+  - New `tools/update_frames.py` (with a curl fallback: the Mac's built-in Python is too old for NASA's
+    server). Sea surface temperature: NASA's image of 2026-11-13, and for the first time a real data date,
+    12 Nov 2026, read from NASA's dated copy of the same image (map pixels match). Precipitation: image of
+    2026-11-14, data time 06:30 from NASA's date overlay (time zone not stated). Vegetation: NASA's file is
+    unchanged. Air temperature: NASA has no newer version of this preview.
+  - The new sea temperature image checked against the real data for 12 Nov: median error 0.70 °C, worst
+    2.83 °C, all 335 points within one legend step. The How it works table keeps the 5 Nov image it was
+    checked on (frames/sst/frame-2026-11-05.jpg).
+  - The new precipitation data showed that "Go to lightest" could land on a middling value; Go to now stands
+    near the top (warmest) or bottom (coolest) of the area. Every frame: nothing decodes beyond it.
+  - Tests: 341 of 341 Player checks, 77 of 77 page checks, 20 of 20 decoder self-tests. Committed 27b407d.
 
 ### Session 6: 2026-11-14 evening (finished)
 
@@ -389,6 +401,8 @@ Tick these as you go and add a line under History with what you found.
 - [ ] Screen reader test (about 20 min): VoiceOver (Mac: Cmd + F5), NVDA (Windows) or TalkBack (Android). Eyes closed: open the Player, take the tour (T), get the summary, jump to the warmest area, press W, walk into an edge, compare two places, change volume with minus and plus, mute, change frame. Try each Voice setting once. Note where you got lost, heard nothing, or heard two voices, and whether the letter keys reached the page.
 - [ ] By-eye check: open `decoder-test.html?frame=sst&fill=1` (then `t2m`, `ndvi`, `precip`), type the value you read from the colorbar for each row, and paste the Markdown export into `docs/accuracy-check.md`.
 - [ ] Check the Summary against the picture for each frame (does the "warmest" place look warmest?).
+- [ ] Press "Check the microphone" in the Player (Chrome) and tell Claude exactly what it says.
+- [ ] Before the demo: run `python3 tools/update_frames.py`, read the two date images it mentions, run the tests, commit.
 - [ ] Talk to Terra with a real microphone in Chrome (press V once to switch it on, then just talk; with headphones, and once without): try "where am I", "take me to Japan", "compare Brazil and Norway", "summary" then "yes", "open the rain map". Note what it misheard or did not understand, and send me the exact words so I can add them.
 - [ ] On a phone with TalkBack or VoiceOver on: does the first question read well, and can you reach "Talk to Terra" and "Where am I?"
 - [ ] Listen to the Demo (press D) and the sound cues with headphones: are the chimes and ticks clear, not annoying? Try High contrast and Large text.
@@ -405,6 +419,11 @@ Tick these as you go and add a line under History with what you found.
 ## History
 
 Newest first. Claude's entries name the commit so you can see exactly what changed.
+
+### 2026-11-14: Terra with a real microphone; newest NASA frames (Claude, commit 27b407d)
+- Real-microphone tests found why Terra seemed deaf in a busy room; fixed. New "Check the microphone".
+- `tools/update_frames.py`; SST now data for 12 Nov 2026, precipitation 2026-11-14 06:30.
+- Tests: 341 of 341 Player checks, 77 of 77 page checks.
 
 ### 2026-11-14: Terra answers out loud and understands its name (Claude, commit 54c51c5)
 - Fixes your report that Terra did not listen or respond; six causes found and fixed (see session 6).
