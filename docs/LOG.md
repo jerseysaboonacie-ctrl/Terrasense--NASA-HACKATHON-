@@ -459,7 +459,7 @@ Tick these as you go and add a line under History with what you found.
 
 Newest first. Claude's entries name the commit so you can see exactly what changed.
 
-### 2026-11-14: Terra answers with people talking nearby (Claude, this commit)
+### 2026-11-14: Terra answers with people talking nearby (Claude, commit 35d2919)
 - Found with Google's real recognizer on recorded requests: Terra waited for Chrome to finish a phrase,
   which with people talking never happens, and Chrome's recognizer then stalls. Now Terra answers when the
   words stop, or shortly after its name; restarts stalled sessions; knows "Tara", "Sarah", "Terror".
