@@ -7,7 +7,7 @@ same format (newest first under **History**) and tick your tasks in **Your tasks
 Status words: **Done** (built and tested), **Partly done** (some of it exists, see notes),
 **Not started**, **Yours** (only a person can do it).
 
-Last updated: 2026-11-14 18:01 (+07), session 5 started.
+Last updated: 2026-11-14 18:14 (+07), session 5 finished.
 
 ---
 
@@ -16,21 +16,35 @@ Last updated: 2026-11-14 18:01 (+07), session 5 started.
 Live progress, newest session first, newest line at the bottom of each session. Times are the
 laptop's clock (+07). Each phase has an estimate; the heartbeat says when it actually started and finished.
 
-### Session 5: 2026-11-14 evening (in progress)
+### Session 5: 2026-11-14 evening (finished)
 
 **Task (from you):** Terra listens through the microphone, works in the Player, and can be switched on and off,
 so that while it is on it hears you and answers whenever you speak.
 
 | Phase | What | Estimate | Status |
 |---|---|---|---|
-| 1 | Terra on/off switch: continuous listening while on, restarts by itself, answers every request | 45 min | In progress |
-| 2 | Safety: Terra must not answer its own voice or the screen reader; optional wake word "Terra"; clear microphone errors | 30 min | Waiting |
-| 3 | Player: the switch is always visible in the Player's top bar; stays on when Terra opens another page | 20 min | Waiting |
-| 4 | Tests with a simulated microphone, docs, log, commit | 40 min | Waiting |
+| 1 | Terra on/off switch: continuous listening while on, restarts by itself, answers every request | 45 min | Done |
+| 2 | Safety: Terra must not answer its own voice or the screen reader; optional wake word "Terra"; clear microphone errors | 30 min | Done |
+| 3 | Player: the switch is always visible in the Player's top bar; stays on when Terra opens another page | 20 min | Done |
+| 4 | Tests with a simulated microphone, docs, log, commit | 40 min | Done |
 
-Total estimate: about 2 hours 15 minutes.
+Total estimate: about 2 hours 15 minutes. Actual: finished 18:14 (laptop clock).
 
 - 18:01: Started. Today V listens for one request only; the change makes V (and a button) a switch.
+- 18:14: Done and committed (b20781f).
+  - V, or the "Terra listening" switch (in Start here and in the Player's top bar), turns Terra on and off.
+    While on, Terra keeps listening and answers every request; it restarts by itself when the browser
+    ends a listening session; "stop listening" or V switches it off.
+  - Terra must not answer itself: it pauses while the built-in voice talks and ignores what sounds like its
+    own last answers. Optional wake word ("Only answer when I start with Terra") for noisy rooms or a
+    screen reader on speakers.
+  - Stays on when it opens another page in the same tab.
+  - Found by the screen-reader simulation: when Chrome asked for microphone permission, Terra said
+    nothing, and the permission bubble is easy to miss without sight. Now it says "Your browser is asking
+    to use the microphone. Choose Allow." and, if blocked, how to allow it.
+  - Tests use a stand-in microphone (headless Chrome has none): 10 new checks; 330 of 330 Player checks,
+    77 of 77 page checks.
+  - Not tested: a real microphone, recognition accuracy, room noise.
 
 ### Session 4: 2026-11-14 evening (finished)
 
@@ -299,7 +313,7 @@ Tick these as you go and add a line under History with what you found.
 - [ ] Screen reader test (about 20 min): VoiceOver (Mac: Cmd + F5), NVDA (Windows) or TalkBack (Android). Eyes closed: open the Player, take the tour (T), get the summary, jump to the warmest area, press W, walk into an edge, compare two places, change volume with minus and plus, mute, change frame. Try each Voice setting once. Note where you got lost, heard nothing, or heard two voices, and whether the letter keys reached the page.
 - [ ] By-eye check: open `decoder-test.html?frame=sst&fill=1` (then `t2m`, `ndvi`, `precip`), type the value you read from the colorbar for each row, and paste the Markdown export into `docs/accuracy-check.md`.
 - [ ] Check the Summary against the picture for each frame (does the "warmest" place look warmest?).
-- [ ] Talk to Terra with a real microphone in Chrome (press V): try "where am I", "take me to Japan", "compare Brazil and Norway", "summary" then "yes", "open the rain map". Note what it misheard or did not understand, and send me the exact words so I can add them.
+- [ ] Talk to Terra with a real microphone in Chrome (press V once to switch it on, then just talk; with headphones, and once without): try "where am I", "take me to Japan", "compare Brazil and Norway", "summary" then "yes", "open the rain map". Note what it misheard or did not understand, and send me the exact words so I can add them.
 - [ ] On a phone with TalkBack or VoiceOver on: does the first question read well, and can you reach "Talk to Terra" and "Where am I?"
 - [ ] Listen to the Demo (press D) and the sound cues with headphones: are the chimes and ticks clear, not annoying? Try High contrast and Large text.
 - [ ] Test on a real phone with headphones: drag on the map, sound start, volume.
@@ -315,6 +329,10 @@ Tick these as you go and add a line under History with what you found.
 ## History
 
 Newest first. Claude's entries name the commit so you can see exactly what changed.
+
+### 2026-11-14: Terra on/off with continuous listening (Claude, commit b20781f)
+- V or the "Terra listening" switch turns Terra on and off; while on it answers whenever you speak.
+- Tests: 330 of 330 Player checks, 77 of 77 page checks (with a stand-in microphone).
 
 ### 2026-11-14: Screen-reader simulation and fixes (Claude, commit 98a17b6)
 - New `tools/sr_sim.py`. It found 14 problems; all fixed (see session 4 above for each problem and solution).
