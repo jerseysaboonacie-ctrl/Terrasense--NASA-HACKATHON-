@@ -5,8 +5,9 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Jukebox Player</title>
   <link rel="stylesheet" href="css/styles.css">
+  <script src="js/display.js"></script>
 </head>
-<body>
+<body data-own-prefs="1">
   <a class="skip-link" href="#frame-wrap">Skip to the map</a>
   <header class="site-header">
     <nav aria-label="Main">
@@ -57,6 +58,7 @@
           <button id="tour-btn" type="button">Tour (T)</button>
           <button id="summary-btn" type="button">Summary</button>
           <button id="where-btn" type="button" class="secondary">Where am I? (W)</button>
+          <button id="demo-btn" type="button" class="secondary" aria-pressed="false">Demo, 1 minute (D)</button>
         </div>
         <div id="summary-box" class="summary-box" hidden>
           <h3>Summary</h3>
@@ -95,7 +97,7 @@
           <dt>Value</dt><dd id="info-value">–</dd>
           <dt>Place</dt><dd id="info-place">–</dd>
           <dt>Date</dt><dd id="info-date"></dd>
-          <dt>Legend colour</dt><dd id="info-swatch">–</dd>
+          <dt>On the legend</dt><dd id="info-swatch">–</dd>
         </dl>
         <p class="muted small">Values are approximate. They are decoded from the colors of the visualization, not from the underlying measurements.</p>
         <button id="explain-btn" type="button" class="secondary" aria-expanded="false" aria-controls="explain">Explain this sound</button>
@@ -160,8 +162,14 @@
           </select>
         </div>
         <label class="check"><input type="checkbox" id="moving-toggle"> Read the value when the mouse stops moving</label>
-        <label class="check"><input type="checkbox" id="cues-toggle" checked> Sound cues (bump at the map edge, tone on errors)</label>
+        <label class="check"><input type="checkbox" id="cues-toggle" checked> Sound cues (bump at the map edge, chimes when a scan starts and ends and when Go to jumps, one tick for A and two for B, a falling tone on errors)</label>
         <label class="check" id="vibrate-label" hidden><input type="checkbox" id="vibrate-toggle" checked> Vibrate at very high values (phones that support it)</label>
+        <fieldset class="display-settings voice-mode">
+          <legend>Display</legend>
+          <label class="check"><input type="checkbox" id="hc-toggle"> High contrast (black, white and yellow)</label>
+          <label class="check"><input type="checkbox" id="large-toggle"> Large text</label>
+          <label class="check"><input type="checkbox" id="motion-toggle"> Reduce motion (the pointer does not move across the map during a scan)</label>
+        </fieldset>
         <p class="muted small">These settings are remembered in this browser.</p>
         <div class="button-row">
           <button id="reset-btn" type="button" class="secondary">Reset settings</button>
@@ -171,9 +179,9 @@
 
       <!-- Legends (left column on a laptop, last on a phone) -->
       <div class="area-lower">
-      <!-- Colour legend -->
+      <!-- Color legend -->
       <section class="area-legend" aria-labelledby="legend-heading">
-        <h2 id="legend-heading">Colour legend</h2>
+        <h2 id="legend-heading">Color legend</h2>
         <canvas id="legend-canvas" class="legend-strip" aria-hidden="true"></canvas>
         <div id="legend-ends" class="legend-ends"></div>
         <div id="colorbars" class="colorbars"></div>
@@ -201,12 +209,13 @@
           <tr><td>Enter or Space</td><td>Play the current point again</td></tr>
           <tr><td>W</td><td>Where am I: repeat the value and place in full</td></tr>
           <tr><td>T</td><td>Start the tour, or go to its next step</td></tr>
+          <tr><td>D</td><td>Start or stop the one-minute demo</td></tr>
           <tr><td>S</td><td>Start or stop the scan</td></tr>
           <tr><td>M</td><td>Mute or unmute</td></tr>
           <tr><td>Minus, plus</td><td>Volume down, volume up</td></tr>
           <tr><td>A, B</td><td>Mark the current point as A or B</td></tr>
           <tr><td>C</td><td>Compare A and B (plays both, then says the difference)</td></tr>
-          <tr><td>Escape</td><td>Stop the sound, the speech and the tour</td></tr>
+          <tr><td>Escape</td><td>Stop the sound, the speech, the tour and the demo</td></tr>
           <tr><td>?</td><td>Open this help</td></tr>
           <tr><td>Tab</td><td>Leave the map and go to the controls</td></tr>
         </tbody>

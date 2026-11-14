@@ -5,17 +5,17 @@ run again on 2026-11-13 after adding Summary, Go to and Compare (section 7), and
 2026-11-13 after the navigation work for blind users (section 8).
 Each check is PASS, FAIL or NOT TESTED, with the evidence. "Simulated" means automated
 tests in headless Chrome on macOS using synthetic key and pointer events
-(`tests/player-test.html`, 185 checks, 0 failed; `tests/pages-test.html`, 70 checks, 0 failed;
-`decoder-test.html?auto=1`, 20 self-tests, 0 failed; all on 2026-11-13).
+(`tests/player-test.html`, 214 checks, 0 failed; `tests/pages-test.html`, 73 checks, 0 failed;
+`decoder-test.html?auto=1`, 20 self-tests, 0 failed; all on 2026-11-14).
 
 ## Results
 
 | # | Check | Result | Evidence |
 |---|---|---|---|
 | 1.1 | Ten pixels per frame decode within one legend step | PASS for SST; by-eye part NOT TESTED | SST: all ten within 2.0 °C of the real MUR value (one step = 5 °C); 336-point grid: median error 0.7 °C, worst 1.8 °C. Other frames: self-tests pass (round trip, ±8 noise never more than one step off). The by-eye column in docs/accuracy-check.md still needs a person. |
-| 1.2 | No hardcoded or invented values; no extra precision | PASS | Every value comes from the legend tables built from NASA's colourbars by `tools/build_legends.py`. Temperatures shown to 1 °C (table has 0.25–0.5 °C entries), NDVI to 10%, precipitation as class ranges. Ends of a legend say "or lower" / "or higher". |
+| 1.2 | No hardcoded or invented values; no extra precision | PASS | Every value comes from the legend tables built from NASA's colorbars by `tools/build_legends.py`. Temperatures shown to 1 °C (table has 0.25–0.5 °C entries), NDVI to 10%, precipitation as class ranges. Ends of a legend say "or lower" / "or higher". |
 | 1.3 | Units, variable names, dates, credits match the source | PASS, with gaps listed below | Copied from the SVS pages and API on 2026-11-05 into `data/frames.json`; gallery, Player and Credits read only that file. |
-| 1.4 | Missing or masked pixels give no data, not a low value | PASS | Simulated: land, water, logo and transparent pixels give "no data", silence and one click on all four frames. Self-test: every mask and no-data colour decodes to no data. |
+| 1.4 | Missing or masked pixels give no data, not a low value | PASS | Simulated: land, water, logo and transparent pixels give "no data", silence and one click on all four frames. Self-test: every mask and no-data color decodes to no data. |
 | 2.1 | Higher value always higher pitch, same scale, 10 points per frame | PASS | Simulated, all four frames. SST: −2 °C → 240 Hz … 32 °C → 800 Hz; T2M: −39 °C → 222 Hz … 40 °C or higher → 880 Hz; every frequency = 220 × 4^t within 0.5 Hz. |
 | 2.2 | Stereo pan follows horizontal position | PASS | Simulated: pan = −0.8 … +0.8 from left to right edge, within 0.01, on all frames. |
 | 2.3 | Nothing exceeds the safe volume limit | PASS | Simulated: slider at 100% gives master gain 0.35 (the cap); compressor present on the output. |
@@ -75,6 +75,19 @@ Every row is simulated in headless Chrome on all four frames unless it says othe
 Not tested: any of this with VoiceOver, NVDA, JAWS or TalkBack; real speech output; touch on a real phone;
 whether blind users find the tour and wording clear. Single-letter keys may be taken by a screen reader
 in browse mode outside the map; the help and the Accessibility page say so.
+
+## 9. Sound cues, display, demo, wording, accuracy table (added 2026-11-14)
+
+| # | Check | Result | Evidence |
+|---|---|---|---|
+| 9.1 | Sound cues | PASS (simulated, 4 frames) | One scan gives one start and one end chime; Go to gives one jump note; A one tick, B two. With Sound cues off, Go to plays its tone but no chime. Cue sounds were counted, not listened to. |
+| 9.2 | Tone fades when the pointer is still | PASS (simulated, 4 frames) | Tone on after a move, off 1.3 s later. |
+| 9.3 | Display settings | PASS (simulated) | High contrast: page background black; Large text: root font 20 px; both survive a reload and are cleared by Reset. Switch on the Accessibility page also applies on Home. Reduce motion: during a scan the marker stays put while the sound moves. Not checked: how high contrast looks to a low-vision user. |
+| 9.4 | Demo | PASS (simulated) | Full run on SST: tones, equator scan, warmest, coolest, compare and summary all happen and it ends with "Demo finished." D then Escape on all four frames stops it and restores the row menu. |
+| 9.5 | Legend line | PASS (simulated, 4 frames) | e.g. "between the 25 and 30 °C marks"; the decoded table value lies between the two marks, which are one printed tick apart. |
+| 9.6 | Ten-point table on How it works | PASS | 12 rows decoded live by the Player's code; 10 compared with MUR 2026-11-04, all within one legend step (5 °C); 2 correctly give no value. |
+| 9.7 | One spelling | PASS | The British spelling no longer appears in any page, script, tool, data file or document (searched with `git grep`), except in the project log's history. |
+| 9.8 | SST date | PASS | Reads "Data date not stated (image updated 2026-11-05)" in the Player, gallery, credits and README. |
 
 ## Could not verify
 

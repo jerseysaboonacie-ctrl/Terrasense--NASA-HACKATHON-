@@ -29,18 +29,41 @@ export const SETTINGS = {
   click: { frequency: 1400, seconds: 0.015, level: 0.25 },
 
   // Sound cues (short, soft, below the tone level; they obey mute and the cap).
-  //   edge:  a low bump when the arrow keys reach the edge of the map
-  //   error: two falling notes when something fails
+  // Each is a list of notes; `delay` is seconds after the first note.
+  //   edge:      a low bump when the arrow keys reach the edge of the map
+  //   error:     two falling notes when something fails
+  //   scanStart: two rising notes;  scanEnd: the same two, falling
+  //   jump:      one short high note when Go to moves the pointer
+  //   markA:     one tick;  markB: two ticks (so A and B sound different)
   cues: {
     edge: { notes: [{ frequency: 140, seconds: 0.09, level: 0.5, type: 'triangle' }] },
     error: { notes: [
       { frequency: 330, seconds: 0.12, level: 0.3, type: 'triangle' },
       { frequency: 247, seconds: 0.16, level: 0.3, type: 'triangle', delay: 0.15 },
     ] },
+    scanStart: { notes: [
+      { frequency: 523, seconds: 0.08, level: 0.25, type: 'sine' },
+      { frequency: 784, seconds: 0.1, level: 0.25, type: 'sine', delay: 0.1 },
+    ] },
+    scanEnd: { notes: [
+      { frequency: 784, seconds: 0.08, level: 0.25, type: 'sine' },
+      { frequency: 523, seconds: 0.12, level: 0.25, type: 'sine', delay: 0.1 },
+    ] },
+    jump: { notes: [{ frequency: 1046, seconds: 0.06, level: 0.2, type: 'sine' }] },
+    markA: { notes: [{ frequency: 1800, seconds: 0.03, level: 0.25, type: 'triangle' }] },
+    markB: { notes: [
+      { frequency: 1800, seconds: 0.03, level: 0.25, type: 'triangle' },
+      { frequency: 1800, seconds: 0.03, level: 0.25, type: 'triangle', delay: 0.09 },
+    ] },
   },
+
+  // A tone played by hovering or touching fades out after the pointer has
+  // been still this long, so a resting hand does not leave a tone droning.
+  stillFadeSeconds: 1,
 
   // Timing.
   scanSeconds: 8,           // one sweep across the frame
+  demoSeconds: 60,          // length of the Demo
   referenceSeconds: 1,      // low / middle / high reference tones
   keyToneSeconds: 0.6,      // how long a tone plays after a key press
   narrationDelayMs: 600,    // wait this long after the pointer stops before announcing

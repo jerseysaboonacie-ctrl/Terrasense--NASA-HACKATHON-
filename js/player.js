@@ -5,7 +5,7 @@
 // sound from the single voice in audio.js, and every sentence from
 // narrator.js, so the panel, the sound and the narration always agree.
 
-import { loadFrameList, loadFrame, decodeAt } from './decoder.js';
+import { loadFrameList, loadFrame, decodeAt, describeLegendPosition } from './decoder.js';
 import {
   startAudio, isStarted, audioSupported, playTone, stopTone, playClick,
   setVolume, setMuted, isMuted, frequencyFor, panFor, waveformFor, audioState, playCue,
@@ -21,9 +21,10 @@ const els = {
   title: $('frame-title'), date: $('frame-date'), startBtn: $('start-btn'), muteBtn: $('mute-btn'),
   audioMsg: $('audio-msg'), status: $('status'), alert: $('alert'),
   intro: $('intro'), layoutText: $('layout-text'), tourBtn: $('tour-btn'), whereBtn: $('where-btn'),
-  frameSelect: $('frame-select'), voiceRadios: [...document.querySelectorAll('input[name="voice-mode"]')],
+  frameSelect: $('frame-select'), demoBtn: $('demo-btn'), voiceRadios: [...document.querySelectorAll('input[name="voice-mode"]')],
   detailSelect: $('detail-select'), rateSelect: $('rate-select'), rateRow: $('rate-row'),
   movingToggle: $('moving-toggle'), cuesToggle: $('cues-toggle'), resetBtn: $('reset-btn'),
+  hcToggle: $('hc-toggle'), largeToggle: $('large-toggle'), motionToggle: $('motion-toggle'),
   wrap: $('frame-wrap'), canvas: $('frame-canvas'), cursor: $('cursor'),
   narration: $('narration-line'), infoVariable: $('info-variable'), infoValue: $('info-value'),
   infoPlace: $('info-place'), infoDate: $('info-date'), infoSwatch: $('info-swatch'),
@@ -80,7 +81,7 @@ function swatch(rgb) {
 function showError(message) {
   els.status.textContent = '';
   els.alert.textContent = message;
-  if (prefs.soundCues) playCue('error');
+  cue('error');
   if (prefs.voiceMode === 'voice') speak(message, prefs.speechRate);
 }
 
@@ -123,6 +124,11 @@ function say(text) {
   else if (prefs.voiceMode === 'voice') speak(text, prefs.speechRate);
 }
 const announce = say;
+
+/** A sound cue (settings.js), if Sound cues is on. */
+function cue(kind, x = 0.5) {
+  if (prefs.soundCues) playCue(kind, x);
+}
 const announceStatus = say;
 
 // ---------------------------------------------------------------------------
@@ -182,7 +188,7 @@ function showPoint({ announce: when = false, hold, force = false, prefix = '', d
   els.infoPlace.textContent = d.place;
   els.infoSwatch.replaceChildren();
   if (r.status === 'value') {
-    els.infoSwatch.append(swatch(r.matchedColor), ' matched legend colour');
+    els.infoSwatch.append(swatch(r.matchedColor), ' ' + describeLegendPosition(frame.meta, r.entry));
   } else {
     els.infoSwatch.textContent = 'No data';
   }
@@ -190,7 +196,9 @@ function showPoint({ announce: when = false, hold, force = false, prefix = '', d
   drawLegend(els.legendCanvas, frame.meta, r);
   if (!els.explain.hidden) renderExplain(r);
 
-  playPoint(r, { hold, force });
+  // Pointer tones (no hold given) fade after the pointer has been still for
+  // S.stillFadeSeconds; each move re-arms it. The scan keeps its tone going.
+  playPoint(r, { hold: hold ?? (scan ? undefined : S.stillFadeSeconds), force });
   vibrate(r);
 
   clearTimeout(narrateTimer);
@@ -237,13 +245,13 @@ function renderExplain(r) {
     return;
   }
 
-  const how = meta.smoothRadius > 0 ? 'the middle colour of the 3 by 3 pixels around' : 'the colour of';
-  step(`Pixel colour: `, swatch(r.rgb), ` red ${r.rgb[0]}, green ${r.rgb[1]}, blue ${r.rgb[2]} (${how} x ${r.x}, y ${r.y}).`);
+  const how = meta.smoothRadius > 0 ? 'the middle color of the 3 by 3 pixels around' : 'the color of';
+  step(`Pixel color: `, swatch(r.rgb), ` red ${r.rgb[0]}, green ${r.rgb[1]}, blue ${r.rgb[2]} (${how} x ${r.x}, y ${r.y}).`);
 
   if (r.status === 'value') {
-    step(`Closest legend colour: `, swatch(r.matchedColor),
+    step(`Closest legend color: `, swatch(r.matchedColor),
       ` red ${r.matchedColor[0]}, green ${r.matchedColor[1]}, blue ${r.matchedColor[2]}. ` +
-      `Colour distance ${r.distance.toFixed(1)}; anything over ${meta.maxColorDistance} would count as no data.`);
+      `Color distance ${r.distance.toFixed(1)}; anything over ${meta.maxColorDistance} would count as no data.`);
     step(`Value: ${r.text}, which is ${Math.round(r.t * 100)}% of the way up the legend.`);
     const f = frequencyFor(r.t);
     const pan = panFor(xFraction(r.x));
@@ -252,8 +260,8 @@ function renderExplain(r) {
     step(`Sound: ${Math.round(f)} Hz (${S.minFrequency} Hz × ${ratio} to the power ${r.t.toFixed(2)}), ` +
       `${waveformFor(r.entry.family)} wave, panned ${side} (${pan.toFixed(2)}).`);
   } else {
-    if (r.matchedColor) step(`This is the colour used for: ${r.reason}.`);
-    else if (r.distance != null) step(`No legend colour is close enough: the closest is ${r.distance.toFixed(1)} away, and the limit is ${meta.maxColorDistance}.`);
+    if (r.matchedColor) step(`This is the color used for: ${r.reason}.`);
+    else if (r.distance != null) step(`No legend color is close enough: the closest is ${r.distance.toFixed(1)} away, and the limit is ${meta.maxColorDistance}.`);
     else step(`No data: ${r.reason}.`);
     step('Value: none. The app never guesses.');
     step('Sound: silence, plus one soft click when you enter the area.');
@@ -351,7 +359,7 @@ els.wrap.addEventListener('keydown', (e) => {
       // Already at the edge: say so, with a bump, instead of staying silent.
       if ((move[0] && nx === point.x) || (move[1] && ny === point.y)) {
         prefix = `Edge of the map, ${EDGE_NAMES[e.key]}. `;
-        if (prefs.soundCues) playCue('edge', xFraction(nx));
+        cue('edge', xFraction(nx));
       }
       point.x = nx;
       point.y = ny;
@@ -371,6 +379,7 @@ document.addEventListener('keydown', (e) => {
   if (e.key === 'm' || e.key === 'M') { e.preventDefault(); toggleMute(); }
   else if (e.key === 't' || e.key === 'T') { e.preventDefault(); tourStep(); }
   else if (e.key === 'w' || e.key === 'W') { e.preventDefault(); whereAmI(); }
+  else if (e.key === 'd' || e.key === 'D') { e.preventDefault(); toggleDemo(); }
   else if (e.key === '-' || e.key === '_') { e.preventDefault(); changeVolume(-10); }
   else if (e.key === '+' || e.key === '=') { e.preventDefault(); changeVolume(10); }
   else if (e.key === 's' || e.key === 'S') { e.preventDefault(); toggleScan(); }
@@ -378,7 +387,10 @@ document.addEventListener('keydown', (e) => {
   else if (e.key === 'b' || e.key === 'B') { e.preventDefault(); mark('B'); }
   else if (e.key === 'c' || e.key === 'C') { e.preventDefault(); compare(); }
   else if (e.key === '?') { e.preventDefault(); els.helpDialog.showModal(); }
-  else if (e.key === 'Escape') { stopScan(true); stopTone(); stopSpeaking(); stopTour(true); }
+  else if (e.key === 'Escape') {
+    if (demo) { stopDemo(true); return; }
+    stopScan(true); stopTone(); stopSpeaking(); stopTour(true);
+  }
 });
 
 // ---------------------------------------------------------------------------
@@ -417,7 +429,9 @@ async function startScan() {
   const row = els.rowSelect.value === 'pointer' ? point.y : latToY(Number(els.rowSelect.value));
   if (overview && !overviewCache) overviewCache = computeOverview();
 
-  scan = { start: performance.now(), row, overview, raf: 0, lastNull: false };
+  // The start chime plays first; the sweep begins just after it.
+  cue('scanStart', 0.5);
+  scan = { start: performance.now() + (prefs.soundCues ? 250 : 0), row, overview, raf: 0, lastNull: false };
   els.scanBtn.setAttribute('aria-pressed', 'true');
   els.scanBtn.textContent = 'Stop scan';
   lastStatus = null;
@@ -429,10 +443,23 @@ async function startScan() {
   const tick = (now) => {
     if (!scan) return;
     const f = (now - scan.start) / (S.scanSeconds * 1000);
-    if (f >= 1) { stopScan(false); announceStatus('Scan finished.'); return; }
+    if (f < 0) { scan.raf = requestAnimationFrame(tick); return; }
+    if (f >= 1) { stopScan(false); cue('scanEnd', 1); announceStatus('Scan finished.'); return; }
     const x = a.x + Math.min(a.width - 1, Math.floor(f * a.width));
     point = { x, y: scan.row };
-    if (scan.overview) {
+    if (scan.overview || reduceMotion()) {
+      // Overview, or reduced motion: sound only; the marker stays at the row start.
+      if (!scan.overview) {
+        const r = decodeAt(frame, x, scan.row);
+        last = r;
+        if (r.status === 'value') { playTone({ t: r.t, xFraction: f, family: r.entry.family }); scan.lastNull = false; }
+        else { stopTone(); if (!scan.lastNull) playClick(f); scan.lastNull = true; }
+        els.cursor.hidden = false;
+        els.cursor.style.left = ((a.x + 0.5) / frame.width) * 100 + '%';
+        els.cursor.style.top = ((scan.row + 0.5) / frame.height) * 100 + '%';
+        scan.raf = requestAnimationFrame(tick);
+        return;
+      }
       const t = overviewCache[Math.min(overviewCache.length - 1, Math.floor(f * overviewCache.length))];
       els.cursor.hidden = false;
       els.cursor.style.left = ((x + 0.5) / frame.width) * 100 + '%';
@@ -460,7 +487,7 @@ function stopScan(announceIt) {
   stopTone();
   els.scanBtn.setAttribute('aria-pressed', 'false');
   els.scanBtn.textContent = 'Scan';
-  if (announceIt) announceStatus('Scan stopped.');
+  if (announceIt) { cue('scanEnd', 0.5); announceStatus('Scan stopped.'); }
 }
 
 els.scanBtn.addEventListener('click', toggleScan);
@@ -479,6 +506,11 @@ let highIndex = -1;        // which "warmest" area we are on, for Next warmest
 
 const cap = (s) => s.charAt(0).toUpperCase() + s.slice(1);
 
+/** The frame's date for use mid-sentence ("Data date not stated..." -> "data date not stated..."). */
+function dateInSentence(meta) {
+  return /^[A-Z][a-z]/.test(meta.date) ? meta.date.charAt(0).toLowerCase() + meta.date.slice(1) : meta.date;
+}
+
 function getAnalysis() {
   if (!analysis) analysis = analyseFrame(frame);
   return analysis;
@@ -494,8 +526,7 @@ function buildSummary() {
   const meta = frame.meta;
   const T = meta.terms;
   const A = getAnalysis();
-  // "Most recent frame on ..." reads better mid-sentence in lower case.
-  const date = /^[A-Z][a-z]/.test(meta.date) ? meta.date.charAt(0).toLowerCase() + meta.date.slice(1) : meta.date;
+  const date = dateInSentence(frame.meta);
   if (!A.high.length || !A.low.length) {
     return `Summary of ${meta.title}, ${date}: there is not enough decoded data to find areas.`;
   }
@@ -527,6 +558,7 @@ async function goToArea(kind, i) {
   if (!list.length) { announceStatus(`There is not enough decoded data to find the ${T[kind]} ${T.area}.`); return; }
   const area = list[i % list.length];
   point = { x: area.rep.x, y: area.rep.y };
+  cue('jump', xFraction(area.rep.x));
   const rank = list.length > 1 ? `, ${(i % list.length) + 1} of ${list.length}` : '';
   showPoint({ announce: 'now', hold: S.referenceSeconds, prefix: `${cap(T[kind])} ${T.area}${rank}: `, detail: atLeastNormal() });
 }
@@ -559,6 +591,7 @@ function mark(which) {
   if (r.status === 'value') dd.append(swatch(r.matchedColor), ' ');
   dd.append(words);
   placeMarker(which === 'A' ? els.markerA : els.markerB, r);
+  cue(which === 'A' ? 'markA' : 'markB', xFraction(r.x));
   announceStatus(`Point ${which} marked: ${words}.`);
 }
 
@@ -686,7 +719,22 @@ function applyPrefs() {
   els.movingToggle.checked = prefs.announceMoving;
   els.cuesToggle.checked = prefs.soundCues;
   els.vibrateToggle.checked = prefs.vibrate;
+  els.hcToggle.checked = prefs.highContrast;
+  els.largeToggle.checked = prefs.largeText;
+  els.motionToggle.checked = prefs.reduceMotion;
+  applyDisplay();
   setVolumePercent(prefs.volume);
+}
+
+/** High contrast, large text, reduced motion: classes on <html> (display.js). */
+function applyDisplay() {
+  if (window.TerraDisplay) window.TerraDisplay.apply(prefs);
+  if (frame) drawLegend(els.legendCanvas, frame.meta, last);
+}
+
+/** Reduced motion: the setting here, or the system's own setting. */
+function reduceMotion() {
+  return prefs.reduceMotion || (window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches);
 }
 
 els.voiceRadios.forEach((r) => r.addEventListener('change', () => {
@@ -706,6 +754,9 @@ els.rateSelect.addEventListener('change', () => {
 els.movingToggle.addEventListener('change', () => setPref('announceMoving', els.movingToggle.checked));
 els.cuesToggle.addEventListener('change', () => setPref('soundCues', els.cuesToggle.checked));
 els.vibrateToggle.addEventListener('change', () => setPref('vibrate', els.vibrateToggle.checked));
+for (const [box, key] of [[els.hcToggle, 'highContrast'], [els.largeToggle, 'largeText'], [els.motionToggle, 'reduceMotion']]) {
+  box.addEventListener('change', () => { setPref(key, box.checked); applyDisplay(); });
+}
 els.resetBtn.addEventListener('click', () => {
   clearPrefs();
   stopSpeaking();
@@ -735,7 +786,7 @@ function tourSteps() {
   const n = 6;
   const head = (i, name) => `Tour, step ${i} of ${n}${name ? ', ' + name : ''}.`;
   return [
-    { text: `${head(1)} This is ${meta.title}, ${meta.date}. ${meta.listenFor} Press T for the next step, or Escape to stop.` },
+    { text: `${head(1)} This is ${meta.title}, ${dateInSentence(meta)}. ${meta.listenFor} Press T for the next step, or Escape to stop.` },
     { text: `${head(2, 'the layout')} ${describeLayout(meta)}` },
     { text: `${head(3, 'the sound')} Higher values play higher notes, on the same scale for every frame. ` +
         refs.map((r) => `${r.name}: ${r.label}.`).join(' ') + ' You are hearing them now, low to high.', tones: refs },
@@ -778,6 +829,75 @@ function stopTour(announceIt) {
   if (announceIt && !finished) say('Tour stopped.');
 }
 
+// ---------------------------------------------------------------------------
+// Demo: one minute that plays and says the main features by itself.
+// Every step calls the same functions as the buttons, so it says nothing
+// the Player would not say.
+// ---------------------------------------------------------------------------
+
+let demo = null;           // { timers, row } while the demo runs
+
+/** The demo's steps: [seconds from start, action]. Total S.demoSeconds. */
+function demoSteps() {
+  const meta = frame.meta;
+  const refs = referenceTones(meta);
+  const A = getAnalysis();
+  const steps = [
+    [0, () => say(`Demo, one minute: ${meta.title}. Press Escape or Stop demo at any time. First, the sound scale: higher values play higher notes. ` +
+      refs.map((r) => `${r.name}: ${r.label}.`).join(' '))],
+  ];
+  refs.forEach((r, k) => steps.push([1.5 + k * 1.2, () => {
+    if (isStarted() && !isMuted()) playTone({ t: r.t, xFraction: 0.5, family: r.family, holdSeconds: 0.9 });
+  }]));
+  steps.push([6, () => { els.rowSelect.value = '0'; els.overview.checked = false; startScan(); }]);
+  steps.push([16, () => goToArea('high', 0)]);
+  steps.push([23, () => goToArea('low', 0)]);
+  if (A.high.length && A.low.length) {
+    steps.push([30, () => { point = { ...A.high[0].rep }; mark('A'); }]);
+    steps.push([32.5, () => { point = { ...A.low[0].rep }; mark('B'); }]);
+    steps.push([35, () => compare()]);
+  }
+  steps.push([44, () => els.summaryBtn.click()]);
+  steps.push([S.demoSeconds, () => { finishDemo(); say(`Demo finished. Now try it yourself: Tab to the map and use the arrow keys, or press T for the tour.`); }]);
+  return steps;
+}
+
+async function startDemo() {
+  if (!frame || demo) return;
+  stopScan(false); stopTour(false); stopTone(); stopSpeaking();
+  await ensureAudio();
+  demo = { timers: [], row: els.rowSelect.value, overview: els.overview.checked };
+  els.demoBtn.setAttribute('aria-pressed', 'true');
+  els.demoBtn.textContent = 'Stop demo (D)';
+  for (const [sec, act] of demoSteps()) {
+    demo.timers.push(setTimeout(() => { if (demo) act(); }, sec * 1000));
+  }
+}
+
+/** Put the controls the demo changed back as they were. */
+function finishDemo() {
+  if (!demo) return;
+  demo.timers.forEach(clearTimeout);
+  els.rowSelect.value = demo.row;
+  els.overview.checked = demo.overview;
+  demo = null;
+  els.demoBtn.setAttribute('aria-pressed', 'false');
+  els.demoBtn.textContent = 'Demo, 1 minute (D)';
+}
+
+function stopDemo(announceIt) {
+  if (!demo) return;
+  finishDemo();
+  compareTimers.forEach(clearTimeout);
+  stopScan(false); stopTone(); stopSpeaking();
+  if (announceIt) say('Demo stopped.');
+}
+
+function toggleDemo() {
+  if (demo) stopDemo(true); else startDemo();
+}
+
+els.demoBtn.addEventListener('click', toggleDemo);
 els.tourBtn.addEventListener('click', tourStep);
 els.whereBtn.addEventListener('click', whereAmI);
 els.frameSelect.addEventListener('change', () => {
@@ -825,13 +945,13 @@ async function init() {
   }));
   const layout = describeLayout(meta);
   els.layoutText.textContent = layout;
-  els.intro.textContent = `${meta.title}, ${meta.date}. ${meta.listenFor} ` +
+  els.intro.textContent = `${meta.title}, ${dateInSentence(meta)}. ${meta.listenFor} ` +
     'Press T for a short guided tour, or go to the map and use the arrow keys. Question mark lists every key.';
 
   els.title.textContent = meta.title;
   els.date.textContent = meta.date;
   document.title = meta.title + ' – Jukebox Player';
-  els.wrap.setAttribute('aria-label', `Map: ${meta.title}, ${meta.date}. Arrow keys explore.`);
+  els.wrap.setAttribute('aria-label', `Map: ${meta.title}, ${dateInSentence(meta)}. Arrow keys explore.`);
   els.infoVariable.textContent = `${meta.variable} (${meta.units})`;
   els.infoDate.textContent = meta.date;
   buildLegendText(meta);
@@ -885,6 +1005,7 @@ async function init() {
       scanning: Boolean(scan),
       prefs: { ...prefs },
       tourStep: tour ? tour.i : null,
+      demo: Boolean(demo),
       alert: els.alert.textContent,
       audio: audioState(),
     }),

@@ -1,10 +1,10 @@
 // decoder.js
-// Turns the colour of a pixel into an approximate value, using the frame's
+// Turns the color of a pixel into an approximate value, using the frame's
 // legend table in data/frames.json.
 //
-// The legend table is the single source of truth for what a colour means.
-// The decoder never guesses: if the pixel colour is not close to any legend
-// colour, it reports "no data".
+// The legend table is the single source of truth for what a color means.
+// The decoder never guesses: if the pixel color is not close to any legend
+// color, it reports "no data".
 //
 // Everything that plays a sound or shows a value goes through decodeAt().
 
@@ -33,8 +33,8 @@ export async function loadFrame(meta) {
  * Read the raw RGBA pixels of an image served from this site.
  * (Images on other websites cannot be read: the browser blocks it. That is
  * why the frames are downloaded into frames/ and served from here.)
- * colorSpaceConversion 'none' keeps the colours exactly as stored in the file,
- * so they match the colours we measured from NASA's colourbars.
+ * colorSpaceConversion 'none' keeps the colors exactly as stored in the file,
+ * so they match the colors we measured from NASA's colorbars.
  */
 async function loadPixels(url) {
   const res = await fetch(url);
@@ -60,8 +60,8 @@ async function loadPixels(url) {
 // Decoding
 // ---------------------------------------------------------------------------
 
-/** Straight-line distance between two colours in RGB space (0 = identical). */
-export function colourDistance(a, b) {
+/** Straight-line distance between two colors in RGB space (0 = identical). */
+export function colorDistance(a, b) {
   const dr = a[0] - b[0];
   const dg = a[1] - b[1];
   const db = a[2] - b[2];
@@ -69,11 +69,11 @@ export function colourDistance(a, b) {
 }
 
 /**
- * Colour at (x, y). For JPEG frames (smoothRadius 1) we take the median of the
+ * Color at (x, y). For JPEG frames (smoothRadius 1) we take the median of the
  * 3x3 square around the pixel: this removes compression noise without
  * blending two different regions together. PNG frames use the pixel itself.
  */
-export function sampleColour(frame, x, y) {
+export function sampleColor(frame, x, y) {
   const r = frame.meta.smoothRadius;
   const R = [], G = [], B = [], A = [];
   for (let dy = -r; dy <= r; dy++) {
@@ -92,12 +92,12 @@ function median(list) {
   return s[Math.floor(s.length / 2)];
 }
 
-/** Find the legend entry whose colour is closest to rgb. */
+/** Find the legend entry whose color is closest to rgb. */
 export function nearestLegendEntry(legend, rgb) {
   let best = null;
   let bestDistance = Infinity;
   for (const entry of legend) {
-    const d = colourDistance(rgb, entry.color);
+    const d = colorDistance(rgb, entry.color);
     if (d < bestDistance) { best = entry; bestDistance = d; }
   }
   return { entry: best, distance: bestDistance };
@@ -119,16 +119,16 @@ export function pixelToLonLat(frame, x, y) {
  * Decode the pixel at image coordinates (x, y).
  *
  * Returns an object with:
- *   status     'value'  a legend colour matched; value is approximate
+ *   status     'value'  a legend color matched; value is approximate
  *              'nodata' anything else: outside the map, under a logo or date
- *                       label, a known no-data colour (land, water...), a
- *                       transparent pixel, or a colour not on the legend
+ *                       label, a known no-data color (land, water...), a
+ *                       transparent pixel, or a color not on the legend
  *   reason     why it is no data (shown to the user)
  *   t          0..1 position on the legend (0 = lowest value), for pitch
  *   entry      the matched legend entry
  *   text       short plain-language value, e.g. "about 28 °C"
- *   rgb        sampled colour; matchedColor = legend colour it matched
- *   distance   colour distance between the two (smaller = better match)
+ *   rgb        sampled color; matchedColor = legend color it matched
+ *   distance   color distance between the two (smaller = better match)
  *   lon, lat   position on the globe
  */
 export function decodeAt(frame, x, y) {
@@ -143,15 +143,15 @@ export function decodeAt(frame, x, y) {
   const mask = meta.masks.find((m) => inRect(m, x, y));
   if (mask) return noData('covered by the ' + mask.label);
 
-  const { rgb, alpha } = sampleColour(frame, x, y);
-  return { ...result, rgb, ...classifyColour(meta, rgb, alpha) };
+  const { rgb, alpha } = sampleColor(frame, x, y);
+  return { ...result, rgb, ...classifyColor(meta, rgb, alpha) };
 }
 
 /**
- * The core decision: what does this colour mean on this frame's legend?
- * Separate from decodeAt() so it can be tested with any colour.
+ * The core decision: what does this color mean on this frame's legend?
+ * Separate from decodeAt() so it can be tested with any color.
  */
-export function classifyColour(meta, rgb, alpha = 255) {
+export function classifyColor(meta, rgb, alpha = 255) {
   const noData = (reason, extra) => ({ ...extra, status: 'nodata', reason, text: 'no data' });
 
   if (alpha < 128) {
@@ -160,12 +160,12 @@ export function classifyColour(meta, rgb, alpha = 255) {
 
   const { entry, distance } = nearestLegendEntry(meta.legend, rgb);
 
-  // Known no-data colours (e.g. grey land on the sea temperature map).
-  // They win only if they are a closer match than the best legend colour.
+  // Known no-data colors (e.g. grey land on the sea temperature map).
+  // They win only if they are a closer match than the best legend color.
   let nd = null;
   let ndDistance = Infinity;
   for (const c of meta.noDataColors) {
-    const d = colourDistance(rgb, c.color);
+    const d = colorDistance(rgb, c.color);
     if (d <= c.maxDistance && d < ndDistance) { nd = c; ndDistance = d; }
   }
   if (nd && ndDistance < distance) {
@@ -173,7 +173,7 @@ export function classifyColour(meta, rgb, alpha = 255) {
   }
 
   if (distance > meta.maxColorDistance) {
-    return noData('colour is not on the legend', { distance });
+    return noData('color is not on the legend', { distance });
   }
 
   return {
@@ -205,7 +205,7 @@ function fmt(n) {
 /**
  * Short value text, always marked approximate ("about").
  * Values at the very ends of the legend say "or lower" / "or higher",
- * because the colourbar cannot show anything beyond its ends.
+ * because the colorbar cannot show anything beyond its ends.
  */
 export function describeValue(meta, entry) {
   const info = meta.legendInfo;
@@ -230,6 +230,30 @@ export function describeValue(meta, entry) {
   if (atBottom) return `${v} ${meta.units} or lower`;
   if (atTop) return `${v} ${meta.units} or higher`;
   return `about ${v} ${meta.units}`;
+}
+
+/**
+ * Where a matched color sits on NASA's colorbar, in the words a sighted
+ * person would use reading the bar: between which printed tick marks
+ * (continuous legends), which class (discrete), or how far along (relative).
+ */
+export function describeLegendPosition(meta, entry) {
+  const info = meta.legendInfo;
+  if (info.kind === 'discrete') {
+    const kind = entry.family === 'frozen' ? 'snow' : 'rain';
+    return entry.high == null
+      ? `${kind} class, ${fmt(entry.value)} ${meta.units} or more`
+      : `${kind} class, ${fmt(entry.value)} to ${fmt(entry.high)} ${meta.units}`;
+  }
+  if (info.scale === 'relative') {
+    return `${Math.round(entry.t * 100)}% of the way from Low to High (no numbers on this legend)`;
+  }
+  const tick = info.tickStep;
+  if (entry.t <= 0) return `at the low end, the ${fmt(info.min)} ${meta.units} mark`;
+  if (entry.t >= 1) return `at the high end, the ${fmt(info.max)} ${meta.units} mark`;
+  const lo = Math.floor(entry.value / tick + 1e-9) * tick;
+  if (Math.abs(entry.value - lo) < 1e-9) return `at the ${fmt(roundTo(lo, tick))} ${meta.units} mark`;
+  return `between the ${fmt(roundTo(lo, tick))} and ${fmt(roundTo(lo + tick, tick))} ${meta.units} marks`;
 }
 
 /** "12° N, 46° W" style text for a position. */

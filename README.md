@@ -19,7 +19,7 @@ offered because none of our frames has dated versions yet; see Known limitations
 | 5. Audio engine and audio test page | Done |
 | 6. Player: canvas, pointer events, info panel | Done |
 | 7. Keyboard and narration | Done |
-| 8. Colour legend, reference tones, Explain this sound | Done |
+| 8. Color legend, reference tones, Explain this sound | Done |
 | 9. Scan (row and overview) | Done. Time stepping: not applicable yet |
 | 10. Pages, README, verification | Done ([docs/verification.md](docs/verification.md)) |
 
@@ -42,6 +42,16 @@ offered because none of our frames has dated versions yet; see Known limitations
 - **Tour**: six short steps (what the frame is, the layout, the sound with low/middle/high tones,
   exploring, finding, settings). T goes forward, Escape stops. The layout text is built from
   `frames.json` (projection, no-data labels, masks), not written per frame.
+
+- **Sound cues** (switch: Sound cues): low bump at an edge; two rising notes when a scan starts and
+  two falling when it ends; a short high note when Go to jumps; one tick for A, two for B; a falling tone
+  on errors. All in `js/settings.js` (`cues`). A hovered or touched tone fades after 1 s of stillness.
+- **Display** (Player Controls, and the Accessibility page): High contrast, Large text, Reduce motion.
+  `js/display.js` applies them on every page from the same saved settings; the system's dark mode and
+  reduced-motion settings are followed too.
+- **Demo** (D, or the button): one minute that plays the reference tones, scans the equator, goes to the
+  warmest and coolest areas, compares them and reads the Summary, using the same functions as the buttons.
+  Escape or Stop demo ends it and restores the controls.
 
 ## Find and compare (Player)
 
@@ -103,10 +113,10 @@ phones, and blind and low-vision people.
 
 ## How it works
 
-1. Each frame is a NASA visualization with a colour legend.
-2. The app reads the colour of the pixel under the pointer (median of a 3×3 square for JPEG frames).
-3. It finds the closest colour in the frame's legend table. If nothing is close enough
-   (colour distance over `maxColorDistance`), or the colour is a known no-data colour
+1. Each frame is a NASA visualization with a color legend.
+2. The app reads the color of the pixel under the pointer (median of a 3×3 square for JPEG frames).
+3. It finds the closest color in the frame's legend table. If nothing is close enough
+   (color distance over `maxColorDistance`), or the color is a known no-data color
    (land, water) or the point is under a logo or date label, it reports **no data**.
 4. The matched legend entry gives an approximate value and a position `t` from 0 (lowest)
    to 1 (highest). Pitch = 220 Hz × 4^t (220 to 880 Hz, the same for every frame);
@@ -127,7 +137,9 @@ decoder-test.html  audio-test.html  tests/player-test.html   team test pages
 css/styles.css           all styles; light and dark, high contrast
 js/settings.js           every sound setting in one place (including the sound cues)
 js/prefs.js              the listener's settings, remembered in this browser
-js/decoder.js            pixel colour -> legend value (the core)
+js/display.js            high contrast, large text, reduced motion on every page
+js/accuracy.js           the ten-point table on How it works, decoded live
+js/decoder.js            pixel color -> legend value (the core)
 js/audio.js              Web Audio engine: one voice, ramps, pan, compressor, mute, click
 js/player.js             the Player: pointer, keyboard, scan, reference tones, Explain panel
 js/narrator.js           info panel and narration text (same strings), optional speech
@@ -138,12 +150,13 @@ js/gallery.js            gallery cards from data/frames.json
 js/credits.js            credits from data/frames.json
 js/decoder-test.js       decoder test page
 js/audio-test.js         audio test page
-data/frames.json         one entry per frame: facts, legend table, no-data colours, masks
-frames/<id>/             self-hosted frame images and NASA colourbars
-tools/build_legends.py   rebuilds the legend tables from NASA's colourbars (needs Pillow)
-tools/legend_report.py   finds colours that could be confused
+data/frames.json         one entry per frame: facts, legend table, no-data colors, masks
+data/accuracy.json       real MUR values at the ten-point pixels, with source and date
+frames/<id>/             self-hosted frame images and NASA colorbars
+tools/build_legends.py   rebuilds the legend tables from NASA's colorbars (needs Pillow)
+tools/legend_report.py   finds colors that could be confused
 tools/compare_sst_with_mur.py  checks decoded SST against the real MUR data
-tools/sources/           full-resolution colourbars used for measuring
+tools/sources/           full-resolution colorbars used for measuring
 docs/legends.md          how every legend number was measured
 docs/accuracy-check.md   ten-point checks and the comparison with real data
 docs/LOG.md              project log: status board, your tasks, history
@@ -157,7 +170,7 @@ labels on `noDataColors` (so the app can say "land" instead of just "no data"),
 `smoothRadius`, `transparent`, `dateNote`, `listenFor`, `spokenName` (the short
 name used at the start of each narration line) and `terms` (words such as "warmest").
 
-To rebuild the legends after changing a colourbar measurement:
+To rebuild the legends after changing a colorbar measurement:
 
 ```sh
 python3 -m venv .venv && .venv/bin/pip install -r tools/requirements.txt
@@ -173,7 +186,7 @@ They were downloaded on 2026-11-05.
 
 | Frame | Source | Date | Data |
 |---|---|---|---|
-| Sea Surface Temperature | [SVS 5101](https://svs.gsfc.nasa.gov/5101/) | Most recent on 2026-11-05 (not printed on the image) | MUR SST (JPL PO.DAAC) |
+| Sea Surface Temperature | [SVS 5101](https://svs.gsfc.nasa.gov/5101/) | Data date not stated; image updated 2026-11-05 | MUR SST (JPL PO.DAAC) |
 | Near-Surface Air Temperature | [SVS 5147](https://svs.gsfc.nasa.gov/5147/) | 15 Aug 2023, 09:00 EDT | GEOS-FP (NASA GMAO) |
 | Land Vegetation (NDVI) | [SVS 5544](https://svs.gsfc.nasa.gov/5544/) | 13 Jun 2026 | NRT NDVI (dataset not named on the page) |
 | Precipitation | [SVS 4285](https://svs.gsfc.nasa.gov/4285/) | 2026-11-05 09:30 (time zone not stated) | IMERG (GPM) |
@@ -184,17 +197,17 @@ ERDDAP server (dataset `jplMURSST41`); it is not used by the website itself.
 
 ## Known limitations
 
-- **Values are approximate.** They are decoded from the colours of the visualization,
+- **Values are approximate.** They are decoded from the colors of the visualization,
   not from the underlying measurements.
-- **JPEG noise.** Three frames are JPEGs, so colours are slightly noisy. The decoder takes
+- **JPEG noise.** Three frames are JPEGs, so colors are slightly noisy. The decoder takes
   the median of a 3×3 square. Against the real MUR data, decoded SST had a median error
   of 0.7 °C and a worst error of 1.8 °C (336 points).
-- **Similar colours.** On the air temperature frame, dark blue (about −38 °C) and
-  purple-blue (about −11 °C) are closer in colour than we would like. Tests found no
+- **Similar colors.** On the air temperature frame, dark blue (about −38 °C) and
+  purple-blue (about −11 °C) are closer in color than we would like. Tests found no
   mix-ups, but a surprising reading on that frame deserves a second look.
-- **NASA colourbar typo.** The air temperature colourbar prints "−10" where −30 belongs.
+- **NASA colorbar typo.** The air temperature colorbar prints "−10" where −30 belongs.
   We use −30 (see docs/legends.md).
-- **Ends of the scale.** A colour at either end of a legend is reported as "or lower" /
+- **Ends of the scale.** A color at either end of a legend is reported as "or lower" /
   "or higher", because the bar cannot show anything beyond it.
 - **Relative frame.** The NDVI legend has no numbers, so its values are relative.
 - **Dates.** The air temperature (2023) and NDVI (June 2026) frames are the preview stills

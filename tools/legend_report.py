@@ -3,11 +3,11 @@ Ambiguity report for the legend tables.
 
 Run:   python3 tools/legend_report.py      (standard library only)
 
-Why: the decoder picks the legend colour closest to the pixel colour. If two
-parts of a colourbar that mean very different values have similar colours,
+Why: the decoder picks the legend color closest to the pixel color. If two
+parts of a colorbar that mean very different values have similar colors,
 a slightly noisy pixel (JPEG compression) could be decoded to the wrong one.
-This script finds, for every legend, the most similar pair of colours that are
-more than one legend step (tickStep) apart in value. If that colour distance is
+This script finds, for every legend, the most similar pair of colors that are
+more than one legend step (tickStep) apart in value. If that color distance is
 not comfortably bigger than the decoder's match limit, the legend is risky.
 """
 
@@ -44,7 +44,7 @@ def main():
                 if worst is None or d < worst[0]:
                     worst = (d, vi, ci, vj, cj)
         d, vi, ci, vj, cj = worst
-        print("%-7s closest colours more than one step apart: distance %.1f  (%s at %g  vs  %s at %g)"
+        print("%-7s closest colors more than one step apart: distance %.1f  (%s at %g  vs  %s at %g)"
               % (frame["id"], d, ci, vi, cj, vj))
 
 

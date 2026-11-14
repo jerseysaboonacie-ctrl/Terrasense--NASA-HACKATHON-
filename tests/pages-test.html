@@ -5,6 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Page Tests</title>
   <link rel="stylesheet" href="../css/styles.css">
+  <script src="../js/display.js"></script>
   <style>iframe { width: 1100px; height: 700px; border: 2px solid var(--border); }</style>
 </head>
 <body>
@@ -126,9 +127,32 @@
       }
       if (page === 'accessibility.html') {
         const keys = [...doc.querySelectorAll('table td:first-child')].map((td) => td.textContent);
-        const need = ['W', 'T', 'Minus, plus', 'A, B', 'C', 'M', 'S'];
+        const need = ['W', 'T', 'D', 'Minus, plus', 'A, B', 'C', 'M', 'S'];
         const missing = need.filter((k) => !keys.includes(k));
         record(page, 'Key table lists every Player key', missing.length === 0, missing.length ? 'missing: ' + missing.join(', ') : keys.join(', '));
+      }
+      if (page === 'how-it-works.html') {
+        for (let i = 0; i < 50 && !doc.getElementById('acc-note').textContent; i++) await wait(100);
+        const rows = [...doc.querySelectorAll('#acc-table tbody tr')].map((tr) => [...tr.cells].map((c) => c.textContent));
+        const valueRows = rows.filter((r) => r[5] === 'Yes' || r[5] === 'No');
+        const nodataRows = rows.filter((r) => r[4] === 'correctly no value');
+        record(page, 'Ten-point table: decoded live, 10 compared, 2 no data', rows.length === 12 && valueRows.length === 10 && nodataRows.length === 2 &&
+          valueRows.every((r) => /^about /.test(r[2]) && / °C$/.test(r[3])), doc.getElementById('acc-note').textContent || doc.getElementById('acc-status').textContent);
+        record(page, 'Ten-point table: every point within one legend step', valueRows.every((r) => r[5] === 'Yes'),
+          valueRows.map((r) => `${r[2]} vs ${r[3]}`).join('; '));
+      }
+      if (page === 'accessibility.html') {
+        const box = doc.querySelector('input[data-display="highContrast"]');
+        box.click();
+        const here = doc.documentElement.classList.contains('hc');
+        const w2 = await load('../index.html', 300);
+        const there = w2.document.documentElement.classList.contains('hc');
+        const w3 = await load('../accessibility.html', 300);
+        const box3 = w3.document.querySelector('input[data-display="highContrast"]');
+        const checked = box3.checked;
+        box3.click();
+        record(page, 'Display switch applies here and on other pages, and switches off', here && there && checked && !w3.document.documentElement.classList.contains('hc'),
+          `here ${here}, on Home ${there}, box remembered ${checked}, after unticking ${w3.document.documentElement.classList.contains('hc')}`);
       }
       if (page === 'index.html') {
         const btn = doc.getElementById('start-btn');

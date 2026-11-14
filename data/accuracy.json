@@ -1,0 +1,26 @@
+{
+  "about": "Real sea surface temperature at the ten-point check pixels, for the table on How it works. The page decodes each pixel live with the site's own decoder and compares it with these values. Copied from docs/accuracy-check.md, section 3.",
+  "frame": "sst",
+  "reference": {
+    "name": "JPL MUR SST v4.1",
+    "date": "2026-11-04",
+    "source": "NOAA CoastWatch ERDDAP, dataset jplMURSST41",
+    "url": "https://coastwatch.pfeg.noaa.gov/erddap/griddap/jplMURSST41.html",
+    "units": "°C"
+  },
+  "legendStep": 5,
+  "points": [
+    { "x": 286, "y": 18,  "real": -1.8 },
+    { "x": 510, "y": 34,  "real": 1.5 },
+    { "x": 570, "y": 50,  "real": 6.5 },
+    { "x": 530, "y": 70,  "real": 9.8 },
+    { "x": 522, "y": 102, "real": 14.0 },
+    { "x": 510, "y": 114, "real": 15.7 },
+    { "x": 622, "y": 130, "real": 19.0 },
+    { "x": 326, "y": 150, "real": 24.6 },
+    { "x": 306, "y": 178, "real": 28.3 },
+    { "x": 662, "y": 182, "real": 32.1 },
+    { "x": 298, "y": 18,  "real": null },
+    { "x": 406, "y": 18,  "real": null }
+  ]
+}

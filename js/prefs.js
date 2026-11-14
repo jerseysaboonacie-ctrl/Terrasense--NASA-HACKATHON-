@@ -14,6 +14,9 @@ export const DEFAULTS = Object.freeze({
   announceMoving: false,      // read the value when the mouse stops moving
   soundCues: true,            // edge bump and error tone
   vibrate: true,
+  highContrast: false,        // display settings, applied on every page by display.js
+  largeText: false,
+  reduceMotion: false,
 });
 
 const VALID = {

@@ -27,10 +27,10 @@ Run in Chrome by `decoder-test.html?auto=1`. All passed.
 
 | Test | SST | T2M | NDVI | Precipitation |
 |---|---|---|---|---|
-| Round trip: every legend colour decodes to itself | PASS (0.00 steps) | PASS (0.05 steps) | PASS (0.00 steps) | PASS (exact) |
+| Round trip: every legend color decodes to itself | PASS (0.00 steps) | PASS (0.05 steps) | PASS (0.00 steps) | PASS (exact) |
 | Noise ±8 per channel, worst error | PASS (0.25 steps) | PASS (0.25 steps) | PASS (0.80 steps) | PASS (exact) |
 | Higher value always higher legend position | PASS | PASS | PASS | PASS |
-| Masks and no-data colours never give a value | PASS | PASS | PASS | PASS |
+| Masks and no-data colors never give a value | PASS | PASS | PASS | PASS |
 
 Coverage (share of the frame that decodes to a value): SST 65% (land 33%, off-legend 2%,
 mostly coastlines); T2M 96% (logo and date boxes 4%); NDVI 21% (water 64%, ice 10%,
@@ -42,12 +42,12 @@ Points chosen automatically by the decoder test page ("Fill with 10 points"), sp
 the lowest to the highest value found on each frame, plus two no-data examples.
 
 **Still to do by the team:** open `decoder-test.html?frame=<id>&fill=1`, compare each zoomed
-pixel with NASA's colourbar, type your reading in the "By eye" column, and paste the
+pixel with NASA's colorbar, type your reading in the "By eye" column, and paste the
 Markdown export here. The plan asks for this to be done by people, not only by the code.
 
 ### Sea surface temperature
 
-| # | Place | Pixel x, y | Pixel colour | Legend colour | Distance | Decoded | Real (MUR 2026-11-04) | By eye | Within one step? |
+| # | Place | Pixel x, y | Pixel color | Legend color | Distance | Decoded | Real (MUR 2026-11-04) | By eye | Within one step? |
 |---|---|---|---|---|---|---|---|---|---|
 | 1 | 83° N, 79° W | 286, 18 | 2, 52, 94 | 0, 51, 93 | 2.4 | about −3 °C | −1.8 °C |  |  |
 | 2 | 78° N, 1° W | 510, 34 | 0, 96, 170 | 0, 99, 167 | 4.2 | about 1 °C | 1.5 °C |  |  |
@@ -59,14 +59,14 @@ Markdown export here. The plan asks for this to be done by people, not only by t
 | 8 | 37° N, 65° W | 326, 150 | 191, 117, 79 | 194, 116, 81 | 3.7 | about 25 °C | 24.6 °C |  |  |
 | 9 | 27° N, 72° W | 306, 178 | 151, 54, 44 | 152, 54, 48 | 4.1 | about 29 °C | 28.3 °C |  |  |
 | 10 | 26° N, 53° E | 662, 182 | 99, 35, 38 | 98, 34, 38 | 1.4 | about 33 °C | 32.1 °C |  |  |
-| 11 | 83° N, 75° W | 298, 18 | 35, 62, 99 |  | 35.7 | no data (colour is not on the legend) | n/a |  |  |
+| 11 | 83° N, 75° W | 298, 18 | 35, 62, 99 |  | 35.7 | no data (color is not on the legend) | n/a |  |  |
 | 12 | 83° N, 37° W | 406, 18 | 88, 91, 97 | 103, 103, 103 | 20.1 | no data (Land, no sea temperature data) | n/a |  |  |
 
 The "Real" column is the MUR SST analysis at the same point (NOAA CoastWatch ERDDAP, `jplMURSST41`). All ten decoded values are within 2.0 °C of it; one legend step is 5 °C.
 
 ### Near-surface air temperature
 
-| # | Place | Pixel x, y | Pixel colour | Legend colour | Distance | Decoded | By eye | Within one step? |
+| # | Place | Pixel x, y | Pixel color | Legend color | Distance | Decoded | By eye | Within one step? |
 |---|---|---|---|---|---|---|---|---|
 | 1 | 70° S, 63° E | 690, 454 | 41, 50, 93 | 43, 51, 90 | 3.7 | −40 °C or lower |  |  |
 | 2 | 68° S, 56° E | 670, 450 | 155, 181, 218 | 153, 177, 215 | 5.4 | about −31 °C |  |  |
@@ -79,11 +79,11 @@ The "Real" column is the MUR SST analysis at the same point (NOAA CoastWatch ERD
 | 9 | 54° N, 23° E | 578, 102 | 69, 10, 3 | 68, 12, 4 | 2.4 | about 31 °C |  |  |
 | 10 | 40° N, 32° E | 602, 142 | 119, 119, 119 | 119, 121, 118 | 2.2 | 40 °C or higher |  |  |
 | 11 | 89° N, 179° W | 2, 2 |  |  |  | no data (covered by the NASA and GMAO logo) |  |  |
-| 12 | 76° N, 62° W | 334, 38 | 110, 184, 199 |  | 35.3 | no data (colour is not on the legend) |  |  |
+| 12 | 76° N, 62° W | 334, 38 | 110, 184, 199 |  | 35.3 | no data (color is not on the legend) |  |  |
 
 ### Vegetation (NDVI)
 
-| # | Place | Pixel x, y | Pixel colour | Legend colour | Distance | Decoded | By eye | Within one step? |
+| # | Place | Pixel x, y | Pixel color | Legend color | Distance | Decoded | By eye | Within one step? |
 |---|---|---|---|---|---|---|---|---|
 | 1 | 79° N, 85° W | 270, 30 | 211, 212, 207 | 222, 210, 207 | 11.2 | lowest on the legend (relative) |  |  |
 | 2 | 71° N, 97° E | 786, 54 | 210, 213, 175 | 225, 202, 172 | 18.8 | about 10% of the way from low to high (relative) |  |  |
@@ -96,11 +96,11 @@ The "Real" column is the MUR SST analysis at the same point (NOAA CoastWatch ERD
 | 9 | 62° N, 50° E | 654, 78 | 28, 60, 18 | 16, 79, 33 | 27 | about 90% of the way from low to high (relative) |  |  |
 | 10 | 64° N, 47° E | 646, 74 | 25, 58, 15 | 2, 69, 28 | 28.6 | highest on the legend (relative) |  |  |
 | 11 | 89° N, 179° W | 2, 2 | 8, 123, 177 | 8, 123, 177 | 0 | no data (Water, no vegetation value) |  |  |
-| 12 | 83° N, 40° W | 398, 18 | 73, 152, 193 |  | 121.3 | no data (colour is not on the legend) |  |  |
+| 12 | 83° N, 40° W | 398, 18 | 73, 152, 193 |  | 121.3 | no data (color is not on the legend) |  |  |
 
 ### Precipitation
 
-| # | Place | Pixel x, y | Pixel colour | Legend colour | Distance | Decoded | By eye | Within one step? |
+| # | Place | Pixel x, y | Pixel color | Legend color | Distance | Decoded | By eye | Within one step? |
 |---|---|---|---|---|---|---|---|---|
 | 1 | 82° N, 48° E | 2281, 84 | 69, 255, 255 | 69, 255, 255 | 0 | about 0.1 to 0.2 mm/hour, snow (frozen) |  |  |
 | 2 | 82° N, 49° E | 2294, 84 | 73, 221, 255 | 73, 221, 255 | 0 | about 0.2 to 0.3 mm/hour, snow (frozen) |  |  |

@@ -1,26 +1,26 @@
 """
-Build the legend tables (colour -> value) that the decoder uses.
+Build the legend tables (color -> value) that the decoder uses.
 
 Run:   python3 tools/build_legends.py          (needs Pillow: pip install -r tools/requirements.txt)
 Output: fills the "legend" and "legendInfo" fields of each frame in
         data/frames.json (all other fields are left exactly as they are).
 
-The legend table is the single source of truth for what a colour means.
-Nothing in here is invented: every colour is read from NASA's own colourbar
-image, and every value comes from the tick labels printed on that colourbar.
+The legend table is the single source of truth for what a color means.
+Nothing in here is invented: every color is read from NASA's own colorbar
+image, and every value comes from the tick labels printed on that colorbar.
 
-How a continuous colourbar is read
+How a continuous colorbar is read
 ----------------------------------
 1. We measured, once, the pixel x-position of the first and last tick on
-   each colourbar (see the numbers in LEGENDS below, and docs/legends.md for
+   each colorbar (see the numbers in LEGENDS below, and docs/legends.md for
    how they were measured).
 2. Between those two ticks the bar is linear, so value v sits at
        x = x_min + (v - v_min) / (v_max - v_min) * (x_max - x_min)
-3. At that x we take the median colour of a band of rows in the middle of the
+3. At that x we take the median color of a band of rows in the middle of the
    bar (median ignores anti-aliasing and tick marks).
 
-Discrete colourbars (precipitation) are read class by class: each solid block
-of colour between two ticks becomes one class with a low and high value.
+Discrete colorbars (precipitation) are read class by class: each solid block
+of color between two ticks becomes one class with a low and high value.
 """
 
 import json
@@ -37,7 +37,7 @@ ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 FRAMES_JSON = os.path.join(ROOT, "data", "frames.json")
 
 # ---------------------------------------------------------------------------
-# Continuous legends. Pixel positions were measured from the colourbar images
+# Continuous legends. Pixel positions were measured from the colorbar images
 # (white tick marks / bar borders). See docs/legends.md.
 # ---------------------------------------------------------------------------
 LEGENDS = [
@@ -65,7 +65,7 @@ LEGENDS = [
         "image": "tools/sources/NearSurfaceTemperature_colorbar_plain.png",
         # Bar border at x=71-72 and 463-464, 7 inner ticks every ~48.9 px,
         # i.e. 8 equal intervals. Labels read -40 ... 40 in steps of 10.
-        # NOTE: NASA's colourbar prints the 2nd label as "-10"; by position it
+        # NOTE: NASA's colorbar prints the 2nd label as "-10"; by position it
         # is -30 (evenly spaced ticks). See docs/legends.md.
         "v_min": -40.0, "x_min": 72.5,
         "v_max": 40.0, "x_max": 463.5,
@@ -79,7 +79,7 @@ LEGENDS = [
         "id": "ndvi",
         "title": "Land Vegetation (NDVI)",
         "units": "relative (Low to High)",
-        "scale": "relative",       # colourbar has no numbers, only Low / High
+        "scale": "relative",       # colorbar has no numbers, only Low / High
         "image": "frames/ndvi/colorbar.png",
         # Bar border at x=99-100 and 799-800.
         "v_min": 0.0, "x_min": 100.5,
@@ -93,10 +93,10 @@ LEGENDS = [
 ]
 
 # ---------------------------------------------------------------------------
-# Discrete legend: IMERG precipitation (two colourbars: rain and frozen).
+# Discrete legend: IMERG precipitation (two colorbars: rain and frozen).
 # Class edges are the tick labels printed under the bars, in mm/hour:
 #   0.1 0.2 0.3 0.5 1.0 2.0 3.0 5.0 10 20 50   plus a ">50" arrow on the right.
-# Colours are read from row 33 of each colourbar at the middle of each block.
+# Colors are read from row 33 of each colorbar at the middle of each block.
 # ---------------------------------------------------------------------------
 PRECIP_EDGES = [0.1, 0.2, 0.3, 0.5, 1.0, 2.0, 3.0, 5.0, 10, 20, 50]
 PRECIP_BLOCK_X = [58, 94, 130, 166, 202, 238, 274, 310, 346, 382]  # block centres
@@ -136,7 +136,7 @@ def build_continuous(cfg):
         "displayStep": cfg["display_step"],
         "source": {
             "image": cfg["image"],
-            "method": "median colour of rows %d-%d, linear between x=%.1f (%g) and x=%.1f (%g)"
+            "method": "median color of rows %d-%d, linear between x=%.1f (%g) and x=%.1f (%g)"
             % (cfg["rows"][0], cfg["rows"][1], cfg["x_min"], cfg["v_min"], cfg["x_max"], cfg["v_max"]),
         },
     }
@@ -155,8 +155,8 @@ def build_precip():
             rgb = list(px[x, PRECIP_ROW])
             prev = classes[-1] if classes else None
             if prev and prev["family"] == family and prev["color"] == rgb:
-                # Same colour as the class before it (the frozen bar uses one
-                # colour for 20-50 and >50), so the colour cannot tell them
+                # Same color as the class before it (the frozen bar uses one
+                # color for 20-50 and >50), so the color cannot tell them
                 # apart: merge them into one wider class ("20 or more").
                 prev["high"] = high
                 continue
@@ -180,7 +180,7 @@ def build_precip():
         "displayStep": None,
         "source": {
             "image": "frames/precip/colorbar-rain.png + colorbar-snow.png",
-            "method": "colour at row %d in the middle of each class block; edges from tick labels" % PRECIP_ROW,
+            "method": "color at row %d in the middle of each class block; edges from tick labels" % PRECIP_ROW,
         },
     }
     return "precip", info, classes

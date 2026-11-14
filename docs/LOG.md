@@ -7,14 +7,56 @@ same format (newest first under **History**) and tick your tasks in **Your tasks
 Status words: **Done** (built and tested), **Partly done** (some of it exists, see notes),
 **Not started**, **Yours** (only a person can do it).
 
-Last updated: 2026-11-13 23:08 (+07), work session finished (commit 3c29d96).
+Last updated: 2026-11-14 10:49 (+07), session 2 in progress.
 
 ---
 
-## Heartbeat (current work session)
+## Heartbeat
 
-Live progress for the current task, newest at the bottom. Times are the laptop's clock (+07).
-Each phase has an estimate; the heartbeat says when it actually started and finished.
+Live progress, newest session first, newest line at the bottom of each session. Times are the
+laptop's clock (+07). Each phase has an estimate; the heartbeat says when it actually started and finished.
+
+### Session 2: 2026-11-14 morning (in progress)
+
+**Task (from you):** apply the remaining changes: sound cues, display settings, Demo mode,
+the 10-point table on How it works, and the wording fixes.
+
+| Phase | What | Estimate | Status |
+|---|---|---|---|
+| 1 | Wording: one spelling of "color", legend readout shows the matched range, honest SST date | 25 min | Done (10:06 to 10:08) |
+| 2 | Sound cues: scan start and end chimes, jump chime, A/B ticks, tone fades after about 1 s of stillness | 40 min | Done (code; tested in phase 6) |
+| 3 | Display settings: high contrast, large text, reduced motion (remembered, in Reset) | 30 min | Done (code; tested in phase 6) |
+| 4 | Demo mode: 60-second guided run with Stop | 40 min | Done (code; tested in phase 6) |
+| 5 | 10-point accuracy table on How it works | 20 min | Done (code; tested in phase 6) |
+| 6 | Tests for everything new, all tests re-run, docs, log, commit | 35 min | In progress |
+
+Total estimate: about 3 hours 10 minutes, finishing around 13:15.
+
+- 10:06: Started. Plan and estimates written above.
+- 10:08: Phase 1 done. "color" is now the only spelling (175 replacements in pages, code, tools and docs;
+  code names renamed with them). The readout's legend line now says where the color sits on NASA's bar,
+  e.g. "between the 25 and 30 °C marks" (it said "matched legend color"). The sea temperature date now reads
+  "Data date not stated (image updated 2026-11-05)" everywhere. Phase 2 started.
+- 10:11: Phases 2 to 5 written:
+  - Sound cues: two rising notes when a scan starts, falling when it ends or is stopped; a short high note on
+    Go to; one tick for A, two for B. A hovered or touched tone now fades after 1 s of stillness.
+  - Display: High contrast, Large text, Reduce motion. They apply on every page (`js/display.js`), are
+    remembered, are in Reset, and are on both the Player and the Accessibility page.
+  - Demo (D key or button): one minute of tones, an equator scan, Go to warmest, Go to coolest, Compare
+    and Summary, using the same functions as the buttons. Escape or Stop demo ends it.
+  - How it works: the ten-point table. Each pixel is decoded live by the Player's own code and compared with
+    the real MUR value stored with its source in `data/accuracy.json`.
+  Phase 6 (tests) started.
+- 10:22: Page tests: 73 of 73 pass (new: the ten-point table builds live, 10 of 10 within one legend step,
+  2 correctly no data; a display switch on the Accessibility page applies on Home too). Screenshot of
+  How it works checked; added a line explaining why its largest difference (2.0 °C) differs from the
+  336-point check (1.8 °C). First Player run hit the runner's 590 s limit with no results, so I made the
+  test page record a thrown error as a failure and always post, and re-ran it with 1100 s.
+- 10:49: The re-run timed out too, with no checks recorded at all. Chrome's console showed why: a mistake in
+  my new test code (a variable named twice), so the test page never started. The site itself was not at
+  fault. Fixed; the test page now also posts its progress after every check. Re-running.
+
+### Session 1: 2026-11-13 evening (finished)
 
 **Task (2026-11-13, from you):** make sure every feature works as expected and that the site is
 easy to navigate for a blind person.
@@ -81,8 +123,8 @@ Total estimate: about 2.5 hours, finishing around 23:45. Actual: 2 hours, finish
 | Settings panel (speech speed, detail level, high contrast, large text, reduced motion), remembered, Reset button | Claude | Partly done | Done 2026-11-13: voice, speech speed, detail, volume, sound cues, mouse announcements; remembered; Reset. Missing: high contrast, large text, reduced motion switches (the site already follows the system's dark mode). |
 | 60-second Demo mode with Stop | Claude | Not started | |
 | Two more frames with checked legends | Claude + you | Not started | Candidates found on 2026-11-05, both from the same SVS gallery: SST Anomaly (SVS 5176) and GEOS-FP Near-Surface Wind Speed (SVS 5148). The wind legend is transparent below about 4 m/s, which needs care. Each needs its 10-point check. |
-| Wording: one spelling of color | Claude | Not started | Headings say "colour"; the approximate-values note says "colors". |
-| Wording: legend readout shows the matched range | Claude | Not started | Today: "Legend colour: matched legend colour". Plan: e.g. "Legend range: 28 to 30 °C". |
+| Wording: one spelling of color | Claude | Not started | Headings say "color"; the approximate-values note says "colors". |
+| Wording: legend readout shows the matched range | Claude | Not started | Today: "Legend color: matched legend color". Plan: e.g. "Legend range: 28 to 30 °C". |
 | Quotes from blind or low-vision testers, with consent | Yours | Not started | |
 
 ### Tier 3: only if ahead
@@ -117,7 +159,7 @@ Total estimate: about 2.5 hours, finishing around 23:45. Actual: 2 hours, finish
 Tick these as you go and add a line under History with what you found.
 
 - [ ] Screen reader test (about 20 min): VoiceOver (Mac: Cmd + F5), NVDA (Windows) or TalkBack (Android). Eyes closed: open the Player, take the tour (T), get the summary, jump to the warmest area, press W, walk into an edge, compare two places, change volume with minus and plus, mute, change frame. Try each Voice setting once. Note where you got lost, heard nothing, or heard two voices, and whether the letter keys reached the page.
-- [ ] By-eye check: open `decoder-test.html?frame=sst&fill=1` (then `t2m`, `ndvi`, `precip`), type the value you read from the colourbar for each row, and paste the Markdown export into `docs/accuracy-check.md`.
+- [ ] By-eye check: open `decoder-test.html?frame=sst&fill=1` (then `t2m`, `ndvi`, `precip`), type the value you read from the colorbar for each row, and paste the Markdown export into `docs/accuracy-check.md`.
 - [ ] Check the Summary against the picture for each frame (does the "warmest" place look warmest?).
 - [ ] Test on a real phone with headphones: drag on the map, sound start, volume.
 - [ ] Test in a second browser (Safari or Firefox).
@@ -158,6 +200,6 @@ Newest first. Claude's entries name the commit so you can see exactly what chang
 - Tests: 77 automated Player checks pass.
 
 ### 2026-11-05: Decoder and validation (Claude, commits ce05d93 and 110fa39)
-- Chose four frames from the SVS Daily Visualizations gallery and measured their legends from NASA's colourbars.
+- Chose four frames from the SVS Daily Visualizations gallery and measured their legends from NASA's colorbars.
 - Built the six-page skeleton, the gallery and credits from `data/frames.json`, and the decoder with its test page.
 - Validated SST against real MUR data: median error 0.7 °C, worst 1.8 °C over 336 points; ten-point table in `docs/accuracy-check.md`.

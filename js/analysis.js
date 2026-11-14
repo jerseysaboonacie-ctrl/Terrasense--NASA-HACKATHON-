@@ -226,7 +226,7 @@ export function describeDifference(meta, A, B) {
     if (a === b) {
       const width = b.high == null ? null : Math.round((b.high - b.value) * 100) / 100;
       return width == null
-        ? `A and B are in the same legend class, ${fmt(b.value)} ${meta.units} or more, so the difference cannot be measured from the colours.`
+        ? `A and B are in the same legend class, ${fmt(b.value)} ${meta.units} or more, so the difference cannot be measured from the colors.`
         : `A and B are in the same legend class, so they differ by less than ${fmt(width)} ${meta.units}.`;
     }
     // Possible difference range from the class edges.

@@ -1,11 +1,11 @@
 // decoder-test.js: the decoder test page.
-// Lets the team check, by eye, that decoded values match NASA's colourbar,
+// Lets the team check, by eye, that decoded values match NASA's colorbar,
 // and runs automatic self-tests on every legend table.
 // Open decoder-test.html?auto=1 to run every frame and print JSON results
 // (used for headless checks).
 
 import {
-  loadFrameList, loadFrame, decodeAt, classifyColour, nearestLegendEntry, describePlace,
+  loadFrameList, loadFrame, decodeAt, classifyColor, nearestLegendEntry, describePlace,
 } from './decoder.js';
 import { drawLegend } from './legend.js';
 
@@ -121,7 +121,7 @@ function showPoint(announce) {
   const items = [
     ['Pixel', `x ${r.x}, y ${r.y}`],
     ['Place', describePlace(r.lon, r.lat)],
-    ['Pixel colour', r.rgb ? r.rgb.join(', ') : 'n/a', r.rgb],
+    ['Pixel color', r.rgb ? r.rgb.join(', ') : 'n/a', r.rgb],
     ['Matched', r.matchedColor ? r.matchedColor.join(', ') : 'none', r.matchedColor],
     ['Distance', r.distance != null ? r.distance.toFixed(1) + ' (limit ' + frame.meta.maxColorDistance + ')' : 'n/a'],
     ['Legend position', r.t != null ? Math.round(r.t * 100) + '%' : 'n/a'],
@@ -252,7 +252,7 @@ function renderTable() {
   const meta = frame ? frame.meta : null;
   const head = el('tr');
   const eyeHint = meta && meta.legendInfo.scale === 'relative' ? 'Your reading by eye (% of bar)' : `Your reading by eye${meta ? ' (' + meta.units + ')' : ''}`;
-  ['#', 'Place', 'Pixel x, y', 'Zoom', 'Pixel colour', 'Legend colour', 'Distance', 'Decoded', eyeHint, 'Result']
+  ['#', 'Place', 'Pixel x, y', 'Zoom', 'Pixel color', 'Legend color', 'Distance', 'Decoded', eyeHint, 'Result']
     .forEach((h) => { const th = el('th', h); th.scope = 'col'; head.append(th); });
   const thead = el('thead'); thead.append(head);
   const tbody = el('tbody');
@@ -348,7 +348,7 @@ els.exportBtn.addEventListener('click', () => {
   const m = frame.meta;
   const lines = [
     `### ${m.title} (${m.date})`, '',
-    '| # | Place | Pixel x, y | Pixel colour | Legend colour | Distance | Decoded | By eye | Result |',
+    '| # | Place | Pixel x, y | Pixel color | Legend color | Distance | Decoded | By eye | Result |',
     '|---|---|---|---|---|---|---|---|---|',
     ...rows.map((row, i) => {
       const r = row.result;
@@ -389,7 +389,7 @@ export function runSelfTests(f) {
   const tests = [];
   const sameFamily = (a, b) => m.legendInfo.kind !== 'discrete' || a.family === b.family;
 
-  // 1. Every legend colour decodes back to (nearly) its own value.
+  // 1. Every legend color decodes back to (nearly) its own value.
   let worst = 0;
   for (const e of m.legend) {
     const { entry } = nearestLegendEntry(m.legend, e.color);
@@ -397,9 +397,9 @@ export function runSelfTests(f) {
     worst = Math.max(worst, d);
   }
   tests.push({ name: 'Round trip', pass: worst <= 1,
-    detail: `each legend colour decodes to within ${worst.toFixed(2)} legend steps of itself` });
+    detail: `each legend color decodes to within ${worst.toFixed(2)} legend steps of itself` });
 
-  // 2. Noise: add up to ±8 per colour channel (like JPEG noise) and decode again.
+  // 2. Noise: add up to ±8 per color channel (like JPEG noise) and decode again.
   const rand = rng(42);
   let maxErr = 0, beyond = 0, total = 0;
   for (const e of m.legend) {
@@ -414,7 +414,7 @@ export function runSelfTests(f) {
     }
   }
   tests.push({ name: 'Noise ±8 per channel', pass: beyond === 0,
-    detail: `${total} noisy colours, worst error ${maxErr.toFixed(2)} legend steps, ${beyond} more than one step off` });
+    detail: `${total} noisy colors, worst error ${maxErr.toFixed(2)} legend steps, ${beyond} more than one step off` });
 
   // 3. Higher value always means higher legend position t (pitch depends on it).
   let ordered = true;
@@ -427,17 +427,17 @@ export function runSelfTests(f) {
   }
   tests.push({ name: 'Order', pass: ordered, detail: 'higher legend values always have a higher position (t)' });
 
-  // 4. Masks and no-data colours never return a value.
+  // 4. Masks and no-data colors never return a value.
   let maskOk = true;
   for (const mk of m.masks) {
     const r = decodeAt(f, mk.x + Math.floor(mk.width / 2), mk.y + Math.floor(mk.height / 2));
     if (r.status !== 'nodata') maskOk = false;
   }
   for (const c of m.noDataColors) {
-    if (classifyColour(m, c.color).status !== 'nodata') maskOk = false;
+    if (classifyColor(m, c.color).status !== 'nodata') maskOk = false;
   }
   tests.push({ name: 'No-data areas', pass: maskOk,
-    detail: `${m.masks.length} masked area(s) and ${m.noDataColors.length} no-data colour(s) give no data` });
+    detail: `${m.masks.length} masked area(s) and ${m.noDataColors.length} no-data color(s) give no data` });
 
   // 5. Coverage: how the map's pixels decode (for information).
   const counts = { value: 0 };

@@ -5,6 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Player Tests</title>
   <link rel="stylesheet" href="../css/styles.css">
+  <script src="../js/display.js"></script>
   <style>
     iframe { width: 1100px; height: 900px; border: 2px solid var(--border); }
   </style>
@@ -31,8 +32,11 @@
     const wait = (ms) => new Promise((r) => setTimeout(r, ms));
     const freqFor = (t) => S.minFrequency * Math.pow(S.maxFrequency / S.minFrequency, t);
 
+    const postTo = new URLSearchParams(location.search).get('post');
     function record(frame, check, pass, evidence) {
       results.push({ frame, check, pass, evidence });
+      // Progress, so a run that hangs still shows the last check it reached.
+      if (postTo) fetch(postTo + '_progress', { method: 'POST', body: JSON.stringify(results) }).catch(() => {});
       const tr = document.createElement('tr');
       for (const [i, v] of [frame, check, pass ? 'PASS' : 'FAIL', evidence].entries()) {
         const td = document.createElement('td');
@@ -270,6 +274,33 @@
       record(id, 'No script errors', w.__errors.length === 0, w.__errors.join(' | ') || 'none');
     }
 
+    // The whole one-minute demo, once.
+    async function testFullDemo(id) {
+      const w = await load('../player.html?frame=' + id);
+      const doc = w.document, J = w.__jukebox;
+      const st = () => J.getState();
+      const seen = { tone: false, scan: false, warm: false, cool: false, compare: false, summary: false };
+      doc.getElementById('demo-btn').click();
+      const t0 = performance.now();
+      while (performance.now() - t0 < (S.demoSeconds + 3) * 1000) {
+        const q = st();
+        if (q.audio.toneOn && performance.now() - t0 < 6000) seen.tone = true;
+        if (q.scanning) seen.scan = true;
+        if (q.narrationLine.startsWith(cap0(metas[id].terms.high))) seen.warm = true;
+        if (q.narrationLine.startsWith(cap0(metas[id].terms.low))) seen.cool = true;
+        if (q.compareText && q.compareText.startsWith('Compare.')) seen.compare = true;
+        if (q.summaryText) seen.summary = true;
+        if (!q.demo && performance.now() - t0 > 2000) break;
+        await wait(250);
+      }
+      const end = st();
+      const secs = ((performance.now() - t0) / 1000).toFixed(1);
+      record(id, 'Full demo: tones, scan, warmest, coolest, compare, summary, then finishes',
+        Object.values(seen).every(Boolean) && !end.demo && end.narrationLine.startsWith('Demo finished.') && w.__errors.length === 0,
+        `${Object.entries(seen).map(([k, v]) => k + (v ? ' yes' : ' NO')).join(', ')}; ended after ${secs} s: "${end.narrationLine.slice(0, 40)}…"`);
+    }
+    const cap0 = (x) => x.charAt(0).toUpperCase() + x.slice(1);
+
     async function testBadFrame() {
       const w = await load('../player.html?frame=does-not-exist');
       for (let i = 0; i < 30 && !w.document.getElementById('alert').textContent; i++) await wait(100);
@@ -410,25 +441,95 @@
       record(id, 'Tour step 3 plays the low tone', t3.audio.toneOn && Math.abs(t3.audio.frequency - freqFor(0)) < 30,
         `${Math.round(t3.audio.frequency)} Hz at 0.45 s; reference buttons: ${refs.join(' | ')}`);
 
+      // Legend readout: where the matched color sits on NASA's bar
+      J.moveTo(vx, vy);
+      const sw = doc.getElementById('info-swatch').textContent.trim();
+      const info = meta.legendInfo, ent = st().result.value;
+      let legendOk;
+      if (info.kind === 'discrete') legendOk = / class, /.test(sw);
+      else if (info.scale === 'relative') legendOk = /% of the way from Low to High/.test(sw);
+      else {
+        const m = sw.replace(/−/g, '-').match(/between the (-?[\d.]+) and (-?[\d.]+) /);
+        legendOk = (m && Number(m[1]) <= ent && ent <= Number(m[2]) && Number(m[2]) - Number(m[1]) === info.tickStep) || /mark$/.test(sw);
+      }
+      record(id, 'Legend line says where the color sits on the bar', legendOk, `"${sw}" (table value ${ent})`);
+
+      // Sound cues: scan chimes, jump, A and B ticks
+      const c0 = { ...st().audio.cues };
+      key(doc.body, 's'); await wait(500);
+      key(doc.body, 's'); await wait(100);
+      doc.getElementById('high-btn').click(); await wait(150);
+      key(doc.body, 'a'); key(doc.body, 'b'); await wait(50);
+      const c1 = st().audio.cues;
+      const inc = (k) => (c1[k] || 0) - (c0[k] || 0);
+      record(id, 'Sound cues: scan start and end, jump, A one tick, B two', inc('scanStart') === 1 && inc('scanEnd') === 1 && inc('jump') === 1 && inc('markA') === 1 && inc('markB') === 1,
+        ['scanStart', 'scanEnd', 'jump', 'markA', 'markB'].map((k) => `${k} +${inc(k)}`).join(', '));
+      const cuesBox = doc.getElementById('cues-toggle');
+      cuesBox.click();
+      const c2 = st().audio.cues.jump || 0;
+      doc.getElementById('high-btn').click(); await wait(150);
+      record(id, 'Sound cues off: no chime', (st().audio.cues.jump || 0) === c2 && st().audio.toneOn, `jump count stays ${c2}; tone still plays`);
+      cuesBox.click();
+
+      // A pointer tone fades after about 1 s of stillness
+      J.moveTo(vx, vy);
+      const onNow = st().audio.toneOn;
+      await wait(S.stillFadeSeconds * 1000 + 300);
+      record(id, 'Tone fades after the pointer is still for 1 s', onNow && !st().audio.toneOn, `on ${onNow} → after ${S.stillFadeSeconds + 0.3} s on ${st().audio.toneOn}`);
+
+      // Display settings
+      const html = doc.documentElement;
+      doc.getElementById('hc-toggle').click();
+      doc.getElementById('large-toggle').click();
+      const bg = w.getComputedStyle(doc.body).backgroundColor;
+      const rootFont = w.getComputedStyle(html).fontSize;
+      record(id, 'High contrast and large text apply', html.classList.contains('hc') && bg === 'rgb(0, 0, 0)' && html.classList.contains('large-text') && rootFont === '20px',
+        `classes "${html.className}", background ${bg}, root font ${rootFont}`);
+      doc.getElementById('motion-toggle').click();
+      key(doc.body, 's'); await wait(450);
+      const left0 = doc.getElementById('cursor').style.left;
+      await wait(700);
+      const rm = st();
+      const left1 = doc.getElementById('cursor').style.left;
+      key(doc.body, 's'); await wait(100);
+      record(id, 'Reduce motion: scan plays but the marker stays still', rm.scanning && left0 === left1 && rm.point.x > 0,
+        `marker ${left0} → ${left1}; sound position x ${rm.point.x}`);
+
+      // Demo: Escape stops it and restores the controls
+      const rowBefore = doc.getElementById('row-select').value;
+      key(doc.body, 'd'); await wait(1200);
+      const dm = st();
+      key(doc.body, 'Escape'); await wait(100);
+      record(id, 'D starts the demo, Escape stops it', dm.demo && dm.narrationLine.startsWith(`Demo, one minute: ${meta.title}.`) &&
+        !st().demo && st().narrationLine === 'Demo stopped.' && !st().scanning && doc.getElementById('row-select').value === rowBefore,
+        `"${dm.narrationLine.slice(0, 70)}…" then "${st().narrationLine}"`);
+
       // Settings remembered after a reload, then Reset
       dsel.value = 'full'; dsel.dispatchEvent(new Event('change'));
       const w2 = await load('../player.html?frame=' + id);
       const s2 = w2.__jukebox.getState();
-      record(id, 'Settings remembered after reload', s2.prefs.detail === 'full' && w2.document.getElementById('detail-select').value === 'full',
-        'detail = ' + s2.prefs.detail);
+      record(id, 'Settings remembered after reload (incl. display)', s2.prefs.detail === 'full' && w2.document.getElementById('detail-select').value === 'full' &&
+        w2.document.documentElement.classList.contains('hc') && w2.document.getElementById('hc-toggle').checked,
+        'detail = ' + s2.prefs.detail + ', html classes "' + w2.document.documentElement.className + '"');
       w2.document.getElementById('reset-btn').click();
       const s3 = w2.__jukebox.getState();
       record(id, 'Reset settings restores the defaults', s3.prefs.detail === 'normal' && s3.prefs.voiceMode === 'screenreader' &&
-        s3.prefs.volume === 30 && s3.narrationLine.startsWith('Settings reset'), `"${s3.narrationLine}"`);
+        s3.prefs.volume === 30 && s3.narrationLine.startsWith('Settings reset') && w2.document.documentElement.className.trim() === '',
+        `"${s3.narrationLine}", html classes "${w2.document.documentElement.className}"`);
       record(id, 'Navigation: no script errors', w.__errors.length === 0 && w2.__errors.length === 0, [...w.__errors, ...w2.__errors].join(' | ') || 'none');
     }
 
     const allFrames = (await (await fetch('../data/frames.json', { cache: 'no-cache' })).json()).frames;
     const metas = Object.fromEntries(allFrames.map((f) => [f.id, f]));
     const frames = allFrames.map((f) => f.id);
-    for (const id of frames) await testFrame(id);
-    for (const id of frames) await testNavigation(id);
-    await testBadFrame();
+    // A test that throws is recorded as a failure, and the rest still run.
+    const guard = async (name, fn) => {
+      try { await fn(); } catch (err) { record(name, 'Test ran to the end', false, String(err && err.stack || err).slice(0, 300)); }
+    };
+    for (const id of frames) await guard(id, () => testFrame(id));
+    for (const id of frames) await guard(id, () => testNavigation(id));
+    await guard('sst', () => testFullDemo('sst'));
+    await guard('(bad id)', () => testBadFrame());
 
     const failed = results.filter((r) => !r.pass).length;
     document.getElementById('summary').textContent = `${results.length} checks, ${failed} failed.`;

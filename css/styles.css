@@ -333,3 +333,41 @@ button.big-button { border-radius: var(--radius); }
 .voice-mode label.check { margin: 6px 0; }
 .voice-mode input[type="radio"] { width: 1.2em; height: 1.2em; }
 #alert:empty { display: none; }
+
+/* ------------------------------------------------------------------ */
+/* Display settings (js/display.js puts these classes on <html>)       */
+/* ------------------------------------------------------------------ */
+
+/* High contrast: pure black and white, yellow links and buttons, cyan focus. */
+:root.hc {
+  --bg: #000000;
+  --surface: #000000;
+  --text: #ffffff;
+  --muted: #ffffff;
+  --border: #ffffff;
+  --accent: #ffff00;
+  --accent-text: #000000;
+  --focus: #00ffff;
+  --warn-bg: #000000;
+  --warn-text: #ffff00;
+  --bad: #ff8080;
+  --good: #80ff80;
+  color-scheme: dark;
+}
+:root.hc .controls, :root.hc .info-panel, :root.hc .note, :root.hc .card { border: 2px solid var(--border); }
+:root.hc a { text-decoration-thickness: 2px; }
+:root.hc :focus-visible { outline-width: 4px; }
+
+/* Large text: everything about a quarter bigger (rem sizes follow the root). */
+:root.large-text { font-size: 125%; }
+:root.large-text body { font-size: 22.5px; }
+
+/* Reduced motion: no transitions or animations (the system setting counts too). */
+:root.reduce-motion *, :root.reduce-motion *::before, :root.reduce-motion *::after {
+  transition: none !important; animation: none !important; scroll-behavior: auto !important;
+}
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { transition: none !important; animation: none !important; scroll-behavior: auto !important; }
+}
+.display-settings label.check { display: flex; gap: 8px; align-items: center; margin: 8px 0; }
+.display-settings input[type="checkbox"] { width: 1.2em; height: 1.2em; }

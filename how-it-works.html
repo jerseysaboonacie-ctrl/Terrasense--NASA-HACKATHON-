@@ -5,6 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>How It Works</title>
   <link rel="stylesheet" href="css/styles.css">
+  <script src="js/display.js"></script>
 </head>
 <body>
   <a class="skip-link" href="#main">Skip to content</a>
@@ -22,15 +23,15 @@
   </header>
 
   <main id="main">
-    <h1>How a colour becomes a sound</h1>
+    <h1>How a color becomes a sound</h1>
     <ol>
-      <li><strong>The frame is a picture with a colour legend.</strong> NASA colours each point of the map by its value, and the legend says which colour means which value. We store every frame's legend as a table of colours and values, read from NASA's own colourbar.</li>
-      <li><strong>The app finds the pixel under your pointer.</strong> It reads that pixel's colour straight from the image, which is stored on this site. For compressed (JPEG) frames it takes the middle colour of the 3 by 3 pixels around the point, which removes compression noise.</li>
-      <li><strong>It matches that colour to the closest legend colour.</strong> That gives an approximate value. If no legend colour is close enough, or the colour means land or water, or the point is under a logo or date label, the app says "no data" instead of guessing.</li>
+      <li><strong>The frame is a picture with a color legend.</strong> NASA colors each point of the map by its value, and the legend says which color means which value. We store every frame's legend as a table of colors and values, read from NASA's own colorbar.</li>
+      <li><strong>The app finds the pixel under your pointer.</strong> It reads that pixel's color straight from the image, which is stored on this site. For compressed (JPEG) frames it takes the middle color of the 3 by 3 pixels around the point, which removes compression noise.</li>
+      <li><strong>It matches that color to the closest legend color.</strong> That gives an approximate value. If no legend color is close enough, or the color means land or water, or the point is under a logo or date label, the app says "no data" instead of guessing.</li>
       <li><strong>It turns the value into a pitch.</strong> The lowest value on the legend plays 220 Hz and the highest 880 Hz, two octaves higher, on the same scale for every frame. Left and right on the map are heard as left and right in headphones. No data is silence with one soft click.</li>
     </ol>
 
-    <p>In the Player, press <strong>Explain this sound</strong> to see these four steps for the exact point under your pointer: the pixel colour, the closest legend colour, the value, and the frequency.</p>
+    <p>In the Player, press <strong>Explain this sound</strong> to see these four steps for the exact point under your pointer: the pixel color, the closest legend color, the value, and the frequency.</p>
 
     <h2>How we checked it</h2>
     <p>
@@ -39,13 +40,36 @@
       The full results are in the project's <code>docs/accuracy-check.md</code>.
     </p>
 
+    <h3>Ten points, checked one by one</h3>
+    <p>
+      Ten sea temperature points spread from cold to warm, plus two places with no data. They were picked separately from the 336 points above, so their largest difference can be a little different. The middle column is
+      what the Player says at that pixel today (worked out live by the same code when this page opens).
+      The real value is the satellite analysis for the day that matched the image best; the image itself states no date.
+    </p>
+    <p id="acc-status" role="status">Building the table…</p>
+    <div class="table-wrap">
+      <table id="acc-table">
+        <caption class="sr-only">Decoded sea surface temperature compared with the real measurement at 12 points</caption>
+        <thead><tr>
+          <th scope="col">#</th><th scope="col">Place</th><th scope="col">The Player says</th>
+          <th scope="col" id="acc-real-head">Real</th><th scope="col">Difference</th><th scope="col">Within one legend step?</th>
+        </tr></thead>
+        <tbody></tbody>
+      </table>
+    </div>
+    <p id="acc-note"></p>
+    <p class="muted small">
+      Not yet done: a person reading each pixel against NASA's colorbar by eye, and the same check on the
+      other three frames, whose underlying data we have not compared.
+    </p>
+
     <h2>What this cannot tell you</h2>
     <div class="note">
       <ul>
         <li>Values are approximate. They are decoded from the colors of the visualization, not from the underlying measurements.</li>
-        <li>Image compression adds noise to the colours, which is why the app reads a small square, not one pixel.</li>
-        <li>Some colours look alike. On the air temperature frame, the coldest dark blue is closer to a mid-range purple-blue than we would like, so check surprising readings.</li>
-        <li>A colour at either end of a legend only tells you "this much or more" (or less), because the legend cannot show anything beyond its ends.</li>
+        <li>Image compression adds noise to the colors, which is why the app reads a small square, not one pixel.</li>
+        <li>Some colors look alike. On the air temperature frame, the coldest dark blue is closer to a mid-range purple-blue than we would like, so check surprising readings.</li>
+        <li>A color at either end of a legend only tells you "this much or more" (or less), because the legend cannot show anything beyond its ends.</li>
         <li>Land, water, logos and date labels are reported as "no data", never as a low value.</li>
         <li>The vegetation frame's legend has no numbers, only Low and High, so its sound is relative.</li>
         <li>On the precipitation frame, "no precipitation shown" can mean less than 0.1 mm per hour or missing data; the image does not tell them apart.</li>
@@ -58,5 +82,6 @@
   <footer class="site-footer">
     TerraSense Jukebox is a hackathon project. It is not endorsed by NASA. Visualizations are credited to their original sources on the <a href="credits.html">Credits</a> page.
   </footer>
+  <script type="module" src="js/accuracy.js"></script>
 </body>
 </html>

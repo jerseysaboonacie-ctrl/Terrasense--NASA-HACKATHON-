@@ -5,6 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Decoder Test</title>
   <link rel="stylesheet" href="css/styles.css">
+  <script src="js/display.js"></script>
 </head>
 <body>
   <a class="skip-link" href="#main">Skip to content</a>
@@ -24,8 +25,8 @@
   <main id="main">
     <h1>Decoder test</h1>
     <p>
-      Shows how each pixel colour is turned into a value, so you can check the decoder
-      against NASA's colourbar by eye. Values are approximate: a colour is not a measurement.
+      Shows how each pixel color is turned into a value, so you can check the decoder
+      against NASA's colorbar by eye. Values are approximate: a color is not a measurement.
     </p>
 
     <p>
@@ -58,7 +59,7 @@
     <h2>Legend</h2>
     <p class="muted">
       Top: the legend table the decoder uses, drawn from data/frames.json, with a marker at the last decoded value.
-      Below: NASA's original colourbar. The two should look the same.
+      Below: NASA's original colorbar. The two should look the same.
     </p>
     <canvas id="legend-strip" class="legend-strip" height="44" aria-hidden="true"></canvas>
     <div id="colorbars" class="colorbars"></div>
@@ -67,7 +68,7 @@
     <p>
       Add the points you want to check by clicking the frame, or fill the table with ten points spread
       across the legend range plus two no-data examples. For each row, compare the zoomed pixel with NASA's
-      colourbar and type the value you read by eye. Rows more than one legend step apart are flagged.
+      colorbar and type the value you read by eye. Rows more than one legend step apart are flagged.
     </p>
     <p>
       <button id="fill-btn">Fill with 10 points across the range</button>
