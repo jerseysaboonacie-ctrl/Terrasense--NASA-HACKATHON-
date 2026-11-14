@@ -66,17 +66,83 @@ export function speechSupported() {
   return 'speechSynthesis' in window && 'SpeechSynthesisUtterance' in window;
 }
 
-/** Speak a sentence, cutting off anything still being spoken. */
+// Our own record of whether the built-in voice is talking. Chrome's
+// speechSynthesis.speaking can stay true after speech ends (a known bug), so
+// it is not trusted: we count from each utterance's start to its end, with a
+// time limit in case an end event never arrives.
+let speechGen = 0;        // bumps on every new speak() or stop, so old events are ignored
+let active = 0;           // utterances of the current speak() still to finish
+let speakingUntil = 0;    // time limit for `active`
+const keep = [];          // references, so Chrome does not drop utterances (and their end events)
+let voice = null;
+
+/** A local English voice if there is one (works offline and avoids network voices). */
+function pickVoice() {
+  if (voice || !speechSupported()) return voice;
+  const voices = window.speechSynthesis.getVoices();
+  voice = voices.find((v) => v.lang === 'en-US' && v.localService) ||
+    voices.find((v) => /^en/.test(v.lang) && v.localService) || voices.find((v) => /^en/.test(v.lang)) || null;
+  return voice;
+}
+if (speechSupported()) window.speechSynthesis.addEventListener?.('voiceschanged', () => { voice = null; pickVoice(); });
+
+/** Split long text into sentence groups of about 200 characters (Chrome cuts off long utterances). */
+function chunksForSpeech(text) {
+  const parts = [];
+  let cur = '';
+  for (const s of text.split(/(?<=[.!?…])\s+/)) {
+    if (cur && (cur + ' ' + s).length > 200) { parts.push(cur); cur = s; } else cur = cur ? cur + ' ' + s : s;
+  }
+  if (cur) parts.push(cur);
+  return parts;
+}
+
+/**
+ * Browsers only let a page speak after the user has pressed a key, clicked or
+ * tapped on it. False until then (window.__testUserActivation is for the tests).
+ */
+export function canSpeakNow() {
+  if (window.__testUserActivation) return true;
+  const ua = navigator.userActivation;
+  return !ua || ua.hasBeenActive;
+}
+
+/** True while the built-in voice is reading something we asked it to read. */
+export function isSpeaking() {
+  return active > 0 && performance.now() < speakingUntil;
+}
+
+/** Speak text, cutting off anything still being spoken. onEnd runs when it has all been read. */
 export function speak(text, rate = 1, onEnd) {
-  if (!speechSupported()) { if (onEnd) onEnd(); return; }
-  window.speechSynthesis.cancel();
-  const u = new SpeechSynthesisUtterance(text);
-  u.lang = document.documentElement.lang || 'en';
-  u.rate = rate;
-  if (onEnd) { u.onend = onEnd; u.onerror = onEnd; }
-  window.speechSynthesis.speak(u);
+  if (!speechSupported() || !text) { if (onEnd) onEnd(); return; }
+  const synth = window.speechSynthesis;
+  const gen = ++speechGen;
+  synth.cancel();
+  keep.length = 0;
+  const parts = chunksForSpeech(text);
+  active = parts.length;
+  // About 150 words a minute at rate 1, plus a margin.
+  speakingUntil = performance.now() + (text.split(/\s+/).length / (2.5 * rate)) * 1000 + 3000;
+  parts.forEach((part, i) => {
+    const u = new SpeechSynthesisUtterance(part);
+    u.lang = 'en-US';
+    u.rate = rate;
+    const v = pickVoice();
+    if (v) u.voice = v;
+    const done = () => {
+      if (gen !== speechGen) return;
+      active = Math.max(0, active - 1);
+      if (i === parts.length - 1) { active = 0; if (onEnd) onEnd(); }
+    };
+    u.onend = done;
+    u.onerror = done;
+    keep.push(u);
+    synth.speak(u);
+  });
 }
 
 export function stopSpeaking() {
+  speechGen++;
+  active = 0;
   if (speechSupported()) window.speechSynthesis.cancel();
 }

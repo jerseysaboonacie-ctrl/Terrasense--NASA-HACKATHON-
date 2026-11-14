@@ -5,7 +5,7 @@ run again on 2026-11-13 after adding Summary, Go to and Compare (section 7), and
 2026-11-13 after the navigation work for blind users (section 8).
 Each check is PASS, FAIL or NOT TESTED, with the evidence. "Simulated" means automated
 tests in headless Chrome on macOS using synthetic key and pointer events
-(`tests/player-test.html`, 330 checks, 0 failed; `tests/pages-test.html`, 77 checks, 0 failed;
+(`tests/player-test.html`, 338 checks, 0 failed; `tests/pages-test.html`, 77 checks, 0 failed;
 `decoder-test.html?auto=1`, 20 self-tests, 0 failed; all on 2026-11-14).
 
 ## Results
@@ -142,6 +142,11 @@ Tested with a stand-in speech recognizer and microphone inside headless Chrome (
 | 12.6 | Switching off | PASS | "stop listening", V, or either switch; listening stops. |
 | 12.7 | Stays on across pages | PASS | "open the rain map": the Player opens on precipitation and says "Terra is still listening." |
 | 12.8 | Microphone permission | PASS (simulated) | Says "Your browser is asking to use the microphone. Choose Allow." before the browser's question; if blocked, says how to allow it. |
+| 12.9 | Answers out loud in screen reader mode (2026-11-14, after your report) | PASS | Voice set to "screen reader", no screen reader running: Terra's answers are spoken by the built-in voice, once (not also in the live region). Unticking "Terra answers out loud" sends them to the screen reader. |
+| 12.10 | Its name and "are you listening?" | PASS | "Terra, are you still listening?" → "Yes, I'm listening. What would you like to do?"; "Terra" → "Yes? I'm listening."; "can you hear me" → "Yes, I'm listening."; "hey Terra where am I" answered without the wake-word setting. |
+| 12.11 | Long answers | PASS | The summary is spoken in 4 parts of at most 149 characters. |
+| 12.12 | Frame change keeps Terra | PASS | "open the rain map" switches frame in the same page; Terra keeps listening and speaking. |
+| 12.13 | New page without a key press | PASS | Terra keeps listening, says "Terra is still listening." through the screen reader channel, and shows a note to press a key or tap once so it can speak. |
 
 Not tested: a real microphone, real speech recognition accuracy, and how often room noise or a screen reader
 on speakers is heard as a request.

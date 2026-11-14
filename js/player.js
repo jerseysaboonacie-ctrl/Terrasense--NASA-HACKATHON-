@@ -127,12 +127,14 @@ let saidSomething = false; // anything announced yet (the opening message must n
 
 let assistant = null;      // Terra (assistant.js), created at start-up
 
-function say(text) {
+function say(text, { aloud = false } = {}) {
   saidSomething = true;
   els.narration.textContent = text;
   if (assistant) assistant.heard(text);
-  if (prefs.voiceMode === 'screenreader') setLive(text);
-  else if (prefs.voiceMode === 'voice') speak(text, prefs.speechRate);
+  // Terra answering out loud (you talked to it): the built-in voice instead of the live region.
+  const mode = aloud || (assistant && assistant.answersAloud()) ? 'voice' : prefs.voiceMode;
+  if (mode === 'screenreader') setLive(text);
+  else if (mode === 'voice') speak(text, prefs.speechRate);
 }
 const announce = say;
 
@@ -971,9 +973,7 @@ function toggleDemo() {
 els.demoBtn.addEventListener('click', toggleDemo);
 els.tourBtn.addEventListener('click', tourStep);
 els.whereBtn.addEventListener('click', whereAmI);
-els.frameSelect.addEventListener('change', () => {
-  location.href = 'player.html?frame=' + encodeURIComponent(els.frameSelect.value);
-});
+els.frameSelect.addEventListener('change', () => switchFrame(els.frameSelect.value));
 
 // ---------------------------------------------------------------------------
 // What Terra (the assistant) can call. Everything goes through the same
@@ -1094,6 +1094,72 @@ function assistantApi() {
 // Start-up
 // ---------------------------------------------------------------------------
 
+let frameList = [];        // every frame in frames.json
+
+/**
+ * Show a frame: its words, legends and picture, and a fresh start for
+ * everything that belongs to one frame (areas, marks, summary, scan...).
+ * Used at start-up and when switching frame in the page, which keeps the
+ * page (and Terra, and permission to speak) instead of reloading it.
+ * Returns false if the picture could not be loaded.
+ */
+async function openFrame(meta) {
+  stopScan(false); stopTour(false); if (demo) finishDemo(); stopTone();
+  compareTimers.forEach(clearTimeout); compareRunning = false;
+  analysis = null; overviewCache = null; highIndex = -1; last = null; lastStatus = null;
+  marks.A = null; marks.B = null;
+  els.markerA.hidden = true; els.markerB.hidden = true;
+  els.compareA.textContent = 'not marked'; els.compareB.textContent = 'not marked'; els.compareResult.textContent = '';
+  els.summaryBox.hidden = true; els.summaryText.textContent = '';
+  els.explain.hidden = true; els.explainBtn.setAttribute('aria-expanded', 'false');
+  els.infoValue.textContent = '–'; els.infoPlace.textContent = '–'; els.infoSwatch.textContent = '–';
+  els.frameSelect.value = meta.id;
+
+  const layout = describeLayout(meta);
+  els.layoutText.textContent = layout;
+  els.intro.textContent = `${meta.title}, ${dateInSentence(meta)}. ${meta.listenFor} ` +
+    'Press T for a short guided tour, or go to the map and use the arrow keys. Question mark lists every key.';
+  els.title.textContent = meta.title;
+  els.date.textContent = meta.date;
+  document.title = meta.title + ' – Jukebox Player';
+  els.wrap.setAttribute('aria-label', `Map: ${meta.title}`);
+  els.infoVariable.textContent = `${meta.variable} (${meta.units})`;
+  els.infoDate.textContent = meta.date;
+  buildLegendText(meta);
+  buildReferenceButtons(meta);
+  // Button labels use the frame's own words (warmest / greenest / heaviest...).
+  els.highBtn.textContent = `Go to ${meta.terms.high}`;
+  els.nextHighBtn.textContent = `Next ${meta.terms.high}`;
+  els.lowBtn.textContent = `Go to ${meta.terms.low}`;
+
+  els.status.textContent = 'Loading the frame…';
+  try {
+    frame = await loadFrame(meta);
+  } catch (err) {
+    pageError('Frame could not be loaded', 'This frame could not be loaded. ' + err.message);
+    return false;
+  }
+  els.status.textContent = '';
+  els.canvas.width = frame.width;
+  els.canvas.height = frame.height;
+  els.canvas.getContext('2d').drawImage(frame.bitmap, 0, 0);
+  const a = meta.mapArea;
+  point = { x: Math.round(a.x + a.width / 2), y: Math.round(a.y + a.height / 2) };
+  drawLegend(els.legendCanvas, meta, null);
+  return true;
+}
+
+/** Switch to another frame in this page (Frame menu, Terra), and say so. */
+async function switchFrame(id) {
+  const meta = frameList.find((f) => f.id === id);
+  if (!meta || (frame && frame.meta.id === id)) {
+    if (meta) say(`${meta.title} is already open.`);
+    return;
+  }
+  history.replaceState(null, '', 'player.html?frame=' + encodeURIComponent(id));
+  if (await openFrame(meta)) say(`${meta.title} is open, ${dateInSentence(meta)}. ${meta.listenFor}`);
+}
+
 /**
  * An error that stops the Player from opening: say so in the title and the
  * heading (read first on load), and set the alert just after load, when a
@@ -1138,51 +1204,21 @@ async function init() {
     return;
   }
 
+  frameList = frames;
   els.frameSelect.replaceChildren(...frames.map((f) => {
     const o = el('option', f.title); o.value = f.id; o.selected = f.id === meta.id; return o;
   }));
-  const layout = describeLayout(meta);
-  els.layoutText.textContent = layout;
-  els.intro.textContent = `${meta.title}, ${dateInSentence(meta)}. ${meta.listenFor} ` +
-    'Press T for a short guided tour, or go to the map and use the arrow keys. Question mark lists every key.';
-
-  els.title.textContent = meta.title;
-  els.date.textContent = meta.date;
-  document.title = meta.title + ' – Jukebox Player';
-  els.wrap.setAttribute('aria-label', `Map: ${meta.title}`);
-  els.infoVariable.textContent = `${meta.variable} (${meta.units})`;
-  els.infoDate.textContent = meta.date;
-  buildLegendText(meta);
-  buildReferenceButtons(meta);
-  // Button labels use the frame's own words (warmest / greenest / heaviest...).
-  els.highBtn.textContent = `Go to ${meta.terms.high}`;
-  els.nextHighBtn.textContent = `Next ${meta.terms.high}`;
-  els.lowBtn.textContent = `Go to ${meta.terms.low}`;
-
-  els.status.textContent = 'Loading the frame…';
-  try {
-    frame = await loadFrame(meta);
-  } catch (err) {
-    pageError('Frame could not be loaded', 'This frame could not be loaded. ' + err.message);
-    return;
-  }
-  els.status.textContent = '';
+  if (!(await openFrame(meta))) return;
   // Opening message, once the page has settled (a screen reader reads the
   // page title first; this polite message follows it).
   setTimeout(() => saidSomething || window.__welcomeOpen || say(`Player ready: ${meta.title}. Press T for a tour, or use the Skip to the map link at the top of the page, then the arrow keys.`), 1000);
-
-  els.canvas.width = frame.width;
-  els.canvas.height = frame.height;
-  els.canvas.getContext('2d').drawImage(frame.bitmap, 0, 0);
-  const a = meta.mapArea;
-  point = { x: Math.round(a.x + a.width / 2), y: Math.round(a.y + a.height / 2) };
-  drawLegend(els.legendCanvas, meta, null);
 
   // Terra, the assistant, with the Player's commands (player-assistant.js).
   assistant = createAssistant({
     container: $('assistant'), say, headingLevel: 3, sayCallsHeard: true,
     commands: playerCommands(assistantApi()), help: PLAYER_HELP,
     toggles: [$('terra-bar-btn')],
+    openFrame: (f) => switchFrame(f.id),
   });
 
   // First visit: ask how to hear the site (welcome.js), then greet in that voice.

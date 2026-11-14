@@ -18,6 +18,7 @@ export const DEFAULTS = Object.freeze({
   largeText: false,
   reduceMotion: false,
   terraWakeWord: false,       // Terra answers only requests that start with "Terra"
+  terraAloud: true,           // Terra answers out loud (built-in voice) when you talk to it
 });
 
 const VALID = {

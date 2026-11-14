@@ -19,7 +19,7 @@
 // Speech recognition uses the browser's Web Speech API. In Chrome and Edge it
 // needs an internet connection; typing always works.
 
-import { speak, stopSpeaking, speechSupported } from './narrator.js';
+import { speak, stopSpeaking, speechSupported, isSpeaking, canSpeakNow } from './narrator.js';
 import { loadPrefs, savePrefs } from './prefs.js';
 import { startAudio, isStarted, playCue, stopTone } from './audio.js';
 import { loadFrameList } from './decoder.js';
@@ -42,9 +42,13 @@ const WAKE = /^ (?:hey |ok |okay )?(?:terra|tera|tara|tierra|terah)\b,? ?(.*)$/;
 
 let pageLive = null;
 
-/** Say text in the saved voice mode: polite live region, built-in voice, or nothing. */
-export function pageSay(text) {
-  const mode = loadPrefs().voiceMode;
+/**
+ * Say text in the saved voice mode: polite live region, built-in voice, or
+ * nothing. With { aloud: true } (Terra answering out loud) the built-in voice
+ * is used instead, and not the live region, so there is still only one voice.
+ */
+export function pageSay(text, { aloud = false } = {}) {
+  const mode = aloud ? 'voice' : loadPrefs().voiceMode;
   if (mode === 'screenreader') {
     if (!pageLive) {
       pageLive = document.createElement('div');
@@ -57,6 +61,11 @@ export function pageSay(text) {
   } else if (mode === 'voice') {
     speak(text, loadPrefs().speechRate);
   }
+}
+
+/** Terra answers out loud (built-in voice) when you talk to it: the "Terra answers out loud" setting. */
+export function terraAloudSetting() {
+  return loadPrefs().terraAloud !== false && speechSupported();
 }
 
 // ---------------------------------------------------------------------------
@@ -84,8 +93,9 @@ const NO = ['no', 'nope', 'not now', 'no thanks', 'no thank you', 'never mind', 
  *   headingLevel 2 or 3
  *   sayCallsHeard true if say() reports back through heard() (the Player), so replies are logged once
  *   toggles      extra buttons that switch Terra on and off too (the Player's top bar)
+ *   openFrame    the Player switches frame in the page instead of loading a new page
  */
-export function createAssistant({ container, say, commands = [], help = '', headingLevel = 2, sayCallsHeard = false, toggles = [] }) {
+export function createAssistant({ container, say, commands = [], help = '', headingLevel = 2, sayCallsHeard = false, toggles = [], openFrame = null }) {
   const h = `h${headingLevel}`;
   container.classList.add('assistant');
   container.setAttribute('aria-labelledby', 'assistant-heading');
@@ -95,6 +105,8 @@ export function createAssistant({ container, say, commands = [], help = '', head
     <div class="button-row">
       <button type="button" id="talk-btn" class="terra-toggle" aria-pressed="false" accesskey="v">Terra listening (V)<span class="terra-state" aria-hidden="true">Off</span></button>
     </div>
+    <p id="assistant-heard" class="muted small" aria-hidden="true"></p>
+    <label class="check"><input type="checkbox" id="aloud-toggle"> Terra answers out loud (built-in voice) when I talk to it. Untick to hear Terra through your screen reader instead.</label>
     <label class="check"><input type="checkbox" id="wake-toggle"> Only answer when I start with "Terra" (for noisy rooms, or a screen reader on speakers)</label>
     <form id="ask-form" class="control-row">
       <label for="ask-input">Or type a request</label>
@@ -106,6 +118,7 @@ export function createAssistant({ container, say, commands = [], help = '', head
 
   const $ = (id) => container.querySelector('#' + id);
   const talkBtn = $('talk-btn'), form = $('ask-form'), input = $('ask-input'), wakeBox = $('wake-toggle');
+  const aloudBox = $('aloud-toggle'), heardEl = $('assistant-heard');
   const allToggles = [talkBtn, ...toggles];
   const statusEl = $('assistant-status'), logEl = $('assistant-log');
 
@@ -122,6 +135,8 @@ export function createAssistant({ container, say, commands = [], help = '', head
   let retryAt = 0;          // do not restart before this time
   let wakeUntil = 0;        // after "Terra" alone: the next request needs no wake word until then
   const recent = [];        // Terra's recent words, to ignore them if the microphone hears them
+  let requestSpoken = false; // the request being answered came from the microphone
+  let skipRemember = false;  // reply() already decided whether to remember this text
   let capturing = false;    // log what the page says while a request runs
   let captureTimer = 0;
 
@@ -142,18 +157,38 @@ export function createAssistant({ container, say, commands = [], help = '', head
     while (recent.length > 8) recent.shift();
   }
 
-  /** Say a reply and log it (once). echo: false for replies that list example requests (help). */
-  function reply(text, { echo = true } = {}) {
+  /** Answer out loud now? Yes when you talk to Terra (or it is switched on) and the setting allows it. */
+  function aloud() {
+    return terraAloudSetting() && canSpeakNow() && (listeningOn || requestSpoken);
+  }
+
+  const SPEAK_HINT = 'Terra is listening, but this page may only speak after you press a key or tap it once. Do that, and Terra will answer out loud.';
+
+  /**
+   * Say a reply and log it (once). echo: false for replies that list example
+   * requests (help). aloud: speak with the built-in voice (see aloud()).
+   */
+  function reply(text, { echo = true, aloud: out = aloud() } = {}) {
     if (!text) return;
     ctx.last = text;
     remember(text, echo);
-    if (sayCallsHeard) { const was = capturing; capturing = true; say(text); capturing = was; }
-    else { say(text); log('Terra', text); }
+    if (sayCallsHeard) {
+      const was = capturing;
+      capturing = true; skipRemember = true; // remembered above (or deliberately not)
+      say(text, { aloud: out });
+      capturing = was; skipRemember = false;
+    }
+    else { say(text, { aloud: out }); log('Terra', text); }
+  }
+
+  /** For the Player: should what it announces now be spoken out loud as Terra's answer? */
+  function answersAloud() {
+    return capturing && aloud();
   }
 
   /** The Player announced something; log it while a request runs. */
   function heard(text) {
-    remember(text);
+    if (!skipRemember) remember(text);
     if (capturing) { log('Terra', text); ctx.last = text; }
   }
 
@@ -199,7 +234,11 @@ export function createAssistant({ container, say, commands = [], help = '', head
     { name: 'open a page', match: (t) => (has(t, 'open', 'go to', 'take me to', 'show me', 'show', 'back to', 'switch to') || /^ \w+( page)? $/.test(t)) && PAGES.find((p) => has(t, ...p.words)),
       run: (c, page) => { go(page.href); return `Opening ${page.name}.`; } },
     { name: 'open a frame', match: (t) => frameFrom(t),
-      run: (c, f) => { go('player.html?frame=' + encodeURIComponent(f.id)); return `Opening ${f.title} in the Player.`; } },
+      run: (c, f) => {
+        if (openFrame) { openFrame(f); return; } // the Player: switch in the page, it says so itself
+        go('player.html?frame=' + encodeURIComponent(f.id));
+        return `Opening ${f.title} in the Player.`;
+      } },
     { name: 'read page', match: (t) => has(t, 'read this page', 'read the page', 'read page', 'read it', 'whats on this page', 'what is on this page', 'read everything'),
       run: () => readPage() },
     { name: 'where (page)', match: (t) => has(t, 'where am i', 'what page', 'which page'),
@@ -254,15 +293,31 @@ export function createAssistant({ container, say, commands = [], help = '', head
   // --- Understanding a request --------------------------------------------
 
   async function handle(text, { spoken = false } = {}) {
-    const t = normalise(text);
+    let t = normalise(text);
     if (!t.trim()) return;
     log('You', text.trim());
+    requestSpoken = spoken;
     capturing = true;
     clearTimeout(captureTimer);
     let answer;
+    // Its name: "Terra, ...", "hey Terra ...", "OK Terra ..." (and "Terra" alone).
+    const named = t.match(WAKE);
+    if (named) {
+      const rest = named[1].trim();
+      if (!rest) {
+        reply(listeningOn ? "Yes? I'm listening." : 'Yes? Type your request, or press V so I can hear you.', { echo: false });
+        captureTimer = setTimeout(() => { capturing = false; requestSpoken = false; }, 3000);
+        return;
+      }
+      text = rest;
+      t = ` ${rest} `;
+    }
     try {
       // A pending yes/no question comes first.
-      if (ctx.pending && (has(t, ...YES) || has(t, ...NO))) {
+      const presence = PRESENCE.find((c) => c.match(t));
+      if (presence) {
+        answer = presence.run();
+      } else if (ctx.pending && (has(t, ...YES) || has(t, ...NO))) {
         const p = ctx.pending;
         ctx.pending = null;
         answer = has(t, ...NO) && !has(t, ...YES) ? (p.no ? await p.no() : 'Okay.') : await p.yes();
@@ -284,8 +339,15 @@ export function createAssistant({ container, say, commands = [], help = '', head
     }
     if (answer) typeof answer === 'string' ? reply(answer) : reply(answer.text, { echo: answer.echo });
     // Keep logging for a moment: some replies arrive later (a comparison speaks after its tones).
-    captureTimer = setTimeout(() => { capturing = false; }, 3000);
+    captureTimer = setTimeout(() => { capturing = false; requestSpoken = false; }, 3000);
   }
+
+  // Asked before anything else, whatever page this is.
+  const PRESENCE = [
+    { match: (t) => has(t, 'are you listening', 'are you still listening', 'still listening', 'can you hear me', 'do you hear me',
+        'are you there', 'are you still there', 'you there', 'are you on', 'are you awake', 'is terra on', 'is terra listening', 'hello are you there'),
+      run: () => (listeningOn ? "Yes, I'm listening. What would you like to do?" : "I'm here, but I'm not listening to the microphone right now. Press V to switch me on.") },
+  ];
 
   // --- Listening: Terra on / off --------------------------------------------
 
@@ -293,17 +355,18 @@ export function createAssistant({ container, say, commands = [], help = '', head
     try { if (!isStarted()) await startAudio(); playCue(kind); } catch (e) { /* no sound: fine */ }
   }
 
-  const speaking = () => speechSupported() && (window.speechSynthesis.speaking || window.speechSynthesis.pending);
+  // Our own record of the built-in voice talking (narrator.js), not Chrome's, which can get stuck.
+  const speaking = () => isSpeaking();
 
   /** True if a transcript looks like Terra's own recent words coming back through the microphone. */
   function isEcho(text) {
     const words = normalise(text).trim().split(' ').filter(Boolean);
-    if (words.length < 5) return false; // short requests are never treated as echoes
+    if (words.length < 6) return false; // short requests are never treated as echoes
     const now = performance.now();
     return recent.some((r) => {
       if (now - r.time > 15000) return false;
       const said = new Set(r.text.trim().split(' '));
-      return words.filter((w) => said.has(w)).length / words.length >= 0.6;
+      return words.filter((w) => said.has(w)).length / words.length >= 0.7;
     });
   }
 
@@ -329,28 +392,28 @@ export function createAssistant({ container, say, commands = [], help = '', head
   /** Make sure the microphone can be used, with a clear message if not. */
   async function microphoneOk() {
     if (!getRecognition()) {
-      reply('Voice input is not available in this browser. Open the site in Chrome, Edge or Safari to talk to Terra, or type your request in the box.');
+      reply('Voice input is not available in this browser. Open the site in Chrome, Edge or Safari to talk to Terra, or type your request in the box.', { aloud: terraAloudSetting() });
       return false;
     }
     if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
-      if (!window.isSecureContext) { reply('The microphone only works on a secure page: open the site from localhost or an https address.'); return false; }
+      if (!window.isSecureContext) { reply('The microphone only works on a secure page: open the site from localhost or an https address.', { aloud: terraAloudSetting() }); return false; }
       return true; // let the recognition ask for permission itself
     }
     // Tell the user about the browser's permission question: it is easy to miss without sight.
     let state = 'unknown';
     try { state = (await navigator.permissions.query({ name: 'microphone' })).state; } catch (e) { /* not supported */ }
     if (state === 'denied') {
-      reply('The microphone is blocked for this site. Allow it in the browser\'s site settings, then press V again. Or type your request in the box.');
+      reply('The microphone is blocked for this site. Allow it in the browser\'s site settings, then press V again. Or type your request in the box.', { aloud: terraAloudSetting() });
       return false;
     }
-    if (state !== 'granted') reply('Your browser is asking to use the microphone. Choose Allow.', { echo: false });
+    if (state !== 'granted') reply('Your browser is asking to use the microphone. Choose Allow.', { echo: false, aloud: terraAloudSetting() });
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
       stream.getTracks().forEach((tr) => tr.stop());
       return true;
     } catch (err) {
-      if (err.name === 'NotFoundError') reply('No microphone was found. Connect one, or type your request in the box.');
-      else reply('The microphone is blocked. Allow microphone access for this site in the browser, then press V again. Or type your request in the box.');
+      if (err.name === 'NotFoundError') reply('No microphone was found. Connect one, or type your request in the box.', { aloud: terraAloudSetting() });
+      else reply('The microphone is blocked. Allow microphone access for this site in the browser, then press V again. Or type your request in the box.', { aloud: terraAloudSetting() });
       return false;
     }
   }
@@ -363,6 +426,7 @@ export function createAssistant({ container, say, commands = [], help = '', head
     setOn(true);
     await cue('listenStart');
     reply(resume ? 'Terra is still listening.' : 'Terra is listening. Say what you want, at any time. Say stop listening, or press V, to switch me off.', { echo: false });
+    if (resume && terraAloudSetting() && !canSpeakNow()) statusEl.textContent = SPEAK_HINT;
     retryAt = performance.now() + 300;
   }
 
@@ -371,7 +435,7 @@ export function createAssistant({ container, say, commands = [], help = '', head
     const Rec = getRecognition();
     if (!listeningOn || rec || !Rec) return;
     const r = new Rec();
-    r.lang = 'en-US';
+    r.lang = /^en/i.test(navigator.language || '') ? navigator.language : 'en-US';
     r.continuous = true;
     r.interimResults = true;
     r.maxAlternatives = 1;
@@ -383,18 +447,19 @@ export function createAssistant({ container, say, commands = [], help = '', head
         else interim += said;
       }
       input.value = interim; // shows what Terra is hearing (not announced)
+      if (interim) heardEl.textContent = `Hearing: "${interim.trim()}"`;
     };
     r.onerror = (e) => {
       if (e.error === 'no-speech' || e.error === 'aborted') return; // just restart
       if (e.error === 'not-allowed' || e.error === 'service-not-allowed') {
         setOn(false);
-        reply('The microphone is blocked. Allow microphone access for this site in the browser, then press V again. Or type your request in the box.');
+        reply('The microphone is blocked. Allow microphone access for this site in the browser, then press V again. Or type your request in the box.', { aloud: terraAloudSetting() });
       } else if (e.error === 'audio-capture') {
         setOn(false);
-        reply('No microphone was found. Connect one, or type your request in the box.');
+        reply('No microphone was found. Connect one, or type your request in the box.', { aloud: terraAloudSetting() });
       } else if (e.error === 'network') {
         setOn(false);
-        reply('Voice input needs an internet connection in this browser. Terra is off; you can still type your request in the box.');
+        reply('Voice input needs an internet connection in this browser. Terra is off; you can still type your request in the box.', { aloud: terraAloudSetting() });
       } else {
         retryAt = performance.now() + 1500;
       }
@@ -409,10 +474,12 @@ export function createAssistant({ container, say, commands = [], help = '', head
     input.value = '';
     let text = said.trim();
     if (!listeningOn || text.length < 2) return;
-    if (speaking() || isEcho(text)) return; // Terra's own voice, or the screen reader repeating Terra
+    if (speaking() || isEcho(text)) { heardEl.textContent = `Heard "${text}" (ignored: it sounded like Terra itself).`; return; }
+    heardEl.textContent = `Heard: "${text}"`;
+    if (terraAloudSetting() && !canSpeakNow()) statusEl.textContent = SPEAK_HINT;
     if (loadPrefs().terraWakeWord && performance.now() > wakeUntil) {
       const m = normalise(text).match(WAKE);
-      if (!m) return; // not for Terra
+      if (!m) { heardEl.textContent = `Heard "${text}" (ignored: it did not start with "Terra").`; return; }
       text = m[1].trim();
       if (!text) { wakeUntil = performance.now() + 8000; reply('Yes?', { echo: false }); return; }
     }
@@ -428,7 +495,7 @@ export function createAssistant({ container, say, commands = [], help = '', head
     if (!rec && performance.now() >= retryAt) begin();
   }, 300);
 
-  function toggle() { if (listeningOn) { setOn(false); reply('Terra stopped listening.', { echo: false }); } else startListening(); }
+  function toggle() { if (listeningOn) { setOn(false); reply('Terra stopped listening.', { echo: false, aloud: terraAloudSetting() }); } else startListening(); }
 
   allToggles.forEach((b) => b.addEventListener('click', toggle));
   form.addEventListener('submit', (e) => {
@@ -438,11 +505,16 @@ export function createAssistant({ container, say, commands = [], help = '', head
     handle(text);
   });
 
+  aloudBox.checked = terraAloudSetting();
+  aloudBox.disabled = !speechSupported();
+  aloudBox.addEventListener('change', () => {
+    const p = loadPrefs(); p.terraAloud = aloudBox.checked; savePrefs(p); announcePrefsChanged();
+  });
   wakeBox.checked = loadPrefs().terraWakeWord;
   wakeBox.addEventListener('change', () => {
     const p = loadPrefs(); p.terraWakeWord = wakeBox.checked; savePrefs(p); announcePrefsChanged();
   });
-  window.addEventListener('terrasense-prefs-changed', () => { wakeBox.checked = loadPrefs().terraWakeWord; });
+  window.addEventListener('terrasense-prefs-changed', () => { wakeBox.checked = loadPrefs().terraWakeWord; aloudBox.checked = terraAloudSetting(); });
 
   // V anywhere on the page (except while typing in a field or a dialog is open): Terra on / off.
   document.addEventListener('keydown', (e) => {
@@ -467,7 +539,7 @@ export function createAssistant({ container, say, commands = [], help = '', head
   }
 
   return {
-    handle, heard, toggle, startListening, ctx,
+    handle, heard, toggle, startListening, ctx, answersAloud,
     get on() { return listeningOn; },
     stop: () => setOn(false),
   };

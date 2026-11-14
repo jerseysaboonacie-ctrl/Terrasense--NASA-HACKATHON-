@@ -7,7 +7,7 @@ same format (newest first under **History**) and tick your tasks in **Your tasks
 Status words: **Done** (built and tested), **Partly done** (some of it exists, see notes),
 **Not started**, **Yours** (only a person can do it).
 
-Last updated: 2026-11-14 18:14 (+07), session 5 finished.
+Last updated: 2026-11-14 18:27 (+07), session 6 started.
 
 ---
 
@@ -15,6 +15,33 @@ Last updated: 2026-11-14 18:14 (+07), session 5 finished.
 
 Live progress, newest session first, newest line at the bottom of each session. Times are the
 laptop's clock (+07). Each phase has an estimate; the heartbeat says when it actually started and finished.
+
+### Session 6: 2026-11-14 evening (in progress)
+
+**Report (from you):** Terra still does not listen and respond, e.g. asking "are you still listening?" or calling
+its name to ask a question gets no answer.
+
+| Phase | What | Estimate | Status |
+|---|---|---|---|
+| 1 | Find the causes | 15 min | Done |
+| 2 | Fix: Terra always answers out loud; its own speaking state; long answers; its name; "are you listening?"; show what it heard | 50 min | In progress |
+| 3 | Tests (stand-in microphone and speech), docs, log, commit | 35 min | Waiting |
+
+- 18:27: Causes found in the code:
+  1. Terra's answers follow the Voice setting. On "Screen reader" (the default, or answer 2 to the first
+     question) they go only to the hidden screen-reader region: without a screen reader running, nothing is
+     heard. This alone makes Terra seem deaf. Fix: Terra answers out loud with the built-in voice whenever
+     you talk to it, or while it is switched on (a setting, on by default; screen reader users can turn it off).
+  2. Terra pauses listening while Chrome reports "speaking". Chrome can get stuck reporting that (a known
+     bug), and then Terra never listens again and drops everything it hears without a word. Fix: Terra keeps
+     its own record of when it is talking, from the start and end of each sentence, with a time limit.
+  3. Chrome stops built-in speech after about 15 s (another known bug), cutting off long answers such as the
+     Summary. Fix: long answers are spoken sentence by sentence.
+  4. Its name: "Terra, are you still listening?" did not match any request, and a leading "Terra" was only
+     removed when the wake word setting was on. Fix: "Terra", "hey Terra" and "OK Terra" at the start are
+     always understood; "Terra" alone answers "Yes? I'm listening."; "are you (still) listening", "can you
+     hear me", "are you there" get "Yes, I'm listening."
+  Also: a line under the switch shows what Terra heard, so you can see whether the microphone works.
 
 ### Session 5: 2026-11-14 evening (finished)
 

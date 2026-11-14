@@ -62,7 +62,11 @@ offered because none of our frames has dated versions yet; see Known limitations
   typing works too). While switched on it keeps listening (continuous Web Speech recognition, restarted
   whenever the browser ends a session) and answers each request; it pauses while the built-in voice talks,
   ignores what sounds like its own recent answers, has an optional wake word ("Terra, ..."), and stays on
-  across pages in the same tab (sessionStorage). Spoken or typed requests
+  across pages in the same tab (sessionStorage). When you talk to it, it answers out loud with the
+  built-in voice whatever the Voice setting ("Terra answers out loud", on by default), in sentence-sized
+  parts (Chrome cuts off long speech), and tracks its own speaking from utterance start/end events rather
+  than `speechSynthesis.speaking` (which Chrome can leave stuck). Its name ("Terra, …", "hey Terra …") and
+  "are you still listening?" are always understood. Spoken or typed requests
   such as "take me to Japan", "compare Brazil and Norway", "summary" (then a yes/no follow-up), "scan the
   equator", "open the rain map", "read this page", "stop listening".
   A fixed set of requests (`js/assistant.js`, `js/player-assistant.js`), not an AI service: a real AI model
