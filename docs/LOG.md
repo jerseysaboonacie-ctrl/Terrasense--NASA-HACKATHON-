@@ -7,7 +7,7 @@ same format (newest first under **History**) and tick your tasks in **Your tasks
 Status words: **Done** (built and tested), **Partly done** (some of it exists, see notes),
 **Not started**, **Yours** (only a person can do it).
 
-Last updated: 2026-11-14 18:27 (+07), session 6 started.
+Last updated: 2026-11-14 18:47 (+07), session 6 finished.
 
 ---
 
@@ -16,7 +16,7 @@ Last updated: 2026-11-14 18:27 (+07), session 6 started.
 Live progress, newest session first, newest line at the bottom of each session. Times are the
 laptop's clock (+07). Each phase has an estimate; the heartbeat says when it actually started and finished.
 
-### Session 6: 2026-11-14 evening (in progress)
+### Session 6: 2026-11-14 evening (finished)
 
 **Report (from you):** Terra still does not listen and respond, e.g. asking "are you still listening?" or calling
 its name to ask a question gets no answer.
@@ -24,8 +24,8 @@ its name to ask a question gets no answer.
 | Phase | What | Estimate | Status |
 |---|---|---|---|
 | 1 | Find the causes | 15 min | Done |
-| 2 | Fix: Terra always answers out loud; its own speaking state; long answers; its name; "are you listening?"; show what it heard | 50 min | In progress |
-| 3 | Tests (stand-in microphone and speech), docs, log, commit | 35 min | Waiting |
+| 2 | Fix: Terra always answers out loud; its own speaking state; long answers; its name; "are you listening?"; show what it heard | 50 min | Done |
+| 3 | Tests (stand-in microphone and speech), docs, log, commit | 35 min | Done (18:47) |
 
 - 18:27: Causes found in the code:
   1. Terra's answers follow the Voice setting. On "Screen reader" (the default, or answer 2 to the first
@@ -42,6 +42,17 @@ its name to ask a question gets no answer.
      always understood; "Terra" alone answers "Yes? I'm listening."; "are you (still) listening", "can you
      hear me", "are you there" get "Yes, I'm listening."
   Also: a line under the switch shows what Terra heard, so you can see whether the microphone works.
+- 18:47: All fixed and committed (54c51c5). Found two more on the way:
+  5. Switching frame reloaded the Player, and a freshly loaded page may not speak until a key press or tap
+     (browser rule), so after "open the rain map" Terra listened but could not answer out loud. Fix: frames
+     now switch inside the Player page (Frame menu and Terra). From other pages a reload cannot be avoided,
+     so Terra says (through the screen reader channel and a note) to press a key or tap once.
+  6. Your exact example, "Terra, are you still listening?", was thrown away as an echo: Terra's own
+     "Terra is listening ... say stop listening" message was remembered as its words (by mistake), and the
+     echo rule was too eager. Fix: that message is no longer remembered, and an echo now needs 6+ words
+     with 70% overlap.
+  Tests (stand-in microphone and voice): 338 of 338 Player checks, 77 of 77 page checks. Not tested: a real
+  microphone and real speech recognition.
 
 ### Session 5: 2026-11-14 evening (finished)
 
@@ -356,6 +367,10 @@ Tick these as you go and add a line under History with what you found.
 ## History
 
 Newest first. Claude's entries name the commit so you can see exactly what changed.
+
+### 2026-11-14: Terra answers out loud and understands its name (Claude, commit 54c51c5)
+- Fixes your report that Terra did not listen or respond; six causes found and fixed (see session 6).
+- Tests: 338 of 338 Player checks, 77 of 77 page checks.
 
 ### 2026-11-14: Terra on/off with continuous listening (Claude, commit b20781f)
 - V or the "Terra listening" switch turns Terra on and off; while on it answers whenever you speak.
