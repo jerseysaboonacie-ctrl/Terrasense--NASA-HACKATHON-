@@ -3,6 +3,7 @@
   "frames": [
     {
       "id": "sst",
+      "keywords": ["sea surface temperature", "sea temperature", "ocean temperature", "sst"],
       "title": "Sea Surface Temperature",
       "variable": "Sea surface temperature",
       "spokenName": "Sea surface temperature",
@@ -207,6 +208,7 @@
     },
     {
       "id": "t2m",
+      "keywords": ["air temperature", "near surface temperature", "near-surface air temperature", "t2m"],
       "title": "Near-Surface Air Temperature",
       "variable": "Air temperature 3 m above the surface (GEOS-FP model)",
       "spokenName": "Air temperature",
@@ -414,6 +416,7 @@
     },
     {
       "id": "ndvi",
+      "keywords": ["vegetation", "land vegetation", "ndvi", "plants", "greenness"],
       "title": "Land Vegetation (NDVI)",
       "variable": "Vegetation index (NDVI), relative",
       "spokenName": "Vegetation",
@@ -576,6 +579,7 @@
     },
     {
       "id": "precip",
+      "keywords": ["precipitation", "rain and snow", "rainfall", "rain", "snow"],
       "title": "Precipitation: Rain and Snow",
       "variable": "Precipitation rate, liquid and frozen (IMERG)",
       "spokenName": "Precipitation",

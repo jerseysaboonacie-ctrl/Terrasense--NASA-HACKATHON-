@@ -54,6 +54,7 @@
           <label class="check"><input type="radio" name="voice-mode" value="voice"> Built-in voice (reads aloud, no screen reader needed)</label>
           <label class="check"><input type="radio" name="voice-mode" value="off"> Off (text on screen only)</label>
         </fieldset>
+        <section id="assistant"></section>
         <div class="button-row">
           <button id="tour-btn" type="button">Tour (T)</button>
           <button id="summary-btn" type="button">Summary</button>
@@ -81,7 +82,7 @@
         </div>
         <p id="frame-help" class="muted">
           Arrow keys move (Shift + arrow moves faster). Enter plays the current point again.
-          W says where you are. T starts the tour. Question mark lists every key.
+          W, or five quick taps on a touch screen, says where you are. T starts the tour. Question mark lists every key.
           With a mouse, click or move; on a touch screen, drag a finger.
         </p>
         <p id="layout-text" class="muted small"></p>
@@ -207,9 +208,11 @@
           <tr><td>Arrow keys</td><td>Move the pointer on the map</td></tr>
           <tr><td>Shift + arrow</td><td>Move faster</td></tr>
           <tr><td>Enter or Space</td><td>Play the current point again</td></tr>
-          <tr><td>W</td><td>Where am I: repeat the value and place in full</td></tr>
+          <tr><td>W</td><td>Where am I: the value and place in full, and the nearest country</td></tr>
+          <tr><td>Tap the map 5 times quickly</td><td>Where am I, on a touch screen (same as W)</td></tr>
           <tr><td>T</td><td>Start the tour, or go to its next step</td></tr>
           <tr><td>D</td><td>Start or stop the one-minute demo</td></tr>
+          <tr><td>V</td><td>Talk to Terra, the assistant (press again to stop listening)</td></tr>
           <tr><td>S</td><td>Start or stop the scan</td></tr>
           <tr><td>M</td><td>Mute or unmute</td></tr>
           <tr><td>Minus, plus</td><td>Volume down, volume up</td></tr>

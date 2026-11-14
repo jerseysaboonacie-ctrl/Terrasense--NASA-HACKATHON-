@@ -51,6 +51,15 @@ export const SETTINGS = {
     ] },
     jump: { notes: [{ frequency: 1046, seconds: 0.06, level: 0.2, type: 'sine' }] },
     markA: { notes: [{ frequency: 1800, seconds: 0.03, level: 0.25, type: 'triangle' }] },
+    // listenStart: two rising notes when the assistant starts listening; listenEnd: falling
+    listenStart: { notes: [
+      { frequency: 660, seconds: 0.07, level: 0.25, type: 'sine' },
+      { frequency: 990, seconds: 0.09, level: 0.25, type: 'sine', delay: 0.08 },
+    ] },
+    listenEnd: { notes: [
+      { frequency: 990, seconds: 0.07, level: 0.2, type: 'sine' },
+      { frequency: 660, seconds: 0.09, level: 0.2, type: 'sine', delay: 0.08 },
+    ] },
     markB: { notes: [
       { frequency: 1800, seconds: 0.03, level: 0.25, type: 'triangle' },
       { frequency: 1800, seconds: 0.03, level: 0.25, type: 'triangle', delay: 0.09 },

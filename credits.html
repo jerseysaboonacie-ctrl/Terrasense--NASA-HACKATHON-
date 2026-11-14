@@ -31,13 +31,20 @@
     <p id="status" role="status">Loading credits…</p>
     <ul id="credit-list" class="credit-list"></ul>
 
+    <h2>Other data</h2>
+    <ul>
+      <li>Country names and borders (for "Where am I" and for going to a place): <a href="https://www.naturalearthdata.com/">Natural Earth</a>, 1:50m Admin 0 Countries, version 5.1.2. Public domain. Borders are simplified to about 1 km, so distances near coasts and borders are approximate.</li>
+      <li>The real sea temperatures in the accuracy table on How it works: JPL MUR SST v4.1, read from NOAA CoastWatch ERDDAP (dataset jplMURSST41).</li>
+    </ul>
+
     <h2>Libraries and fonts</h2>
-    <p>None. The site uses only plain HTML, CSS and JavaScript, with the browser's built-in Web Audio and Canvas APIs, and the device's system font.</p>
+    <p>None. The site uses only plain HTML, CSS and JavaScript, with the browser's built-in Web Audio, Canvas, Speech Synthesis and Speech Recognition APIs, and the device's system font.</p>
   </main>
 
   <footer class="site-footer">
     TerraSense Jukebox is a hackathon project. It is not endorsed by NASA.
   </footer>
   <script type="module" src="js/credits.js"></script>
+  <script type="module" src="js/site.js"></script>
 </body>
 </html>

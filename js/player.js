@@ -15,6 +15,10 @@ import { describeResult, describeLayout, speak, speechSupported, stopSpeaking } 
 import { analyseFrame, describePattern, describeDifference } from './analysis.js';
 import { SETTINGS as S } from './settings.js';
 import { loadPrefs, savePrefs, clearPrefs, DEFAULTS } from './prefs.js';
+import { loadCountries, describeNearby } from './places.js';
+import { createAssistant } from './assistant.js';
+import { playerCommands, PLAYER_HELP } from './player-assistant.js';
+import { askVoiceModeIfNeeded } from './welcome.js';
 
 const $ = (id) => document.getElementById(id);
 const els = {
@@ -117,9 +121,12 @@ function setLive(text) {
  */
 let saidSomething = false; // anything announced yet (the opening message must not talk over it)
 
+let assistant = null;      // Terra (assistant.js), created at start-up
+
 function say(text) {
   saidSomething = true;
   els.narration.textContent = text;
+  if (assistant) assistant.heard(text);
   if (prefs.voiceMode === 'screenreader') setLive(text);
   else if (prefs.voiceMode === 'voice') speak(text, prefs.speechRate);
 }
@@ -171,7 +178,7 @@ function toggleMute() {
  *   force     play the no-data click even if we were already in no data
  *   prefix    words before the narration, e.g. "Warmest ocean area, 1 of 5: "
  */
-function showPoint({ announce: when = false, hold, force = false, prefix = '', detail = prefs.detail } = {}) {
+function showPoint({ announce: when = false, hold, force = false, prefix = '', suffix = '', detail = prefs.detail } = {}) {
   if (!frame || !point) return;
   const r = decodeAt(frame, point.x, point.y);
   last = r;
@@ -202,7 +209,7 @@ function showPoint({ announce: when = false, hold, force = false, prefix = '', d
   vibrate(r);
 
   clearTimeout(narrateTimer);
-  const sentence = prefix + d.narration;
+  const sentence = prefix + d.narration + (suffix ? ' ' + suffix : '');
   if (when === 'now') say(sentence);
   else if (when === 'later') narrateTimer = setTimeout(() => announce(sentence), S.narrationDelayMs);
 }
@@ -290,12 +297,26 @@ function eventToPixel(e) {
   };
 }
 
+// Five quick taps in about the same spot on a touch screen = Where am I.
+const TAP = { count: 5, withinMs: 2500, radiusPx: 40 };
+let taps = [];
+
+/** Record a tap; true when this tap completes five quick taps. */
+function isFifthTap(e) {
+  const now = performance.now();
+  taps = taps.filter((t) => now - t.time < TAP.withinMs && Math.hypot(t.x - e.clientX, t.y - e.clientY) < TAP.radiusPx);
+  taps.push({ time: now, x: e.clientX, y: e.clientY });
+  if (taps.length >= TAP.count) { taps = []; return true; }
+  return false;
+}
+
 els.wrap.addEventListener('pointerdown', (e) => {
   if (!frame) return;
   stopScan(false);
   try { els.wrap.setPointerCapture(e.pointerId); } catch (err) { /* synthetic events */ }
   const p = eventToPixel(e);
   dragMoved = false;
+  if (e.pointerType !== 'mouse' && isFifthTap(e)) { point = p; whereAmI(); return; }
   const go = () => { point = p; showPoint({ announce: 'now' }); };
   if (isStarted()) go(); else ensureAudio().then(go);
 });
@@ -419,14 +440,15 @@ function toggleScan() {
   if (scan) stopScan(true); else startScan();
 }
 
-async function startScan() {
+async function startScan({ row: rowLat, overview: overviewOverride } = {}) {
   if (!frame) return;
   if (!isStarted() && !(await ensureAudio())) return;
   if (isMuted()) { announceStatus('Sound is muted. Press M to unmute, then scan.'); return; }
   stopSpeaking();
   const a = frame.meta.mapArea;
-  const overview = els.overview.checked;
-  const row = els.rowSelect.value === 'pointer' ? point.y : latToY(Number(els.rowSelect.value));
+  const overview = overviewOverride ?? els.overview.checked;
+  const rowChoice = rowLat ?? els.rowSelect.value;
+  const row = rowChoice === 'pointer' ? point.y : latToY(Number(rowChoice));
   if (overview && !overviewCache) overviewCache = computeOverview();
 
   // The start chime plays first; the sweep begins just after it.
@@ -539,13 +561,18 @@ function buildSummary() {
   ].join(' ');
 }
 
-els.summaryBtn.addEventListener('click', () => {
-  if (!frame) return;
-  stopScan(false);
+/** Build the summary and show it in the Summary box (does not announce). */
+function showSummary() {
   const text = buildSummary();
   els.summaryText.textContent = text;
   els.summaryBox.hidden = false;
-  announceStatus(text);
+  return text;
+}
+
+els.summaryBtn.addEventListener('click', () => {
+  if (!frame) return;
+  stopScan(false);
+  announceStatus(showSummary());
 });
 
 /** Move to the i-th warmest ('high') or coolest ('low') area and announce it. */
@@ -564,6 +591,7 @@ async function goToArea(kind, i) {
 }
 
 els.highBtn.addEventListener('click', () => { highIndex = 0; goToArea('high', 0); });
+// (goToArea is also used by Terra, which keeps highIndex in step through the api below.)
 els.nextHighBtn.addEventListener('click', () => { highIndex += 1; goToArea('high', highIndex); });
 els.lowBtn.addEventListener('click', () => goToArea('low', 0));
 
@@ -573,6 +601,7 @@ els.lowBtn.addEventListener('click', () => goToArea('low', 0));
 
 const marks = { A: null, B: null };   // { result, words }
 let compareTimers = [];
+let compareRunning = false; // between pressing Compare and its announcement
 
 function placeMarker(el, r) {
   el.hidden = false;
@@ -580,7 +609,7 @@ function placeMarker(el, r) {
   el.style.top = ((r.y + 0.5) / frame.height) * 100 + '%';
 }
 
-function mark(which) {
+function mark(which, { quiet = false } = {}) {
   if (!frame || !point) return;
   const r = decodeAt(frame, point.x, point.y);
   const d = describeResult(frame.meta, r);
@@ -592,7 +621,7 @@ function mark(which) {
   dd.append(words);
   placeMarker(which === 'A' ? els.markerA : els.markerB, r);
   cue(which === 'A' ? 'markA' : 'markB', xFraction(r.x));
-  announceStatus(`Point ${which} marked: ${words}.`);
+  if (!quiet) announceStatus(`Point ${which} marked: ${words}.`);
 }
 
 /** Play A's sound, then B's, then announce the difference. */
@@ -610,6 +639,7 @@ async function compare() {
   };
   lastStatus = null;
   play(A.result);
+  compareRunning = true;
   compareTimers = [
     setTimeout(() => play(B.result), 1100),
     setTimeout(() => {
@@ -622,6 +652,7 @@ async function compare() {
       }
       const text = `Compare. A: ${A.words}. B: ${B.words}. ${ending}`;
       els.compareResult.textContent = text;
+      compareRunning = false;
       announceStatus(text);
     }, 2100),
   ];
@@ -747,6 +778,14 @@ els.voiceRadios.forEach((r) => r.addEventListener('change', () => {
   if (r.value === 'voice') say('Built-in voice on.');
 }));
 els.detailSelect.addEventListener('change', () => setPref('detail', els.detailSelect.value));
+// The welcome question or Terra changed the saved settings: use them here too.
+window.addEventListener('terrasense-prefs-changed', () => {
+  const before = prefs.voiceMode;
+  prefs = loadPrefs();
+  if (!speechSupported() && prefs.voiceMode === 'voice') prefs.voiceMode = 'screenreader';
+  if (before === 'voice' && prefs.voiceMode !== 'voice') stopSpeaking();
+  applyPrefs();
+});
 els.rateSelect.addEventListener('change', () => {
   setPref('speechRate', Number(els.rateSelect.value));
   if (prefs.voiceMode === 'voice') say('This is the new speed.');
@@ -770,11 +809,22 @@ els.resetBtn.addEventListener('click', () => {
 // Where am I, and the tour
 // ---------------------------------------------------------------------------
 
-function whereAmI() {
+/**
+ * Where am I (W, the button, or five taps on the map): the value and place
+ * in full, plus the nearest country ("About 60 km west of Israel.").
+ * If the country borders cannot be loaded, it still says the rest.
+ */
+async function whereAmI() {
   if (!frame || !point) return;
   stopScan(false);
-  const go = () => showPoint({ announce: 'now', hold: S.keyToneSeconds, force: true, prefix: 'You are here. ', detail: 'full' });
-  if (isStarted()) go(); else ensureAudio().then(go);
+  if (!isStarted()) await ensureAudio();
+  let nearby = '';
+  try {
+    const countries = await loadCountries();
+    const r = decodeAt(frame, point.x, point.y);
+    nearby = describeNearby(countries, r.lon, r.lat);
+  } catch (err) { /* no country names this time; the rest still works */ }
+  showPoint({ announce: 'now', hold: S.keyToneSeconds, force: true, prefix: 'You are here. ', suffix: nearby, detail: 'full' });
 }
 
 let tour = null;           // { i, timers } while the tour runs
@@ -905,6 +955,121 @@ els.frameSelect.addEventListener('change', () => {
 });
 
 // ---------------------------------------------------------------------------
+// What Terra (the assistant) can call. Everything goes through the same
+// functions as the buttons and keys.
+// ---------------------------------------------------------------------------
+
+/** Image pixel for a longitude and latitude (equirectangular map). */
+function toPixel(lon, lat) {
+  const a = frame.meta.mapArea;
+  const x = Math.round(a.x + ((lon + 180) / 360) * a.width - 0.5);
+  return { x: Math.min(a.x + a.width - 1, Math.max(a.x, x)), y: latToY(lat) };
+}
+
+/** The nearest pixel with a value, searching outwards up to about 10 degrees. */
+function nearestValue(x, y) {
+  const a = frame.meta.mapArea;
+  const maxR = Math.round(a.width / 36);
+  const step = Math.max(1, Math.round(a.width / 1024));
+  for (let r = step; r <= maxR; r += step) {
+    let best = null, bestD = Infinity;
+    for (let dx = -r; dx <= r; dx += step) {
+      for (const dy of (Math.abs(dx) === r ? rangeStep(-r, r, step) : [-r, r])) {
+        const px = x + dx, py = y + dy;
+        if (px < a.x || py < a.y || px >= a.x + a.width || py >= a.y + a.height) continue;
+        if (decodeAt(frame, px, py).status === 'value') {
+          const d = dx * dx + dy * dy;
+          if (d < bestD) { bestD = d; best = { x: px, y: py }; }
+        }
+      }
+    }
+    if (best) return best;
+  }
+  return null;
+}
+function rangeStep(a, b, s) { const out = []; for (let i = a; i <= b; i += s) out.push(i); return out; }
+
+/** Move to a pixel, play it and announce it in at least normal detail. */
+async function showAt(x, y, { prefix = '', suffix = '' } = {}) {
+  stopScan(false);
+  if (!isStarted()) await ensureAudio();
+  point = { x, y };
+  showPoint({ announce: 'now', hold: S.referenceSeconds, force: true, prefix, suffix, detail: atLeastNormal() });
+}
+
+function playReferenceTones() {
+  const refs = referenceTones(frame.meta);
+  say('The sound scale: higher values play higher notes, the same scale on every map. ' +
+    refs.map((r) => `${r.name}: ${r.label}.`).join(' ') + ' Here they are, low to high.');
+  refs.forEach((r, k) => setTimeout(() => {
+    if (isStarted() && !isMuted()) playTone({ t: r.t, xFraction: 0.5, family: r.family, holdSeconds: 0.8 });
+  }, 300 + k * 1100));
+}
+
+function assistantApi() {
+  const RATES = [0.8, 1, 1.3, 1.7];
+  return {
+    meta: () => frame.meta,
+    point: () => ({ ...point }),
+    lonLat: (x, y) => { const r = decodeAt(frame, x, y); return { lon: r.lon, lat: r.lat }; },
+    toPixel,
+    decode: (x, y) => decodeAt(frame, x, y),
+    words: (r) => describeResult(frame.meta, r, atLeastNormal()),
+    show: showAt,
+    whereAmI,
+    summaryText: showSummary,
+    areas: getAnalysis,
+    goTo: (kind, i) => { if (kind === 'high') highIndex = i; return goToArea(kind, i); },
+    highIndex: () => Math.max(0, highIndex),
+    markAt: (which, x, y) => { point = { x, y }; mark(which, { quiet: true }); },
+    compare,
+    compareBusy: () => compareRunning,
+    moveBy: (dLon, dLat) => {
+      const a = frame.meta.mapArea;
+      const nx = Math.round(point.x + (dLon / 360) * a.width);
+      const ny = Math.round(point.y - (dLat / 180) * a.height);
+      const cx = Math.min(a.x + a.width - 1, Math.max(a.x, nx)), cy = Math.min(a.y + a.height - 1, Math.max(a.y, ny));
+      const atEdge = cx !== nx || cy !== ny;
+      if (atEdge) cue('edge', xFraction(cx));
+      return showAt(cx, cy, { prefix: atEdge ? 'Edge of the map. ' : '' });
+    },
+    scan: async (row) => {
+      if (row === 'overview') return startScan({ overview: true });
+      return startScan({ row, overview: false });
+    },
+    stopAll: () => { stopDemo(false); stopScan(false); stopTour(false); stopTone(); stopSpeaking(); },
+    tour: tourStep,
+    tourActive: () => Boolean(tour) && tour.i < tourSteps().length - 1,
+    demo: startDemo,
+    demoActive: () => Boolean(demo),
+    volumeBy: changeVolume,
+    volumeSet: (v) => { setVolumePercent(v); say(`Volume ${els.volume.value} percent.`); },
+    mute: (on) => { if (isMuted() !== on) toggleMute(); else say(on ? 'Sound is already muted.' : 'Sound is already on.'); },
+    setDetail: (d) => { setPref('detail', d); els.detailSelect.value = d; },
+    rateBy: (dir) => {
+      if (prefs.voiceMode !== 'voice') return 'Speed is for the built-in voice. Your screen reader has its own speed setting.';
+      const i = Math.max(0, Math.min(RATES.length - 1, RATES.indexOf(prefs.speechRate) + dir));
+      setPref('speechRate', RATES[i]);
+      els.rateSelect.value = String(RATES[i]);
+      return i === RATES.length - 1 && dir > 0 ? 'This is the fastest speed.' : i === 0 && dir < 0 ? 'This is the slowest speed.' : 'Is this better?';
+    },
+    referenceTones: playReferenceTones,
+    explainText: () => {
+      if (!last) return 'Move to a point first.';
+      els.explain.hidden = false;
+      els.explainBtn.setAttribute('aria-expanded', 'true');
+      renderExplain(last);
+      return [...els.explainSteps.children].map((li) => li.textContent).join(' ');
+    },
+    describeFrame: () => {
+      const m = frame.meta;
+      return `This is ${m.title}, ${dateInSentence(m)}. ${m.listenFor} ${describeLayout(m)} Legend: ${els.legendEnds.textContent}`;
+    },
+    nearestValue,
+  };
+}
+
+// ---------------------------------------------------------------------------
 // Start-up
 // ---------------------------------------------------------------------------
 
@@ -971,7 +1136,7 @@ async function init() {
   els.status.textContent = '';
   // Opening message, once the page has settled (a screen reader reads the
   // page title first; this polite message follows it).
-  setTimeout(() => saidSomething || say(`Player ready: ${meta.title}. Press T for a tour, or Tab to the map and use the arrow keys.`), 1000);
+  setTimeout(() => saidSomething || window.__welcomeOpen || say(`Player ready: ${meta.title}. Press T for a tour, or Tab to the map and use the arrow keys.`), 1000);
 
   els.canvas.width = frame.width;
   els.canvas.height = frame.height;
@@ -980,11 +1145,27 @@ async function init() {
   point = { x: Math.round(a.x + a.width / 2), y: Math.round(a.y + a.height / 2) };
   drawLegend(els.legendCanvas, meta, null);
 
+  // Terra, the assistant, with the Player's commands (player-assistant.js).
+  assistant = createAssistant({
+    container: $('assistant'), say, headingLevel: 3, sayCallsHeard: true,
+    commands: playerCommands(assistantApi()), help: PLAYER_HELP,
+    isBusy: () => compareRunning || Boolean(scan) || Boolean(demo),
+  });
+
+  // First visit: ask how to hear the site (welcome.js), then greet in that voice.
+  askVoiceModeIfNeeded((mode) => {
+    if (mode === 'off') return;
+    say(`${mode === 'voice' ? 'Built-in voice on.' : 'Screen reader mode.'} ${meta.title} is open. ` +
+      'Press V at any time and tell Terra, the assistant, what you want, for example "where am I" or "take me to Japan". ' +
+      'Or press T for a tour, or Tab to the map and use the arrow keys.');
+  });
+
   // Read-only hooks for the automated tests in tests/player-test.html.
   window.__jukebox = {
     ready: true,
     size: () => [frame.width, frame.height],
     moveTo(x, y) { point = { x, y }; showPoint({ announce: 'now' }); },
+    ask: (text) => assistant.handle(text),
     getState: () => ({
       point: { ...point },
       result: last && {
@@ -1006,6 +1187,7 @@ async function init() {
       prefs: { ...prefs },
       tourStep: tour ? tour.i : null,
       demo: Boolean(demo),
+      assistantLog: [...document.querySelectorAll('#assistant-log li')].map((li) => li.textContent),
       alert: els.alert.textContent,
       audio: audioState(),
     }),

@@ -53,6 +53,18 @@ offered because none of our frames has dated versions yet; see Known limitations
   warmest and coolest areas, compares them and reads the Summary, using the same functions as the buttons.
   Escape or Stop demo ends it and restores the controls.
 
+- **First visit**: every page first asks how to hear the site (built-in voice, screen reader, or text only),
+  in a native modal dialog; keys 1, 2, 3; any other key or tap reads the question aloud (`js/welcome.js`).
+- **Where am I** (W, the button, or five quick taps in one spot on a touch screen) ends with the nearest
+  country: "In Egypt.", "In Egypt, near Israel.", "About 60 km west of Israel." (`js/places.js`, borders from
+  Natural Earth 1:50m, public domain, built into `data/countries.json` by `tools/build_countries.py`).
+- **Terra, the assistant** (V or "Talk to Terra" on every page; typing works too): spoken or typed requests
+  such as "take me to Japan", "compare Brazil and Norway", "summary" (then a yes/no follow-up), "scan the
+  equator", "open the rain map", "read this page". In built-in voice mode it listens again after each answer.
+  A fixed set of requests (`js/assistant.js`, `js/player-assistant.js`), not an AI service: a real AI model
+  would need an API key and a server, which a static site cannot keep secret. Speech recognition is the
+  browser's Web Speech API (online in Chrome and Edge; not in Firefox); typing works everywhere.
+
 ## Find and compare (Player)
 
 - **Summary** reads out and shows the warmest and coolest areas (with approximate value and
@@ -139,6 +151,11 @@ js/settings.js           every sound setting in one place (including the sound c
 js/prefs.js              the listener's settings, remembered in this browser
 js/display.js            high contrast, large text, reduced motion on every page
 js/accuracy.js           the ten-point table on How it works, decoded live
+js/places.js             country names, "about 60 km west of Israel", finding named places
+js/welcome.js            the first-visit voice question
+js/assistant.js          Terra: listening, typing, conversation, commands for every page
+js/player-assistant.js   Terra's Player commands
+js/site.js               welcome question and Terra on pages other than the Player
 js/decoder.js            pixel color -> legend value (the core)
 js/audio.js              Web Audio engine: one voice, ramps, pan, compressor, mute, click
 js/player.js             the Player: pointer, keyboard, scan, reference tones, Explain panel
@@ -152,6 +169,8 @@ js/decoder-test.js       decoder test page
 js/audio-test.js         audio test page
 data/frames.json         one entry per frame: facts, legend table, no-data colors, masks
 data/accuracy.json       real MUR values at the ten-point pixels, with source and date
+data/countries.json      country names and simplified borders (Natural Earth, public domain)
+tools/build_countries.py builds data/countries.json from Natural Earth
 frames/<id>/             self-hosted frame images and NASA colorbars
 tools/build_legends.py   rebuilds the legend tables from NASA's colorbars (needs Pillow)
 tools/legend_report.py   finds colors that could be confused

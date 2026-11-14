@@ -301,6 +301,143 @@
     }
     const cap0 = (x) => x.charAt(0).toUpperCase() + x.slice(1);
 
+    // Where am I with countries, five taps, and Terra (typed requests; the microphone cannot be tested here).
+    async function testAssistant(id) {
+      const w = await load('../player.html?frame=' + id);
+      const doc = w.document, J = w.__jukebox;
+      const st = () => J.getState();
+      const meta = metas[id];
+      const P = await import('../js/places.js');
+      const countries = await P.loadCountries();
+      const toPx = (lon, lat) => { const [W, H] = J.size(); return { x: Math.round(((lon + 180) / 360) * W - 0.5), y: Math.round(((90 - lat) / 180) * H - 0.5) }; };
+      const ask = async (text, ms = 700) => { await J.ask(text); await wait(ms); return st(); };
+      const startsWithCap = (s, w) => s.startsWith(w.charAt(0).toUpperCase() + w.slice(1));
+
+      if (id === allFrames[0].id) {
+        // Place data checks (once)
+        const wrong = P.NAMED_AREAS.filter((a) => a.name !== 'the North Pole' && Boolean(P.countryAt(countries, a.lon, a.lat)) !== Boolean(a.land));
+        record('(places)', 'Seas and oceans are in the water, continents on land', wrong.length === 0,
+          wrong.map((a) => `${a.name} → ${P.countryAt(countries, a.lon, a.lat)?.name}`).join(', ') || `${P.NAMED_AREAS.length} named areas checked`);
+        const cases = [[33.5, 32.3, /west of Israel|off the coast of Israel/], [30, 26, /^In Egypt\.$/], [34.9, 31.5, /^In Israel/], [139.7, 35.7, /^In Japan/], [-30, 0, /km .* of /]];
+        const got = cases.map(([lon, lat, re]) => [P.describeNearby(countries, lon, lat), re]);
+        record('(places)', 'Nearest country wording (Israel example and others)', got.every(([t, re]) => re.test(t)), got.map(([t]) => `"${t}"`).join(' | '));
+        const finds = [['take me to Japan', 'Japan'], ['go to south africa', 'South Africa'], ['the pacific ocean please', 'the Pacific Ocean'], ['30 degrees north 40 degrees west', '30° N, 40° W'], ['usa', 'the United States']];
+        const fr = finds.map(([q, want]) => [q, (P.findPlace(countries, q) || {}).name, want]);
+        record('(places)', 'Finds places in requests', fr.every(([, g, want]) => g === want), fr.map(([q, g]) => `"${q}" → ${g}`).join('; '));
+      }
+
+      // Where am I names the nearest country
+      const med = toPx(33.5, 32.3);
+      J.moveTo(med.x, med.y);
+      doc.getElementById('where-btn').click();
+      for (let i = 0; i < 30 && !st().narrationLine.startsWith('You are here.'); i++) await wait(100);
+      record(id, 'Where am I names the nearest country', st().narrationLine.startsWith('You are here.') && /Israel/.test(st().narrationLine),
+        `"${st().narrationLine}"`);
+
+      // Five quick taps on the map
+      const wrap = doc.getElementById('frame-wrap');
+      const rect = wrap.getBoundingClientRect();
+      J.moveTo(10, 10);
+      for (let k = 0; k < 5; k++) {
+        wrap.dispatchEvent(new w.PointerEvent('pointerdown', { pointerType: 'touch', pointerId: 7, clientX: rect.left + rect.width * 0.52, clientY: rect.top + rect.height * 0.3, bubbles: true }));
+        wrap.dispatchEvent(new w.PointerEvent('pointerup', { pointerType: 'touch', pointerId: 7, clientX: rect.left + rect.width * 0.52, clientY: rect.top + rect.height * 0.3, bubbles: true }));
+        await wait(150);
+      }
+      for (let i = 0; i < 20 && !st().narrationLine.startsWith('You are here.'); i++) await wait(100);
+      const afterFive = st().narrationLine;
+      for (let k = 0; k < 3; k++) {
+        wrap.dispatchEvent(new w.PointerEvent('pointerdown', { pointerType: 'touch', pointerId: 8, clientX: rect.left + rect.width * 0.3, clientY: rect.top + rect.height * 0.6, bubbles: true }));
+        await wait(150);
+      }
+      record(id, 'Five quick taps say where you are (three do not)', afterFive.startsWith('You are here.') && !st().narrationLine.startsWith('You are here.'),
+        `after 5: "${afterFive.slice(0, 90)}…"; after 3: "${st().narrationLine.slice(0, 40)}…"`);
+
+      // Terra: typed requests
+      let s = await ask('take me to Japan', 900);
+      const jp = s.result;
+      const jpOk = s.narrationLine.startsWith('Japan.') && jp.lat > 28 && jp.lat < 46 && jp.lon > 128 && jp.lon < 147;
+      const needsNearest = jp.status !== 'value';
+      record(id, 'Terra: "take me to Japan"', jpOk && (!needsNearest || /nearest value, about \d[\d,]* km/.test(s.narrationLine)),
+        `"${s.narrationLine}" at ${jp.lat.toFixed(1)}, ${jp.lon.toFixed(1)}`);
+      if (needsNearest) {
+        s = await ask('go there');
+        record(id, 'Terra: "go there" moves to the nearest value', s.result.status === 'value' && s.narrationLine.startsWith('Nearest value.'), `"${s.narrationLine}"`);
+      }
+      s = await ask('where am I', 900);
+      record(id, 'Terra: "where am I"', s.narrationLine.startsWith('You are here.') && /Japan/.test(s.narrationLine), `"${s.narrationLine}"`);
+      s = await ask('what is the temperature in Spain', 900);
+      record(id, 'Terra: "what is the temperature in Spain"', s.narrationLine.startsWith('Spain.') && s.result.lat > 34 && s.result.lat < 45 && s.result.lon > -10 && s.result.lon < 5,
+        `"${s.narrationLine.slice(0, 110)}"`);
+      s = await ask('go to the ' + meta.terms.high);
+      record(id, `Terra: "go to the ${meta.terms.high}"`, startsWithCap(s.narrationLine, meta.terms.high) && s.point.x === s.areas.high[0].x, `"${s.narrationLine.slice(0, 90)}"`);
+      s = await ask('next');
+      record(id, 'Terra: "next"', s.narrationLine.includes('2 of'), `"${s.narrationLine.slice(0, 80)}"`);
+      s = await ask('summary');
+      const offer = `Would you like me to take you to the ${meta.terms.high} ${meta.terms.area}?`;
+      const sumOk = s.narrationLine.startsWith(`Summary of ${meta.title}`) && s.narrationLine.endsWith(offer) && s.summaryText && s.narrationLine.startsWith(s.summaryText);
+      s = await ask('yes please');
+      record(id, 'Terra: summary, then asks a follow-up; "yes" answers it', sumOk && startsWithCap(s.narrationLine, meta.terms.high), `ends "…${offer}" → "${s.narrationLine.slice(0, 60)}…"`);
+      s = await ask('compare here with the ' + meta.terms.low, 2700);
+      record(id, 'Terra: "compare here with the coolest"', s.compareText.startsWith('Compare. A:') && s.narrationLine === s.compareText, `"${s.compareText.slice(0, 120)}"`);
+      s = await ask('compare Brazil and Norway', 2700);
+      record(id, 'Terra: "compare Brazil and Norway"', s.compareText.startsWith('Compare. A:') && s.narrationLine === s.compareText, `"${s.compareText.slice(0, 140)}"`);
+      const lon0 = st().result.lon;
+      J.moveTo(Math.round(J.size()[0] / 2), Math.round(J.size()[1] / 2));
+      const before = st().result.lon;
+      s = await ask('move east 10 degrees');
+      record(id, 'Terra: "move east 10 degrees"', Math.abs(s.result.lon - before - 10) < 1, `${before.toFixed(1)}° → ${s.result.lon.toFixed(1)}°`);
+      void lon0;
+      s = await ask('louder');
+      const louder = s.prefs.volume;
+      s = await ask('quieter');
+      record(id, 'Terra: "louder", "quieter"', louder === 40 && s.prefs.volume === 30 && s.narrationLine === 'Volume 30 percent.', `${louder}% then ${s.prefs.volume}%`);
+      s = await ask('scan the equator', 400);
+      const scanning = s.scanning && s.narrationLine.startsWith('Scanning the row at 0 degrees');
+      s = await ask('stop');
+      record(id, 'Terra: "scan the equator", "stop"', scanning && !s.scanning, `scanning ${scanning}, then ${s.scanning}`);
+      s = await ask('what am I looking at');
+      record(id, 'Terra: "what am I looking at"', s.narrationLine.startsWith(`This is ${meta.title}`), `"${s.narrationLine.slice(0, 100)}…"`);
+      s = await ask('help');
+      record(id, 'Terra: "help"', /Where am I\. Take me to Japan/.test(s.narrationLine), `"${s.narrationLine.slice(0, 80)}…"`);
+      s = await ask('flibbertigibbet wobble');
+      record(id, 'Terra: says when it does not understand', s.narrationLine.startsWith('Sorry, I did not understand "flibbertigibbet wobble"'), `"${s.narrationLine.slice(0, 80)}…"`);
+      s = await ask('repeat');
+      record(id, 'Terra: "repeat"', s.narrationLine.startsWith('Sorry, I did not understand'), `"${s.narrationLine.slice(0, 50)}…"`);
+      const logText = s.assistantLog.join(' | ');
+      record(id, 'Terra: conversation log shows both sides', s.assistantLog.some((l) => l === 'You: compare Brazil and Norway') &&
+        s.assistantLog.some((l) => l.startsWith('Terra: Compare. A:')) && s.assistantLog.some((l) => l === 'You: help') && s.assistantLog.some((l) => l.startsWith('Terra: Where am I. Take me to Japan')), `${s.assistantLog.length} lines, e.g. ${logText.slice(0, 160)}…`);
+      s = await ask('use the built-in voice', 300);
+      const vm = s.prefs.voiceMode;
+      s = await ask('screen reader mode', 300);
+      record(id, 'Terra: changes the voice mode', vm === 'voice' && s.prefs.voiceMode === 'screenreader' && doc.querySelector('input[value="screenreader"]').checked,
+        `${vm} → ${s.prefs.voiceMode}`);
+      record(id, 'Terra: no script errors', w.__errors.length === 0, w.__errors.join(' | ') || 'none');
+    }
+
+    // First visit: the voice question, on the Player
+    async function testWelcome() {
+      localStorage.removeItem(WELCOMED);
+      const w = await load('../player.html?frame=sst');
+      await wait(1300);
+      const doc = w.document;
+      const dlg = doc.querySelector('dialog.welcome-dialog');
+      const open = Boolean(dlg && dlg.open);
+      const focusIn = open && dlg.contains(doc.activeElement);
+      const buttons = open ? [...dlg.querySelectorAll('button[data-mode]')].map((b) => b.textContent) : [];
+      const narrBefore = w.__jukebox.getState().narrationLine;
+      if (open) dlg.dispatchEvent(new KeyboardEvent('keydown', { key: '3', bubbles: true }));
+      await wait(100);
+      const st = w.__jukebox.getState();
+      record('(first visit)', 'Asks how to hear the site before anything else', open && focusIn && buttons.length === 3 && !narrBefore.startsWith('Player ready'),
+        `dialog open ${open}, focus inside ${focusIn}; ${buttons.join(' | ')}; "${dlg && dlg.getAttribute('aria-labelledby')}"`);
+      record('(first visit)', 'Key 3 chooses text only; asked only once', !doc.querySelector('dialog.welcome-dialog') && st.prefs.voiceMode === 'off' &&
+        doc.querySelector('input[value="off"]').checked && localStorage.getItem(WELCOMED) === '1', `voiceMode ${st.prefs.voiceMode}`);
+      const w2 = await load('../player.html?frame=sst');
+      await wait(300);
+      record('(first visit)', 'Not asked again on the next visit', !w2.document.querySelector('dialog.welcome-dialog'), 'no dialog');
+      w2.document.getElementById('reset-btn').click();
+    }
+
     async function testBadFrame() {
       const w = await load('../player.html?frame=does-not-exist');
       for (let i = 0; i < 30 && !w.document.getElementById('alert').textContent; i++) await wait(100);
@@ -519,6 +656,10 @@
       record(id, 'Navigation: no script errors', w.__errors.length === 0 && w2.__errors.length === 0, [...w.__errors, ...w2.__errors].join(' | ') || 'none');
     }
 
+    // The first-visit voice question is tested on its own (testWelcome); hide it elsewhere.
+    const WELCOMED = 'terrasense-jukebox-welcomed-v1';
+    localStorage.setItem(WELCOMED, '1');
+
     const allFrames = (await (await fetch('../data/frames.json', { cache: 'no-cache' })).json()).frames;
     const metas = Object.fromEntries(allFrames.map((f) => [f.id, f]));
     const frames = allFrames.map((f) => f.id);
@@ -526,9 +667,15 @@
     const guard = async (name, fn) => {
       try { await fn(); } catch (err) { record(name, 'Test ran to the end', false, String(err && err.stack || err).slice(0, 300)); }
     };
-    for (const id of frames) await guard(id, () => testFrame(id));
-    for (const id of frames) await guard(id, () => testNavigation(id));
-    await guard('sst', () => testFullDemo('sst'));
+    // ?only=assistant runs just Terra, places, taps and the first-visit question.
+    const only = new URLSearchParams(location.search).get('only');
+    if (only !== 'assistant') {
+      for (const id of frames) await guard(id, () => testFrame(id));
+      for (const id of frames) await guard(id, () => testNavigation(id));
+      await guard('sst', () => testFullDemo('sst'));
+    }
+    for (const id of frames) await guard(id, () => testAssistant(id));
+    await guard('(first visit)', () => testWelcome());
     await guard('(bad id)', () => testBadFrame());
 
     const failed = results.filter((r) => !r.pass).length;

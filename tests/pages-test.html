@@ -107,6 +107,8 @@
       return w;
     }
 
+    const WELCOMED = 'terrasense-jukebox-welcomed-v1';
+    localStorage.setItem(WELCOMED, '1');
     const frames = (await (await fetch('../data/frames.json', { cache: 'no-cache' })).json()).frames;
     const pages = ['index.html', 'gallery.html', 'player.html?frame=sst', 'how-it-works.html', 'accessibility.html', 'credits.html'];
 
@@ -166,6 +168,33 @@
         record(page, 'Start audio plays low, middle, high and says so', /Sound check done/.test(msg.textContent) && msg.getAttribute('role') === 'status' &&
           ['low', 'middle', 'high'].every((n) => heard.some((h) => h.includes(n + ' note'))), heard.concat(msg.textContent).join(' → '));
       }
+    }
+
+    // Terra on a page without the Player, and the first-visit question on Home
+    {
+      const w = await load('../gallery.html');
+      const A = w.__assistant;
+      const box = w.document.getElementById('assistant');
+      const h1 = w.document.querySelector('main h1');
+      record('gallery.html', 'Terra is right after the main heading', Boolean(A) && h1.nextElementSibling === box, box ? box.querySelector('h2').textContent : 'missing');
+      await A.handle('help');
+      const log1 = [...w.document.querySelectorAll('#assistant-log li')].map((li) => li.textContent);
+      record('gallery.html', 'Terra answers "help" (typed)', log1[0] === 'You: help' && /Open the player/.test(log1[1] || ''), log1.join(' | ').slice(0, 160));
+      await A.handle('open the rain map');
+      await wait(1500);
+      const url = iframe.contentWindow.location.href;
+      record('gallery.html', 'Terra: "open the rain map" opens the Player on precipitation', /player\.html\?frame=precip$/.test(url), url);
+    }
+    {
+      localStorage.removeItem(WELCOMED);
+      const w = await load('../index.html', 800);
+      const dlg = w.document.querySelector('dialog.welcome-dialog');
+      const ok = dlg && dlg.open && dlg.contains(w.document.activeElement);
+      if (dlg) dlg.dispatchEvent(new KeyboardEvent('keydown', { key: '2', bubbles: true }));
+      const saved = JSON.parse(localStorage.getItem('terrasense-jukebox-prefs-v1') || '{}');
+      record('index.html', 'First visit asks the voice question; key 2 = screen reader', ok && !w.document.querySelector('dialog.welcome-dialog') && saved.voiceMode === 'screenreader',
+        `open ${Boolean(dlg && dlg.open)}, voiceMode ${saved.voiceMode}`);
+      localStorage.setItem(WELCOMED, '1');
     }
 
     const failed = results.filter((r) => !r.pass).length;

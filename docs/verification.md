@@ -5,7 +5,7 @@ run again on 2026-11-13 after adding Summary, Go to and Compare (section 7), and
 2026-11-13 after the navigation work for blind users (section 8).
 Each check is PASS, FAIL or NOT TESTED, with the evidence. "Simulated" means automated
 tests in headless Chrome on macOS using synthetic key and pointer events
-(`tests/player-test.html`, 214 checks, 0 failed; `tests/pages-test.html`, 73 checks, 0 failed;
+(`tests/player-test.html`, 302 checks, 0 failed; `tests/pages-test.html`, 77 checks, 0 failed;
 `decoder-test.html?auto=1`, 20 self-tests, 0 failed; all on 2026-11-14).
 
 ## Results
@@ -88,6 +88,25 @@ in browse mode outside the map; the help and the Accessibility page say so.
 | 9.6 | Ten-point table on How it works | PASS | 12 rows decoded live by the Player's code; 10 compared with MUR 2026-11-04, all within one legend step (5 °C); 2 correctly give no value. |
 | 9.7 | One spelling | PASS | The British spelling no longer appears in any page, script, tool, data file or document (searched with `git grep`), except in the project log's history. |
 | 9.8 | SST date | PASS | Reads "Data date not stated (image updated 2026-11-05)" in the Player, gallery, credits and README. |
+
+## 10. Where am I with countries, five taps, first-visit question, Terra (added 2026-11-14)
+
+Simulated in headless Chrome. Terra was tested with typed requests: the microphone and speech
+recognition cannot be tested headless.
+
+| # | Check | Result | Evidence |
+|---|---|---|---|
+| 10.1 | Nearest country wording | PASS | "About 100 km west of Israel." (33.5° E, 32.3° N); "In Egypt."; "In Israel, near Palestine."; "In Japan."; mid-Atlantic: "About 850 km north-east of Brazil." Borders: Natural Earth 1:50m, simplified to about 1 km. |
+| 10.2 | Where am I includes the country | PASS (4 frames) | Button, W and Terra all end with the country sentence. |
+| 10.3 | Five quick taps = Where am I | PASS (4 frames) | Five synthetic touch taps in one spot give "You are here…"; three do not. Not tried on a real phone, or with VoiceOver or TalkBack (which take taps for themselves). |
+| 10.4 | Named seas, oceans, continents | PASS | All 33 named points fall in water (seas) or on land (continents), checked against the borders. |
+| 10.5 | First-visit question | PASS | On the first visit the Player and Home open a modal dialog with three choices, focus inside it, before the opening message. Key 3 saves "off", key 2 saves "screen reader"; not asked again. Speaking the question aloud after a key or tap was not heard (headless). |
+| 10.6 | Terra in the Player | PASS (4 frames) | Typed: take me to Japan (with "no value right here… nearest value…", then "go there" on SST and precipitation), where am I, temperature in Spain, go to the warmest, next, summary then "yes", compare here with the coolest, compare Brazil and Norway, move east 10 degrees, louder and quieter, scan the equator and stop, what am I looking at, help, not understood, repeat, change voice mode. The conversation log shows both sides. |
+| 10.7 | Terra on other pages | PASS | Gallery: Terra right after the heading; "help" answered; "open the rain map" opens the Player on precipitation. |
+
+Not tested: speech recognition with a real microphone; the back-and-forth listening in built-in voice mode;
+how well spoken requests are recognised for different accents; Terra with a real screen reader; the
+first-visit question read aloud.
 
 ## Could not verify
 

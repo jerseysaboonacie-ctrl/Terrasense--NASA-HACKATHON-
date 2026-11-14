@@ -45,9 +45,11 @@
           <tr><td>Arrow keys</td><td>Move the pointer on the map</td></tr>
           <tr><td>Shift + arrow</td><td>Move faster</td></tr>
           <tr><td>Enter or Space</td><td>Play the current point again</td></tr>
-          <tr><td>W</td><td>Where am I: repeat the value and place in full</td></tr>
+          <tr><td>W</td><td>Where am I: the value and place in full, and the nearest country (for example "About 60 km west of Israel")</td></tr>
+          <tr><td>Tap the map 5 times quickly</td><td>Where am I, on a touch screen (same as W)</td></tr>
           <tr><td>T</td><td>Start the guided tour, or go to its next step</td></tr>
           <tr><td>D</td><td>Start or stop the one-minute demo (plays and says the main features by itself)</td></tr>
+          <tr><td>V</td><td>Talk to Terra, the assistant (on every page; press again to stop listening)</td></tr>
           <tr><td>S</td><td>Start or stop the scan (left to right along the chosen row)</td></tr>
           <tr><td>M</td><td>Mute or unmute</td></tr>
           <tr><td>Minus, plus</td><td>Volume down, volume up (the new level is announced)</td></tr>
@@ -75,8 +77,25 @@
       <li>Letter keys (M, S, T, W, A, B, C) reach the page when the map has focus. In other places your screen reader may use them itself (for example, to jump between headings); switch to focus or forms mode, or use the buttons.</li>
     </ul>
 
+    <h2>The first question</h2>
+    <p>On your first visit, before anything else, the site asks how you would like to hear it: <strong>1</strong> built-in voice (the page reads itself aloud), <strong>2</strong> I already use a screen reader, or <strong>3</strong> no voice, text only. A screen reader reads the question. Without one, press any key or tap the screen to hear it read aloud: browsers only allow a page to speak after a key press or tap. It is asked once; you can change the answer later under Voice in the Player, or by telling Terra.</p>
+
+    <h2>Terra, the assistant</h2>
+    <p>Instead of finding the right button, tell Terra what you want. Press <strong>V</strong> (or the "Talk to Terra" button), wait for the two rising notes, and speak. Two falling notes mean Terra stopped listening. You can also type your request.</p>
+    <ul>
+      <li>In the Player: "where am I", "take me to Japan", "what is the temperature in Spain", "go to the warmest", "next", "compare here with the coolest", "compare Brazil and Norway", "summary", "scan the equator", "move north a bit", "louder", "mute", "more detail", "tour", "demo", "what am I looking at".</li>
+      <li>On every page: "open the player", "open the rain map", "go to the gallery", "read this page" (then "continue"), "use the built-in voice", "repeat", "help", "goodbye".</li>
+      <li>Terra can ask you something back, for example after the summary: "Would you like me to take you to the warmest ocean area?" Answer yes or no.</li>
+      <li>With the built-in voice, Terra listens again after each answer, so you can keep talking back and forth until you say "goodbye" or stay silent. With a screen reader, press V for each request, because the page cannot tell when your screen reader has finished speaking.</li>
+      <li>If you ask for a place where the map has no value (for example a country on the sea temperature map), Terra says so and gives the nearest value, and "go there" moves to it.</li>
+      <li>Terra is not a general AI and does not send your requests to an AI service. It understands a fixed set of requests, uses the same functions as the buttons, and only says values decoded from the map.</li>
+      <li>Speech recognition is done by your browser. In Chrome and Edge it uses an online service, so it needs an internet connection; Firefox does not offer it. Typing works everywhere, also offline.</li>
+    </ul>
+
     <h2>Touch</h2>
-    <p>Drag a finger across the map to hear it. The page does not scroll while you drag on the map. The tone stops when you lift your finger. On Android phones that support it, a short vibration marks very high values; iPhones do not support this, and nothing depends on it.</p>
+    <p>Drag a finger across the map to hear it. The page does not scroll while you drag on the map. The tone stops when you lift your finger. Tap the map five times quickly in one spot to hear where you are, including the nearest country.</p>
+    <p>With VoiceOver or TalkBack switched on, your screen reader takes the taps itself. Use the "Where am I?" button (double-tap it), ask Terra, or on iPhone use VoiceOver's Direct Touch (in the rotor) on the map.</p>
+    <p>On Android phones that support it, a short vibration marks very high values; iPhones do not support this, and nothing depends on it.</p>
 
     <h2>Headphones and volume</h2>
     <ul>
@@ -105,5 +124,6 @@
   <footer class="site-footer">
     TerraSense Jukebox is a hackathon project. It is not endorsed by NASA. Visualizations are credited to their original sources on the <a href="credits.html">Credits</a> page.
   </footer>
+  <script type="module" src="js/site.js"></script>
 </body>
 </html>

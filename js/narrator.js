@@ -63,12 +63,13 @@ export function speechSupported() {
 }
 
 /** Speak a sentence, cutting off anything still being spoken. */
-export function speak(text, rate = 1) {
-  if (!speechSupported()) return;
+export function speak(text, rate = 1, onEnd) {
+  if (!speechSupported()) { if (onEnd) onEnd(); return; }
   window.speechSynthesis.cancel();
   const u = new SpeechSynthesisUtterance(text);
   u.lang = document.documentElement.lang || 'en';
   u.rate = rate;
+  if (onEnd) { u.onend = onEnd; u.onerror = onEnd; }
   window.speechSynthesis.speak(u);
 }
 

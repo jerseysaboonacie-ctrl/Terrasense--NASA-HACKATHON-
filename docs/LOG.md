@@ -7,7 +7,7 @@ same format (newest first under **History**) and tick your tasks in **Your tasks
 Status words: **Done** (built and tested), **Partly done** (some of it exists, see notes),
 **Not started**, **Yours** (only a person can do it).
 
-Last updated: 2026-11-14 10:51 (+07), session 2 finished (commit fdd5c0d).
+Last updated: 2026-11-14 16:34 (+07), session 3 in progress.
 
 ---
 
@@ -15,6 +15,46 @@ Last updated: 2026-11-14 10:51 (+07), session 2 finished (commit fdd5c0d).
 
 Live progress, newest session first, newest line at the bottom of each session. Times are the
 laptop's clock (+07). Each phase has an estimate; the heartbeat says when it actually started and finished.
+
+### Session 3: 2026-11-14 afternoon (in progress)
+
+**Task (from you):** (1) "Where am I" by tapping the map 5 times on a phone, listed with the keys;
+"you are here" also names a nearby country, e.g. "south-west of Israel". (2) When the site opens, first ask:
+built-in voice, off, or "I already have a screen reader". (3) A voice assistant, like Jarvis, that a blind
+person can simply tell what they want, with back-and-forth conversation.
+
+| Phase | What | Estimate | Status |
+|---|---|---|---|
+| 1 | Country borders (offline, public domain) and "near a country" wording in Where am I | 40 min | Done (16:26 to 16:30; tested in phase 6) |
+| 2 | Five taps on the map = Where am I; added to the key tables | 15 min | Done (16:30; tested in phase 6) |
+| 3 | First-visit question on every page: built-in voice / screen reader / off | 30 min | Done (code; tested in phase 6) |
+| 4 | Assistant core: talk (speech recognition) or type, conversation log, back-and-forth | 60 min | Done (code; tested in phase 6) |
+| 5 | Assistant commands: Player (where, go to a country, warmest, compare, scan, volume, frames...) and other pages | 60 min | Done (code; tested in phase 6) |
+| 6 | Tests, docs, log, commit | 45 min | In progress |
+
+Total estimate: about 4 hours 10 minutes, finishing around 20:40.
+
+- 16:26: Started. Downloaded Natural Earth 1:50m country borders (public domain) for the
+  country names; checking how to make them small enough to load quickly and work offline.
+- 16:30: Phases 1 and 2 written. `tools/build_countries.py` keeps 242 countries with borders rounded to
+  about 1 km: `data/countries.json`, 1.1 MB (427 KB compressed), loaded only the first time it is needed.
+  Where am I now ends with e.g. "In Egypt.", "In Egypt, near Israel.", "About 60 km west of Israel." or
+  "Just off the coast of Israel." Five quick taps in one spot on a touch screen = Where am I; added to
+  both key tables. Phase 3 started.
+- 16:34: Phases 3 to 5 written.
+  - First visit, on any page: a dialog asks "How would you like to hear this site?" with three big buttons
+    (1 built-in voice, 2 I already use a screen reader, 3 text only). A screen reader reads it; anyone else
+    can press any key or tap to hear it read aloud (browsers only allow speech after a key or tap).
+    Asked once; Escape keeps screen reader mode.
+  - Terra, the assistant, on every page (V key or "Talk to Terra"; typing works too). In the Player:
+    where am I, take me to a country, sea or coordinates, the temperature in a place, warmest, next,
+    coolest, compare two places, summary (then asks "Would you like me to take you to the warmest?"),
+    scan, move north a bit, volume, mute, detail, speed, tour, demo, explain, what am I looking at.
+    Everywhere: open a page or a map, read this page (with "continue"), change voice, repeat, help, goodbye.
+    In built-in voice mode it listens again after each answer, so you can go back and forth.
+  - Decision: Terra understands a fixed set of requests (no AI service). A real AI model would need an
+    API key and a server, which this static site does not have; the brief forbids keys in the code.
+  Phase 6 (tests) started.
 
 ### Session 2: 2026-11-14 morning (finished)
 

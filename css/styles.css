@@ -371,3 +371,19 @@ button.big-button { border-radius: var(--radius); }
 }
 .display-settings label.check { display: flex; gap: 8px; align-items: center; margin: 8px 0; }
 .display-settings input[type="checkbox"] { width: 1.2em; height: 1.2em; }
+
+/* Terra, the assistant */
+.assistant { margin: 8px 0 12px; }
+.assistant h2, .assistant h3 { margin: 0 0 4px; }
+.assistant form input[type="text"] { flex: 1; min-width: 12em; font: inherit; padding: 6px 8px; border: 2px solid var(--border); border-radius: 6px; background: var(--bg); color: var(--text); }
+#talk-btn[aria-pressed="true"] { background: var(--bad); border-color: var(--bad); color: var(--bg); }
+.assistant-log { list-style: none; padding: 0; margin: 6px 0 0; max-height: 16em; overflow-y: auto; }
+.assistant-log:empty { display: none; }
+.assistant-log li { padding: 4px 8px; margin: 3px 0; border-radius: 6px; background: var(--bg); }
+.assistant-log li.you { border-left: 4px solid var(--border); }
+.assistant-log li.terra { border-left: 4px solid var(--accent); }
+
+/* First-visit question: three big stacked buttons, easy to find by touch */
+.welcome-dialog { max-width: min(640px, calc(100vw - 32px)); }
+.welcome-choices { display: flex; flex-direction: column; gap: 12px; margin: 12px 0; }
+.welcome-choices .big-button { width: 100%; text-align: left; }
