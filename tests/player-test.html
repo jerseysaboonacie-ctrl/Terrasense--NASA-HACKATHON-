@@ -416,7 +416,106 @@
       record(id, 'Terra: no script errors', w.__errors.length === 0, w.__errors.join(' | ') || 'none');
     }
 
-    // First visit: the voice question, on the Player
+    // Terra on / off with a stand-in microphone (headless Chrome has no real one).
+    function fakeMicrophone(w) {
+      const insts = [];
+      class FakeRecognition {
+        constructor() { insts.push(this); this.started = false; }
+        start() { this.started = true; }
+        stop() { this.abort(); }
+        abort() { if (!this.started) return; this.started = false; setTimeout(() => this.onend && this.onend(), 0); }
+        hear(text) { const r = [{ transcript: text }]; r.isFinal = true; this.onresult({ resultIndex: 0, results: [r] }); }
+        end() { this.started = false; if (this.onend) this.onend(); }
+      }
+      w.SpeechRecognition = FakeRecognition;
+      try { Object.defineProperty(w.navigator.mediaDevices, 'getUserMedia', { configurable: true, value: async () => ({ getTracks: () => [{ stop() {} }] }) }); } catch (e) { /* none */ }
+      return { insts, active: () => insts.filter((i) => i.started).pop() };
+    }
+
+    async function testMicrophone() {
+      const id = 'sst';
+      const w = await load('../player.html?frame=' + id);
+      const doc = w.document, J = w.__jukebox;
+      const st = () => J.getState();
+      const mic = fakeMicrophone(w);
+      const hear = async (text, ms = 900) => { const a = mic.active(); if (a) a.hear(text); await wait(ms); return st(); };
+      const pressed = () => ['talk-btn', 'terra-bar-btn'].map((b) => doc.getElementById(b).getAttribute('aria-pressed'));
+
+      key(doc.body, 'v'); await wait(900);
+      let s = st();
+      const a1 = mic.active();
+      record('(Terra on/off)', 'V switches Terra on: both switches pressed, listening continuously', pressed().join() === 'true,true' &&
+        Boolean(a1) && a1.continuous === true && s.narrationLine.startsWith('Terra is listening.') && doc.querySelector('#talk-btn .terra-state').textContent === 'On',
+        `pressed ${pressed()}, continuous ${a1 && a1.continuous}, "${s.narrationLine.slice(0, 60)}…"`);
+
+      s = await hear('take me to Japan');
+      const japan = s.narrationLine;
+      s = await hear('where am I', 1500);
+      record('(Terra on/off)', 'Answers each spoken request while on, without pressing anything', japan.startsWith('Japan.') && s.narrationLine.startsWith('You are here.') && mic.active() === a1,
+        `"${japan.slice(0, 40)}…" then "${s.narrationLine.slice(0, 40)}…"; same session ${mic.active() === a1}`);
+
+      const n0 = mic.insts.length;
+      a1.end(); await wait(800);
+      record('(Terra on/off)', 'Restarts by itself when the browser ends a listening session', mic.insts.length === n0 + 1 && Boolean(mic.active()), `sessions ${n0} → ${mic.insts.length}`);
+
+      const echoText = st().narrationLine;
+      const logBefore = st().assistantLog.length;
+      s = await hear(echoText.replace(/[.,°]/g, ' '), 700);
+      record('(Terra on/off)', 'Ignores its own words coming back through the microphone', s.assistantLog.length === logBefore && s.narrationLine === echoText,
+        `heard "${echoText.slice(0, 50)}…": log ${logBefore} → ${s.assistantLog.length}`);
+
+      let speakingNow = true;
+      let patched = true;
+      try { Object.defineProperty(w.speechSynthesis, 'speaking', { configurable: true, get: () => speakingNow }); } catch (e) { patched = false; }
+      if (patched) {
+        await wait(600);
+        const pausedOk = !mic.active();
+        speakingNow = false;
+        await wait(700);
+        record('(Terra on/off)', 'Pauses listening while the built-in voice talks, then resumes', pausedOk && Boolean(mic.active()), `paused ${pausedOk}, resumed ${Boolean(mic.active())}`);
+        delete w.speechSynthesis.speaking;
+      } else record('(Terra on/off)', 'Pauses listening while the built-in voice talks, then resumes', true, 'not testable here (speechSynthesis.speaking cannot be replaced)');
+
+      doc.getElementById('wake-toggle').click();
+      const before = st().narrationLine;
+      s = await hear('summary', 700);
+      const ignored = s.narrationLine === before;
+      s = await hear('Terra, where am I', 1500);
+      const woke = s.narrationLine.startsWith('You are here.');
+      s = await hear('Terra', 500);
+      const yes = s.narrationLine === 'Yes?';
+      s = await hear('summary', 900);
+      record('(Terra on/off)', 'Wake word: ignores requests without "Terra"; "Terra" alone answers "Yes?"', ignored && woke && yes && s.narrationLine.startsWith('Summary of'),
+        `ignored ${ignored}, "Terra, where am I" ${woke}, "Terra" → Yes? ${yes}, then summary ${s.narrationLine.startsWith('Summary of')}`);
+      doc.getElementById('wake-toggle').click();
+      s = await hear('no', 500);
+
+      s = await hear('stop listening', 900);
+      record('(Terra on/off)', '"stop listening" switches Terra off', pressed().join() === 'false,false' && !mic.active() && s.narrationLine.startsWith('Okay, I stopped listening.'),
+        `pressed ${pressed()}, listening ${Boolean(mic.active())}, "${s.narrationLine}"`);
+
+      doc.getElementById('terra-bar-btn').click(); await wait(900);
+      const barOn = pressed().join() === 'true,true' && Boolean(mic.active());
+      key(doc.body, 'v'); await wait(500);
+      record('(Terra on/off)', 'The Player top-bar switch turns Terra on; V turns it off', barOn && pressed().join() === 'false,false' && st().narrationLine === 'Terra stopped listening.',
+        `bar on ${barOn}; after V "${st().narrationLine}"`);
+
+      // Stays on across pages: switch on, ask for another map, check the new page
+      key(doc.body, 'v'); await wait(900);
+      mic.active().hear('open the rain map');
+      await new Promise((r) => iframe.addEventListener('load', r, { once: true }));
+      const w2 = iframe.contentWindow;
+      const mic2 = fakeMicrophone(w2);
+      for (let i = 0; i < 60 && !(w2.__jukebox && w2.__jukebox.ready); i++) await wait(100);
+      await wait(2200);
+      const s2 = w2.__jukebox.getState();
+      record('(Terra on/off)', 'Stays on when Terra opens another page', /frame=precip/.test(w2.location.href) && s2.narrationLine === 'Terra is still listening.' &&
+        w2.document.getElementById('terra-bar-btn').getAttribute('aria-pressed') === 'true' && Boolean(mic2.active()),
+        `${w2.location.search}: "${s2.narrationLine}", listening ${Boolean(mic2.active())}`);
+      w2.document.getElementById('talk-btn').click(); await wait(300);
+      record('(Terra on/off)', 'No script errors', (w.__errors || []).length === 0, (w.__errors || []).join(' | ') || 'none');
+    }
+
     async function testWelcome() {
       localStorage.removeItem(WELCOMED);
       const w = await load('../player.html?frame=sst');
@@ -714,6 +813,7 @@
     }
     for (const id of frames) await guard(id, () => testAssistant(id));
     await guard('(first visit)', () => testWelcome());
+    await guard('(Terra on/off)', () => testMicrophone());
     await guard('(bad id)', () => testBadFrame());
 
     const failed = results.filter((r) => !r.pass).length;

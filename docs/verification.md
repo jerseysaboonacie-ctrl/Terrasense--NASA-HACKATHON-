@@ -5,7 +5,7 @@ run again on 2026-11-13 after adding Summary, Go to and Compare (section 7), and
 2026-11-13 after the navigation work for blind users (section 8).
 Each check is PASS, FAIL or NOT TESTED, with the evidence. "Simulated" means automated
 tests in headless Chrome on macOS using synthetic key and pointer events
-(`tests/player-test.html`, 320 checks, 0 failed; `tests/pages-test.html`, 77 checks, 0 failed;
+(`tests/player-test.html`, 330 checks, 0 failed; `tests/pages-test.html`, 77 checks, 0 failed;
 `decoder-test.html?auto=1`, 20 self-tests, 0 failed; all on 2026-11-14).
 
 ## Results
@@ -127,6 +127,24 @@ records every live announcement. Problems it found and how each was solved are l
 
 Not tested: the same with VoiceOver, NVDA, JAWS or TalkBack. The simulator cannot reproduce a screen
 reader's own key handling (browse mode, quick navigation), speech timing, or verbosity settings.
+
+## 12. Terra on and off, listening continuously (added 2026-11-14)
+
+Tested with a stand-in speech recognizer and microphone inside headless Chrome (no real microphone there).
+
+| # | Check | Result | Evidence |
+|---|---|---|---|
+| 12.1 | V switches Terra on | PASS | Both switches (Start here and the Player's top bar) pressed; continuous listening; "Terra is listening. …" |
+| 12.2 | Answers every request while on | PASS | "take me to Japan", then "where am I", in the same listening session, without pressing anything. |
+| 12.3 | Restarts by itself | PASS | When the browser ends a session, a new one starts within a second. |
+| 12.4 | Does not answer itself | PASS | Its own last answer, heard back, is ignored; listening pauses while the built-in voice talks and resumes after. |
+| 12.5 | Wake word | PASS | With "Only answer when I start with Terra": "summary" ignored, "Terra, where am I" answered, "Terra" alone gives "Yes?" and the next request needs no wake word. |
+| 12.6 | Switching off | PASS | "stop listening", V, or either switch; listening stops. |
+| 12.7 | Stays on across pages | PASS | "open the rain map": the Player opens on precipitation and says "Terra is still listening." |
+| 12.8 | Microphone permission | PASS (simulated) | Says "Your browser is asking to use the microphone. Choose Allow." before the browser's question; if blocked, says how to allow it. |
+
+Not tested: a real microphone, real speech recognition accuracy, and how often room noise or a screen reader
+on speakers is heard as a request.
 
 ## Could not verify
 

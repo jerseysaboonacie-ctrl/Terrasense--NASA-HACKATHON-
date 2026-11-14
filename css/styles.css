@@ -376,7 +376,6 @@ button.big-button { border-radius: var(--radius); }
 .assistant { margin: 8px 0 12px; }
 .assistant h2, .assistant h3 { margin: 0 0 4px; }
 .assistant form input[type="text"] { flex: 1; min-width: 12em; font: inherit; padding: 6px 8px; border: 2px solid var(--border); border-radius: 6px; background: var(--bg); color: var(--text); }
-#talk-btn[aria-pressed="true"] { background: var(--bad); border-color: var(--bad); color: var(--bg); }
 .assistant-log { list-style: none; padding: 0; margin: 6px 0 0; max-height: 16em; overflow-y: auto; }
 .assistant-log:empty { display: none; }
 .assistant-log li { padding: 4px 8px; margin: 3px 0; border-radius: 6px; background: var(--bg); }
@@ -387,3 +386,9 @@ button.big-button { border-radius: var(--radius); }
 .welcome-dialog { max-width: min(640px, calc(100vw - 32px)); }
 .welcome-choices { display: flex; flex-direction: column; gap: 12px; margin: 12px 0; }
 .welcome-choices .big-button { width: 100%; text-align: left; }
+
+/* Terra on / off switch: the pill shows the state; aria-pressed tells screen readers */
+.terra-toggle { display: inline-flex; align-items: center; gap: 8px; }
+.terra-state { font-size: 0.8em; font-weight: 700; padding: 1px 8px; border-radius: 999px; border: 2px solid currentColor; }
+.terra-toggle.on { background: var(--good); border-color: var(--good); color: var(--bg); }
+.terra-toggle.on .terra-state::before { content: "● "; }

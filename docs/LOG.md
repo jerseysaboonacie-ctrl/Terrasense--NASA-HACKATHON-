@@ -7,7 +7,7 @@ same format (newest first under **History**) and tick your tasks in **Your tasks
 Status words: **Done** (built and tested), **Partly done** (some of it exists, see notes),
 **Not started**, **Yours** (only a person can do it).
 
-Last updated: 2026-11-14 17:40 (+07), session 4 finished.
+Last updated: 2026-11-14 18:01 (+07), session 5 started.
 
 ---
 
@@ -15,6 +15,22 @@ Last updated: 2026-11-14 17:40 (+07), session 4 finished.
 
 Live progress, newest session first, newest line at the bottom of each session. Times are the
 laptop's clock (+07). Each phase has an estimate; the heartbeat says when it actually started and finished.
+
+### Session 5: 2026-11-14 evening (in progress)
+
+**Task (from you):** Terra listens through the microphone, works in the Player, and can be switched on and off,
+so that while it is on it hears you and answers whenever you speak.
+
+| Phase | What | Estimate | Status |
+|---|---|---|---|
+| 1 | Terra on/off switch: continuous listening while on, restarts by itself, answers every request | 45 min | In progress |
+| 2 | Safety: Terra must not answer its own voice or the screen reader; optional wake word "Terra"; clear microphone errors | 30 min | Waiting |
+| 3 | Player: the switch is always visible in the Player's top bar; stays on when Terra opens another page | 20 min | Waiting |
+| 4 | Tests with a simulated microphone, docs, log, commit | 40 min | Waiting |
+
+Total estimate: about 2 hours 15 minutes.
+
+- 18:01: Started. Today V listens for one request only; the change makes V (and a button) a switch.
 
 ### Session 4: 2026-11-14 evening (finished)
 

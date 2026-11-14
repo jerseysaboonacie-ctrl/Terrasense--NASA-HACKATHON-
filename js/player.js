@@ -1182,14 +1182,14 @@ async function init() {
   assistant = createAssistant({
     container: $('assistant'), say, headingLevel: 3, sayCallsHeard: true,
     commands: playerCommands(assistantApi()), help: PLAYER_HELP,
-    isBusy: () => compareRunning || Boolean(scan) || Boolean(demo),
+    toggles: [$('terra-bar-btn')],
   });
 
   // First visit: ask how to hear the site (welcome.js), then greet in that voice.
   askVoiceModeIfNeeded((mode) => {
     if (mode === 'off') return;
     say(`${mode === 'voice' ? 'Built-in voice on.' : 'Screen reader mode.'} ${meta.title} is open. ` +
-      'Press V at any time and tell Terra, the assistant, what you want, for example "where am I" or "take me to Japan". ' +
+      'Press V to switch on Terra, the assistant, then just say what you want, for example "where am I" or "take me to Japan". ' +
       'Or press T for a tour, or use the Skip to the map link at the top of the page, then the arrow keys.');
   });
 

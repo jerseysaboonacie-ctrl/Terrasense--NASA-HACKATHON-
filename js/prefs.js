@@ -17,6 +17,7 @@ export const DEFAULTS = Object.freeze({
   highContrast: false,        // display settings, applied on every page by display.js
   largeText: false,
   reduceMotion: false,
+  terraWakeWord: false,       // Terra answers only requests that start with "Terra"
 });
 
 const VALID = {

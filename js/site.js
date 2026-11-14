@@ -23,5 +23,5 @@ if (main && h1) {
 askVoiceModeIfNeeded((mode) => {
   if (mode === 'off') return;
   pageSay(`${mode === 'voice' ? 'Built-in voice on.' : 'Screen reader mode.'} This is ${document.title}. ` +
-    'Press V at any time and tell Terra, the assistant, what you want, for example "open the player" or "read this page".');
+    'Press V to switch on Terra, the assistant, then just say what you want, for example "open the player" or "read this page".');
 });
