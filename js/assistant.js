@@ -25,6 +25,7 @@ import { startAudio, isStarted, playCue, stopTone } from './audio.js';
 import { loadFrameList } from './decoder.js';
 import { normalise } from './places.js';
 import { announcePrefsChanged } from './welcome.js';
+import { SETTINGS as S } from './settings.js';
 
 /** The browser's speech recognition, looked up when needed (tests can supply one). */
 const getRecognition = () => window.SpeechRecognition || window.webkitSpeechRecognition;
@@ -34,7 +35,32 @@ export function recognitionSupported() {
 }
 
 const ON_KEY = 'terrasense-terra-on'; // sessionStorage: Terra stays on across pages in this tab
-const WAKE = /^ (?:hey |ok |okay )?(?:terra|tera|tara|tierra|terah)\b,? ?(.*)$/;
+// Terra's name, and how Chrome's recognizer often writes it. Measured by feeding recordings of
+// "Terra, ..." in nine voices to Chrome's recognizer: its first guess was often "Tara", "Sarah" or "Terror".
+const NAMES = ['terra', 'tera', 'tara', 'tarah', 'terah', 'tarra', 'tierra', 'tiara', 'thera', 'sarah', 'sara', 'terror', 'cara', 'kara', 'dara'];
+const WAKE = new RegExp(`^ (?:hey |hi |ok |okay )?(?:${NAMES.join('|')})\\b,? ?(.*)$`);
+const NAME_WORD = new RegExp(`^(?:${NAMES.join('|')})$`);
+const plain = (w) => w.toLowerCase().replace(/[^a-z']/g, '');
+const splitWords = (text) => text.trim().split(/\s+/).filter(Boolean);
+/** Where Terra's name starts in a list of words (with a "hey" or "OK" before it), or -1. */
+function nameIndex(words) {
+  const i = words.findIndex((w) => NAME_WORD.test(plain(w)));
+  if (i > 0 && /^(hey|hi|ok|okay)$/.test(plain(words[i - 1]))) return i - 1;
+  return i;
+}
+/** Where someone starts talking to Terra: its name, or "are you (still) listening", "can you hear me", "are you there". */
+const CHECKING = /^(are|can|do)$/;
+function attentionIndex(words) {
+  const n = nameIndex(words);
+  if (n >= 0) return n;
+  const p = words.map(plain);
+  for (let i = 0; i < p.length - 2; i++) {
+    if (!CHECKING.test(p[i]) || p[i + 1] !== 'you') continue;
+    const next = p[i + 2] === 'still' ? p[i + 3] : p[i + 2];
+    if (/^(listening|listen|there|hear|awake)$/.test(next || '')) return i;
+  }
+  return -1;
+}
 
 // ---------------------------------------------------------------------------
 // Speaking on pages without the Player (the Player passes its own say())
@@ -371,7 +397,8 @@ export function createAssistant({ container, say, commands = [], help = '', head
   // Asked before anything else, whatever page this is.
   const PRESENCE = [
     { match: (t) => has(t, 'are you listening', 'are you still listening', 'still listening', 'can you hear me', 'do you hear me',
-        'are you there', 'are you still there', 'you there', 'are you on', 'are you awake', 'is terra on', 'is terra listening', 'hello are you there'),
+        'are you there', 'are you still there', 'you there', 'are you on', 'are you awake', 'is terra on', 'is terra listening', 'hello are you there')
+        || /^ (are )?(you )?(still )?listen(ing)?( to me)? $/.test(t) || / (are you|you still|still) listen /.test(t),
       run: () => (listeningOn ? "Yes, I'm listening. What would you like to do?" : "I'm here, but I'm not listening to the microphone right now. Press V to switch me on.") },
   ];
 
@@ -388,7 +415,7 @@ export function createAssistant({ container, say, commands = [], help = '', head
   function echoOfLast(text) {
     const last = recent[recent.length - 1];
     if (!last) return false;
-    const words = normalise(text).trim().split(' ').filter((w) => w && !/^(terra|tera|tara|tierra|terah|hey|ok|okay)$/.test(w));
+    const words = normalise(text).trim().split(' ').filter((w) => w && !NAME_WORD.test(w) && !/^(hey|hi|ok|okay)$/.test(w));
     if (!words.length) return true;
     const said = new Set(last.text.trim().split(' '));
     return words.filter((w) => said.has(w)).length / words.length >= 0.5;
@@ -476,17 +503,76 @@ export function createAssistant({ container, say, commands = [], help = '', head
     r.lang = !forceUS && SUPPORTED.includes(navigator.language) ? navigator.language : 'en-US';
     r.continuous = true;
     r.interimResults = true;
-    r.maxAlternatives = 1;
+    r.maxAlternatives = 3;
+    // Chrome only marks a phrase "final" after it hears silence. With people talking nearby, or with some
+    // microphones and audio sources, that can take very long or never happen, and Terra would never answer.
+    // So Terra also acts on words that have stopped changing (STILL_MS), or, once it has heard its name,
+    // on the request after its name a moment later even if the room keeps talking (AFTER_NAME_MS).
+    let finalsDone = 0;   // results of this session already handled as final
+    let used = 0;         // words of the unfinished result already handled
+    let lastTaken = [];   // the words handled last from it (so the final version is not handled twice)
+    let current = [];     // all words of the unfinished result
+    let nameSeenAt = 0, stillTimer = 0;
+    let phraseSince = 0;  // when the unfinished result began
+    // A fresh session: Chrome forgets the unfinished phrase. (With voices around all the time, Chrome can keep one
+    // phrase open for ever and then stop sending anything, while still looking switched on.)
+    const restart = () => {
+      clearTimeout(stillTimer);
+      if (rec !== r) return;
+      rec = null;
+      retryAt = performance.now() + 50;
+      try { r.abort(); } catch (err) { /* already ended */ }
+    };
+    r.lastEvent = performance.now();
+    r.restartIfStuck = () => {
+      const now = performance.now();
+      if (phraseSince && now - phraseSince > S.longestPhraseMs) {
+        // Handle a request waiting in the long phrase first ("..., Terra, where am I"), then start afresh.
+        if (attentionIndex(current.slice(used)) >= 0) take(true);
+        restart();
+      } else if (now - r.lastEvent > S.silentSessionMs) restart();
+    };
+    const take = (fromName) => {
+      let ws = current.slice(used);
+      if (fromName) {
+        const i = attentionIndex(ws);
+        if (i < 0) return;
+        ws = ws.slice(i, i + 12);
+        used += i + ws.length;
+      } else used = current.length;
+      nameSeenAt = 0;
+      if (!ws.length) return;
+      lastTaken = ws.map(plain);
+      restart(); // what came before is handled; start clean so nothing is handled twice
+      onHeard(ws.join(' '));
+    };
     r.onresult = (e) => {
       errorsInARow = 0;
-      let interim = '';
-      for (let i = e.resultIndex; i < e.results.length; i++) {
-        const said = e.results[i][0].transcript;
-        if (e.results[i].isFinal) onHeard(said);
-        else interim += said;
+      r.lastEvent = performance.now();
+      if (rec !== r) return; // a session Terra already replaced
+      if (e.results.length <= finalsDone) finalsDone = Math.min(finalsDone, e.resultIndex); // a browser that starts the list again
+      for (; finalsDone < e.results.length && e.results[finalsDone].isFinal; finalsDone++) {
+        const res = e.results[finalsDone];
+        const alts = [...Array(res.length).keys()].map((k) => res[k].transcript);
+        // Prefer a guess that has Terra's name in it (the first guess often has "Sarah" or misses it).
+        const best = (used ? null : alts.find((a) => nameIndex(splitWords(a)) >= 0)) || alts[0];
+        const rest = splitWords(best).slice(used);
+        const repeat = used && rest.every((w) => lastTaken.includes(plain(w)));
+        used = 0; lastTaken = []; current = []; nameSeenAt = 0; phraseSince = 0;
+        if (rest.length && !repeat) onHeard(rest.join(' '));
       }
-      input.value = interim; // shows what Terra is hearing (not announced)
-      if (interim) heardEl.textContent = `Hearing: "${interim.trim()}"`;
+      clearTimeout(stillTimer);
+      current = splitWords([...e.results].slice(finalsDone).map((x) => x[0].transcript).join(' '));
+      const fresh = current.slice(used);
+      input.value = fresh.join(' '); // shows what Terra is hearing (not announced)
+      if (!fresh.length) return;
+      if (!phraseSince) phraseSince = performance.now();
+      heardEl.textContent = `Hearing: "${fresh.join(' ')}"`;
+      if (attentionIndex(fresh) >= 0) {
+        if (!nameSeenAt) nameSeenAt = performance.now();
+        else if (performance.now() - nameSeenAt > S.afterNameMs) { take(true); return; }
+      }
+      stillTimer = setTimeout(() => take(false), S.stillMs);
     };
     r.onerror = (e) => {
       if (e.error === 'no-speech' || e.error === 'aborted') return; // just restart
@@ -516,6 +602,9 @@ export function createAssistant({ container, say, commands = [], help = '', head
     input.value = '';
     let text = said.trim();
     if (!listeningOn || text.length < 2) return;
+    // Terra's name after other words (people talking just before): start from the name.
+    const words = splitWords(text), at = attentionIndex(words);
+    if (at > 0) text = words.slice(at).join(' ');
     const addressed = WAKE.test(normalise(text));
     if (speaking()) {
       // While Terra talks the microphone hears Terra too: only a request that starts with "Terra"
@@ -540,6 +629,7 @@ export function createAssistant({ container, say, commands = [], help = '', head
   // Instead, what is heard while Terra talks is ignored unless it starts with "Terra"; see onHeard.)
   setInterval(() => {
     if (listeningOn && !rec && performance.now() >= retryAt) begin();
+    else if (rec && rec.restartIfStuck) rec.restartIfStuck();
   }, 250);
 
   // --- Check the microphone: is there sound, and does speech recognition turn it into words? ---

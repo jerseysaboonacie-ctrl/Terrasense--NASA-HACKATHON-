@@ -78,6 +78,10 @@ export const SETTINGS = {
   narrationDelayMs: 600,    // wait this long after the pointer stops before announcing
   keyRepeatMs: 350,         // arrow presses closer than this: speak only once the keys stop
   compactWithinMs: 5000,    // keep moving within this time: steps leave out the variable name
+  stillMs: 1800,            // Terra: words unchanged this long = the end of a spoken request (Chrome usually ends it itself after ~0.8 s)
+  afterNameMs: 3000,        // Terra: after hearing its name, take the request this long later even if the room keeps talking
+  longestPhraseMs: 10000,   // Terra: one phrase longer than this (people talking non-stop): start listening afresh
+  silentSessionMs: 6000,    // Terra: nothing from the recognizer for this long: start listening afresh (it can stall)
 
   // Optional vibration (Android browsers; not iPhone).
   vibration: { threshold: 0.9, pulseMs: 40 },

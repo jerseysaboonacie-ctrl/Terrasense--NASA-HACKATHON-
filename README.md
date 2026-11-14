@@ -60,7 +60,12 @@ offered because none of our frames has dated versions yet; see Known limitations
   Natural Earth 1:50m, public domain, built into `data/countries.json` by `tools/build_countries.py`).
 - **Terra, the assistant** (V or the "Terra listening" switch on every page, also in the Player's top bar;
   typing works too). While switched on it keeps listening (continuous Web Speech recognition, restarted
-  whenever the browser ends a session) and answers each request; it pauses while the built-in voice talks,
+  whenever the browser ends a session) and answers each request. It does not wait for Chrome to mark a
+  phrase "final" (with people talking nearby Chrome may never do so): it answers when the words stop
+  changing, or, after hearing its name or "are you listening", a moment later even if the room keeps
+  talking; it starts a fresh session after each request and whenever the recognizer stalls. Its name is
+  matched as Chrome often writes it ("Tara", "Sarah", "Terror", …) anywhere in a phrase and in all of
+  Chrome's guesses. While the built-in voice talks it only accepts "Terra, …" (which interrupts it),
   ignores what sounds like its own recent answers, has an optional wake word ("Terra, ..."), and stays on
   across pages in the same tab (sessionStorage). When you talk to it, it answers out loud with the
   built-in voice whatever the Voice setting ("Terra answers out loud", on by default), in sentence-sized
@@ -138,6 +143,18 @@ Standard library only; run it with the site served on port 8931:
 python3 tools/sr_sim.py            # Home page: reading order and the first Tab stops
 ```
 
+`tools/terra_voice_test.py` tests Terra end to end with Chrome's real (online) speech recognizer: it makes
+recordings of "Terra, are you still listening?", "Terra, take me to Japan." and "Hey Terra, where am I?" in
+nine Mac voices and plays them to Terra through a virtual microphone (an audio track the recognizer listens
+to), so Terra hears what Google makes of them, as with a person speaking. `--talk 0.3` adds two people
+talking all the time underneath. On 2026-11-14: 27/27 answered in quiet; with constant talk underneath about
+half (the misses: Google lost or garbled the request under the voices).
+
+```sh
+python3 tools/terra_voice_test.py              # quiet room
+python3 tools/terra_voice_test.py --talk 0.3   # people talking nearby
+```
+
 Import `ScreenReaderSim` from it to script longer walks (open, read, tab, key, type_text, heard).
 
 These tests check our code. They do not replace testing with real screen readers, real
@@ -192,6 +209,7 @@ data/accuracy.json       real MUR values at the ten-point pixels, with source an
 data/countries.json      country names and simplified borders (Natural Earth, public domain)
 tools/build_countries.py builds data/countries.json from Natural Earth
 tools/sr_sim.py          screen-reader simulation (accessibility tree, Tab order, live announcements)
+tools/terra_voice_test.py Terra end to end with Chrome's real recognizer, fed recorded requests (macOS)
 frames/<id>/             self-hosted frame images and NASA colorbars
 tools/build_legends.py   rebuilds the legend tables from NASA's colorbars (needs Pillow)
 tools/legend_report.py   finds colors that could be confused

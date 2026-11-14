@@ -7,7 +7,7 @@ same format (newest first under **History**) and tick your tasks in **Your tasks
 Status words: **Done** (built and tested), **Partly done** (some of it exists, see notes),
 **Not started**, **Yours** (only a person can do it).
 
-Last updated: 2026-11-14 19:34 (+07), session 7 finished.
+Last updated: 2026-11-14 21:30 (+07), session 8 finished.
 
 ---
 
@@ -15,6 +15,44 @@ Last updated: 2026-11-14 19:34 (+07), session 7 finished.
 
 Live progress, newest session first, newest line at the bottom of each session. Times are the
 laptop's clock (+07). Each phase has an estimate; the heartbeat says when it actually started and finished.
+
+### Session 8: 2026-11-14 night (finished)
+
+**Report (from you):** "It still doesn't listen."
+
+| Phase | What | Estimate | Status |
+|---|---|---|---|
+| 1 | Find out what happens with a real button press, the real microphone and Chrome's real recognizer | 40 min | Done (20:01 to 20:15) |
+| 2 | Feed Google's real recognizer recordings through a virtual microphone; run Terra's own code on it; fix | 45 min | Done (20:15 to 20:55) |
+| 3 | The same with people talking underneath; fix; tests | 40 min | Done (20:40 to 21:22) |
+| 4 | Voice test tool, docs, log, commit | 20 min | Done (21:30) |
+
+- 20:01: Started. Your browser loaded the newest code at 19:59 (server log), so the fixes did reach you.
+- 20:04: A visible Chrome with Terra talking through the speakers: the recognizer refused with "not-allowed".
+  Traced to a test flag (`--use-fake-ui-for-media-stream`); with a normal "Allow" for the microphone it works.
+- 20:10: Test phrases played through the speakers never reach recognition while room speech does: the Mac
+  cancels its own speaker sound from the microphone. (Also why Terra does not hear itself.) So speaker
+  playback cannot test Terra; a person's voice or a virtual microphone can. One printed line contained a
+  few words of room speech; not kept, and the scripts now print only labels and word positions.
+- 20:14: Chrome can listen to an audio track instead of the microphone. Fed 36 recordings ("Terra, …" in
+  nine Mac voices) to Google's real recognizer: its first guess for "Terra" was usually "Tara", often
+  "Sarah" or "Terror", sometimes "Jenna" or "a timer"; "Terra" was nearly always among the other guesses.
+- 20:20: Terra's own code on that virtual microphone: 0 of 9. Chrome kept one growing "Hearing: …"
+  phrase and never marked it final; Terra only acted on final phrases. Fix: Terra acts when the words stop
+  changing, finds its name anywhere and as Chrome writes it, looks in all of Chrome's guesses.
+- 20:28: 25 of 27 (the 2 misses: Google garbled the recording). With a realistic microphone hiss Chrome
+  does finish phrases itself (~0.8 s after you stop), so in a quiet room the old code also answered.
+- 20:45: With two people talking underneath (made-up text, Mac voices): old code 0 of 12. Chrome never ends
+  the phrase while voices continue, and after ~25 s it stops sending anything while still looking on.
+  This is the likely reason Terra "doesn't listen" in your room. Fixes: after its name (or "are you
+  listening") Terra takes the request about 3 s later even if the room keeps talking; a fresh listening
+  session after each request; restart when a phrase runs past 10 s or nothing arrives for 6 s.
+- 21:05: With people talking underneath: 8 to 11 of 18 per run. Every miss was Google losing or garbling
+  the request under the voices, not Terra ignoring words that arrived.
+- 21:22: Tests: the test's stand-in recognizer now keeps a session's results like Chrome does (it used to
+  send each phrase alone, which hid this). 5 new checks. 346 of 346 Player checks, 77 of 77 page checks.
+- 21:30: `tools/terra_voice_test.py` (quiet: 27 of 27; `--talk 0.3` for people talking). Docs, commit.
+- Not tested: a person speaking to Terra at the real microphone (needs you), Safari, Edge.
 
 ### Session 7: 2026-11-14 night (finished)
 
@@ -402,6 +440,7 @@ Tick these as you go and add a line under History with what you found.
 - [ ] By-eye check: open `decoder-test.html?frame=sst&fill=1` (then `t2m`, `ndvi`, `precip`), type the value you read from the colorbar for each row, and paste the Markdown export into `docs/accuracy-check.md`.
 - [ ] Check the Summary against the picture for each frame (does the "warmest" place look warmest?).
 - [ ] Press "Check the microphone" in the Player (Chrome) and tell Claude exactly what it says.
+- [ ] Talk to Terra (about 2 min, Chrome at http://localhost:8931/player.html): press V, wait for "Terra is listening", then say "Terra, are you still listening?" and pause. If nothing happens, read Claude the line under the switch ("Hearing: …" or "Heard: …").
 - [ ] Before the demo: run `python3 tools/update_frames.py`, read the two date images it mentions, run the tests, commit.
 - [ ] Talk to Terra with a real microphone in Chrome (press V once to switch it on, then just talk; with headphones, and once without): try "where am I", "take me to Japan", "compare Brazil and Norway", "summary" then "yes", "open the rain map". Note what it misheard or did not understand, and send me the exact words so I can add them.
 - [ ] On a phone with TalkBack or VoiceOver on: does the first question read well, and can you reach "Talk to Terra" and "Where am I?"
@@ -419,6 +458,12 @@ Tick these as you go and add a line under History with what you found.
 ## History
 
 Newest first. Claude's entries name the commit so you can see exactly what changed.
+
+### 2026-11-14: Terra answers with people talking nearby (Claude, this commit)
+- Found with Google's real recognizer on recorded requests: Terra waited for Chrome to finish a phrase,
+  which with people talking never happens, and Chrome's recognizer then stalls. Now Terra answers when the
+  words stop, or shortly after its name; restarts stalled sessions; knows "Tara", "Sarah", "Terror".
+- `tools/terra_voice_test.py`. Tests: 346 of 346 Player checks, 77 of 77 page checks.
 
 ### 2026-11-14: Terra with a real microphone; newest NASA frames (Claude, commit 27b407d)
 - Real-microphone tests found why Terra seemed deaf in a busy room; fixed. New "Check the microphone".

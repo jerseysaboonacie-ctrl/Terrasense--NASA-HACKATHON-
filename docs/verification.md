@@ -163,6 +163,23 @@ on speakers is heard as a request.
 | 13.6 | New sea temperature image against real data (MUR 2026-11-12) | PASS | 335 points: median error 0.70 °C, worst 2.83 °C, all within one legend step. |
 | 13.7 | Decoder and Player with the new frames | PASS | 20 of 20 self-tests; 341 of 341 Player checks. Go to warmest and coolest now stand near the top or bottom of the area (90th or 10th percentile): on every frame, no independent grid point decodes beyond them. |
 
+## 14. Terra with Chrome's real recognizer, in quiet and with people talking (added 2026-11-14)
+
+Method: `tools/terra_voice_test.py`. Recordings of three requests in nine Mac voices are played to Terra
+through a virtual microphone (an audio track Chrome's recognizer listens to, with a faint hiss like a real
+microphone). Terra's own code and Google's real recognizer; only the microphone is replaced. Real speaker
+playback could not be used: the Mac cancels its own speaker sound from the microphone (13.3).
+
+| # | Check | Result | Evidence |
+|---|---|---|---|
+| 14.1 | How Chrome writes "Terra" | MEASURED | First guess: usually "Tara", often "Sarah" or "Terror", sometimes "Jenna", "Cara", "a timer", "hey there". "Terra" was nearly always among the other guesses. "Terra" said alone often gives nothing. |
+| 14.2 | Old code, two people talking underneath | FAIL, 0 of 12 | Chrome kept one phrase open ("Hearing: … Tara are you still listening …") and never marked it final; Terra waited for "final" and never answered, then the recognizer stalled. This matches "it does not respond". |
+| 14.3 | New code, quiet | PASS, 27 of 27 | Answers its name as "Tara"/"Sarah", "are you still listening", "take me to Japan", "where am I". |
+| 14.4 | New code, two people talking underneath | PARTLY, 8 to 11 of 18 per run | Misses: Google lost the request or garbled the name and words under the voices. No miss where the words reached Terra intact. |
+| 14.5 | Visible Chrome with a normal "Allow" for the microphone | PASS | Recognition starts and hears speech. (With the test flag `--use-fake-ui-for-media-stream` a visible Chrome refuses recognition with "not-allowed"; that is the flag, not the site.) |
+| 14.6 | Automated checks | PASS | 346 of 346 Player checks (new: answers when words stop changing; "Sarah" and the name after other words; name in Chrome's other guesses; people talking non-stop; restart after a stall). 77 of 77 page checks. The stand-in recognizer now keeps a session's results like Chrome. |
+| 14.7 | A person speaking to Terra at a real microphone | NOT TESTED by us | Needs a person at the Mac. |
+
 ## Could not verify
 
 - The official challenge text and its resource links (5.4).
