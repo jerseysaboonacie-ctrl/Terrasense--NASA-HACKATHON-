@@ -5,7 +5,7 @@ run again on 2026-11-13 after adding Summary, Go to and Compare (section 7), and
 2026-11-13 after the navigation work for blind users (section 8).
 Each check is PASS, FAIL or NOT TESTED, with the evidence. "Simulated" means automated
 tests in headless Chrome on macOS using synthetic key and pointer events
-(`tests/player-test.html`, 302 checks, 0 failed; `tests/pages-test.html`, 77 checks, 0 failed;
+(`tests/player-test.html`, 320 checks, 0 failed; `tests/pages-test.html`, 77 checks, 0 failed;
 `decoder-test.html?auto=1`, 20 self-tests, 0 failed; all on 2026-11-14).
 
 ## Results
@@ -107,6 +107,26 @@ recognition cannot be tested headless.
 Not tested: speech recognition with a real microphone; the back-and-forth listening in built-in voice mode;
 how well spoken requests are recognised for different accents; Terra with a real screen reader; the
 first-visit question read aloud.
+
+## 11. Screen-reader simulation (added 2026-11-14)
+
+`tools/sr_sim.py` reads Chrome's accessibility tree (what screen readers use), presses Tab and keys, and
+records every live announcement. Problems it found and how each was solved are listed in docs/LOG.md
+(session 4). After the fixes:
+
+| # | Check | Result | Evidence |
+|---|---|---|---|
+| 11.1 | Holding or quickly pressing arrow keys | PASS (simulated, 4 frames) | 6 fast presses: 2 announcements (the first step and where you stop); the tone changes on every step. |
+| 11.2 | Repeated steps are shorter | PASS | "About 31 °C, near the equator, 0°, 176° W." while moving; the variable name returns after 5 s. |
+| 11.3 | Edge | PASS | First time "Edge of the map, left side, west. …", then "Edge. …"; fast presses into the edge still name it once. |
+| 11.4 | Map name on focus | PASS | "Map: Sea Surface Temperature", description "Arrow keys explore. W says where you are. Question mark lists every key." |
+| 11.5 | Focus after the first question | PASS | Main heading (h1). |
+| 11.6 | Error page | PASS | Title and heading "Frame not found"; alert heard (assertive). |
+| 11.7 | No double announcement of the volume | PASS (by design) | The visual percentage is hidden from screen readers; the slider says "40 percent". |
+| 11.8 | No stale live text when browsing | PASS | The live region empties 6 s after each announcement. |
+
+Not tested: the same with VoiceOver, NVDA, JAWS or TalkBack. The simulator cannot reproduce a screen
+reader's own key handling (browse mode, quick navigation), speech timing, or verbosity settings.
 
 ## Could not verify
 

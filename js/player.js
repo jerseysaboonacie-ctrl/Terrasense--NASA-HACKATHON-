@@ -106,9 +106,13 @@ function latToY(lat) {
 // ---------------------------------------------------------------------------
 
 /** Put text in the live region. A changing invisible suffix makes repeats get read again. */
+let liveClearTimer = 0;
 function setLive(text) {
-  const same = els.live.textContent.replace(/ $/, '') === text;
-  els.live.textContent = same && !els.live.textContent.endsWith(' ') ? text + ' ' : text;
+  const same = els.live.textContent.replace(/ $/, '') === text;
+  els.live.textContent = same && !els.live.textContent.endsWith(' ') ? text + ' ' : text;
+  // Empty it again after a while, so browsing to the end of the page does not read a stale message.
+  clearTimeout(liveClearTimer);
+  liveClearTimer = setTimeout(() => { els.live.textContent = ''; }, 6000);
 }
 
 /**
@@ -178,7 +182,7 @@ function toggleMute() {
  *   force     play the no-data click even if we were already in no data
  *   prefix    words before the narration, e.g. "Warmest ocean area, 1 of 5: "
  */
-function showPoint({ announce: when = false, hold, force = false, prefix = '', suffix = '', detail = prefs.detail } = {}) {
+function showPoint({ announce: when = false, hold, force = false, prefix = '', suffix = '', detail = prefs.detail, onSpoken } = {}) {
   if (!frame || !point) return;
   const r = decodeAt(frame, point.x, point.y);
   last = r;
@@ -210,7 +214,9 @@ function showPoint({ announce: when = false, hold, force = false, prefix = '', s
 
   clearTimeout(narrateTimer);
   const sentence = prefix + d.narration + (suffix ? ' ' + suffix : '');
-  if (when === 'now') say(sentence);
+  const speakNow = () => { say(sentence); if (onSpoken) onSpoken(); };
+  if (when === 'now') speakNow();
+  else if (when === 'keys') narrateTimer = setTimeout(speakNow, S.keyRepeatMs);
   else if (when === 'later') narrateTimer = setTimeout(() => announce(sentence), S.narrationDelayMs);
 }
 
@@ -354,6 +360,9 @@ els.wrap.addEventListener('pointerleave', () => {
 // Keyboard
 // ---------------------------------------------------------------------------
 
+let lastKeyMove = -Infinity;  // time of the last arrow-key step
+let lastEdgeSpoken = null;    // the edge named in the last spoken step, if any
+
 const EDGE_NAMES = {
   ArrowLeft: 'left side, west', ArrowRight: 'right side, east',
   ArrowUp: 'top, far north', ArrowDown: 'bottom, far south',
@@ -373,19 +382,31 @@ els.wrap.addEventListener('keydown', (e) => {
   stopScan(false);
   const act = () => {
     let prefix = '';
+    // Fast or held arrow keys: the tone follows every step, speech waits for the keys to stop.
+    // Steps soon after another step leave out the variable name (Normal detail).
+    const now = performance.now();
+    const rapid = move && now - lastKeyMove < S.keyRepeatMs;
+    const recent = move && now - lastKeyMove < S.compactWithinMs;
+    if (move) lastKeyMove = now;
+    let edgeKey = null;
     if (move) {
       const a = frame.meta.mapArea;
       const nx = Math.min(a.x + a.width - 1, Math.max(a.x, point.x + move[0]));
       const ny = Math.min(a.y + a.height - 1, Math.max(a.y, point.y + move[1]));
       // Already at the edge: say so, with a bump, instead of staying silent.
       if ((move[0] && nx === point.x) || (move[1] && ny === point.y)) {
-        prefix = `Edge of the map, ${EDGE_NAMES[e.key]}. `;
+        edgeKey = e.key;
+        // Again at the same edge: just "Edge." (the bump says the rest).
+        prefix = lastEdgeSpoken === e.key && recent ? 'Edge. ' : `Edge of the map, ${EDGE_NAMES[e.key]}. `;
         cue('edge', xFraction(nx));
       }
       point.x = nx;
       point.y = ny;
     }
-    showPoint({ announce: 'now', hold: S.keyToneSeconds, force: replay || Boolean(prefix), prefix });
+    const detail = recent && prefs.detail === 'normal' ? 'compact' : prefs.detail;
+    // Remember the edge only once its sentence is actually spoken (fast presses skip some).
+    const onSpoken = move ? () => { lastEdgeSpoken = edgeKey; } : undefined;
+    showPoint({ announce: rapid ? 'keys' : 'now', hold: S.keyToneSeconds, force: replay || Boolean(prefix), prefix, detail, onSpoken });
   };
   if (isStarted()) act(); else ensureAudio().then(act);
 });
@@ -908,7 +929,7 @@ function demoSteps() {
     steps.push([35, () => compare()]);
   }
   steps.push([44, () => els.summaryBtn.click()]);
-  steps.push([S.demoSeconds, () => { finishDemo(); say(`Demo finished. Now try it yourself: Tab to the map and use the arrow keys, or press T for the tour.`); }]);
+  steps.push([S.demoSeconds, () => { finishDemo(); say(`Demo finished. Now try it yourself: use the Skip to the map link at the top of the page and the arrow keys, or press T for the tour.`); }]);
   return steps;
 }
 
@@ -1073,6 +1094,18 @@ function assistantApi() {
 // Start-up
 // ---------------------------------------------------------------------------
 
+/**
+ * An error that stops the Player from opening: say so in the title and the
+ * heading (read first on load), and set the alert just after load, when a
+ * screen reader is ready to announce it.
+ */
+function pageError(heading, message) {
+  document.title = heading + ' – Jukebox Player';
+  els.title.textContent = heading;
+  els.status.textContent = '';
+  setTimeout(() => showError(message), 500);
+}
+
 async function init() {
   buildRowOptions();
   if (!speechSupported()) {
@@ -1094,13 +1127,13 @@ async function init() {
   try {
     frames = await loadFrameList();
   } catch (err) {
-    showError('The frame list could not be loaded. ' + err.message + '. If you opened this file directly, run a local server (see README).');
+    pageError('Frame list not found', 'The frame list could not be loaded. ' + err.message + '. If you opened this file directly, run a local server (see README).');
     return;
   }
   const id = new URLSearchParams(location.search).get('frame') || frames[0].id;
   const meta = frames.find((f) => f.id === id);
   if (!meta) {
-    showError(`There is no frame called "${id}". Choose one from the gallery.`);
+    pageError('Frame not found', `There is no frame called "${id}". Choose one from the gallery.`);
     els.intro.textContent = 'No frame is open.';
     return;
   }
@@ -1116,7 +1149,7 @@ async function init() {
   els.title.textContent = meta.title;
   els.date.textContent = meta.date;
   document.title = meta.title + ' – Jukebox Player';
-  els.wrap.setAttribute('aria-label', `Map: ${meta.title}, ${dateInSentence(meta)}. Arrow keys explore.`);
+  els.wrap.setAttribute('aria-label', `Map: ${meta.title}`);
   els.infoVariable.textContent = `${meta.variable} (${meta.units})`;
   els.infoDate.textContent = meta.date;
   buildLegendText(meta);
@@ -1130,13 +1163,13 @@ async function init() {
   try {
     frame = await loadFrame(meta);
   } catch (err) {
-    showError('This frame could not be loaded. ' + err.message);
+    pageError('Frame could not be loaded', 'This frame could not be loaded. ' + err.message);
     return;
   }
   els.status.textContent = '';
   // Opening message, once the page has settled (a screen reader reads the
   // page title first; this polite message follows it).
-  setTimeout(() => saidSomething || window.__welcomeOpen || say(`Player ready: ${meta.title}. Press T for a tour, or Tab to the map and use the arrow keys.`), 1000);
+  setTimeout(() => saidSomething || window.__welcomeOpen || say(`Player ready: ${meta.title}. Press T for a tour, or use the Skip to the map link at the top of the page, then the arrow keys.`), 1000);
 
   els.canvas.width = frame.width;
   els.canvas.height = frame.height;
@@ -1157,7 +1190,7 @@ async function init() {
     if (mode === 'off') return;
     say(`${mode === 'voice' ? 'Built-in voice on.' : 'Screen reader mode.'} ${meta.title} is open. ` +
       'Press V at any time and tell Terra, the assistant, what you want, for example "where am I" or "take me to Japan". ' +
-      'Or press T for a tour, or Tab to the map and use the arrow keys.');
+      'Or press T for a tour, or use the Skip to the map link at the top of the page, then the arrow keys.');
   });
 
   // Read-only hooks for the automated tests in tests/player-test.html.

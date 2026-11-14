@@ -82,12 +82,14 @@
       const step = Math.max(1, Math.round(W / 100));
       record(id, 'Arrow key moves the pointer', s.point.x === before + step, `x ${before} → ${s.point.x} (step ${step})`);
       key(wrap, 'ArrowRight', { shiftKey: true });
-      await wait(100);
+      await wait(500);
       record(id, 'Shift + arrow moves faster', st().point.x === before + step * 9, `x → ${st().point.x}`);
       s = st();
       record(id, 'Audio starts on a key press', s.audio.started, 'started = ' + s.audio.started);
       const live = s.live.replace(/ $/, '');
-      record(id, 'Narration matches the panel exactly', live === s.narrationLine && live.includes(s.infoValue) && live.includes(s.infoPlace),
+      // Exactly the panel's "Last announcement" line; contains the Value and Place fields (a value that starts
+      // the sentence gets a capital letter, so that part ignores case).
+      record(id, 'Narration matches the panel exactly', live === s.narrationLine && live.toLowerCase().includes(s.infoValue.toLowerCase()) && live.includes(s.infoPlace),
         `live: "${live}"`);
 
       // 3. Grid of points: higher value -> higher pitch, same scale; pan follows x
@@ -430,6 +432,7 @@
       const st = w.__jukebox.getState();
       record('(first visit)', 'Asks how to hear the site before anything else', open && focusIn && buttons.length === 3 && !narrBefore.startsWith('Player ready'),
         `dialog open ${open}, focus inside ${focusIn}; ${buttons.join(' | ')}; "${dlg && dlg.getAttribute('aria-labelledby')}"`);
+      record('(first visit)', 'After choosing, focus goes to the main heading', doc.activeElement === doc.querySelector('main h1'), `focus on ${doc.activeElement.tagName} "${doc.activeElement.textContent.slice(0, 40)}"`);
       record('(first visit)', 'Key 3 chooses text only; asked only once', !doc.querySelector('dialog.welcome-dialog') && st.prefs.voiceMode === 'off' &&
         doc.querySelector('input[value="off"]').checked && localStorage.getItem(WELCOMED) === '1', `voiceMode ${st.prefs.voiceMode}`);
       const w2 = await load('../player.html?frame=sst');
@@ -442,6 +445,7 @@
       const w = await load('../player.html?frame=does-not-exist');
       for (let i = 0; i < 30 && !w.document.getElementById('alert').textContent; i++) await wait(100);
       const al = w.document.getElementById('alert');
+      record('(bad id)', 'Unknown frame: title and heading say so', w.document.title.startsWith('Frame not found') && w.document.getElementById('frame-title').textContent === 'Frame not found', w.document.title);
       record('(bad id)', 'Unknown frame: clear message in the alert region', /no frame called/i.test(al.textContent) && al.getAttribute('role') === 'alert',
         `role="${al.getAttribute('role')}": ${al.textContent}`);
     }
@@ -515,7 +519,7 @@
       const dsel = doc.getElementById('detail-select');
       dsel.value = 'short'; dsel.dispatchEvent(new Event('change'));
       J.moveTo(vx, vy);
-      record(id, 'Detail short: value only', st().narrationLine === st().infoValue + '.', `"${st().narrationLine}"`);
+      record(id, 'Detail short: value only', st().narrationLine.toLowerCase() === st().infoValue.toLowerCase() + '.' && /^[A-Z0-9−-]/.test(st().narrationLine), `"${st().narrationLine}"`);
       dsel.value = 'full'; dsel.dispatchEvent(new Event('change'));
       J.moveTo(vx, vy);
       record(id, 'Detail full: adds legend position', st().narrationLine.includes(st().infoPlace) && /\d+ percent of the way up the legend\.$/.test(st().narrationLine),
@@ -524,19 +528,53 @@
 
       // Edges: arrow key at the edge says so and bumps
       wrap.focus();
-      key(wrap, 'ArrowRight'); await wait(150); // starts audio
+      key(wrap, 'ArrowRight'); await wait(500); // starts audio
       J.moveTo(0, Math.floor(H / 2));
       const e0 = st().audio.cues.edge || 0;
-      key(wrap, 'ArrowLeft'); await wait(100);
+      key(wrap, 'ArrowLeft'); await wait(500);
       const atLeft = st();
       J.moveTo(Math.floor(W / 2), 0);
-      key(wrap, 'ArrowUp'); await wait(100);
+      key(wrap, 'ArrowUp'); await wait(500);
       const atTop = st();
-      key(wrap, 'ArrowDown'); await wait(100);
+      key(wrap, 'ArrowDown'); await wait(500);
       record(id, 'Edge of the map announced with a bump',
         atLeft.narrationLine.startsWith('Edge of the map, left side, west.') && atTop.narrationLine.startsWith('Edge of the map, top, far north.') &&
         (atTop.audio.cues.edge || 0) === e0 + 2 && !st().narrationLine.startsWith('Edge'),
         `"${atLeft.narrationLine.slice(0, 70)}…"; bumps ${e0} → ${atTop.audio.cues.edge}; moving away: "${st().narrationLine.slice(0, 40)}…"`);
+
+      // Held or fast arrow keys: tone on every step, one announcement at the end; repeated edge = "Edge."
+      J.moveTo(Math.floor(W / 2), Math.floor(H / 2));
+      await wait(S.compactWithinMs + 100); // a pause, so the first step is a fresh one
+      const said = [];
+      const liveEl = doc.getElementById('live');
+      const mo = new w.MutationObserver(() => { const t = liveEl.textContent.trim(); if (t) said.push(t); });
+      mo.observe(liveEl, { childList: true, characterData: true, subtree: true });
+      const freqs = [];
+      for (let k = 0; k < 6; k++) { key(wrap, 'ArrowRight'); await wait(60); freqs.push(st().audio.frequency); }
+      await wait(S.keyRepeatMs + 250);
+      const endPlace = st().infoPlace;
+      record(id, 'Fast arrow keys: one announcement at the end, tone on every step',
+        said.length === 2 && said[1].includes(endPlace) && !said[1].startsWith(meta.spokenName) && said[0].startsWith(meta.spokenName),
+        `${said.length} announcements for 6 presses: ${said.map((t) => '"' + t.slice(0, 50) + '…"').join(' then ')}`);
+      said.length = 0;
+      J.moveTo(0, Math.floor(H / 2));
+      key(wrap, 'ArrowLeft'); await wait(500);
+      key(wrap, 'ArrowLeft'); await wait(500);
+      // Fast presses that run into the edge: the full edge sentence is still said once
+      const firstEdgePair = said.slice(0, 2);
+      key(wrap, 'ArrowRight'); await wait(500);
+      said.length = 0;
+      for (let k = 0; k < 6; k++) { key(wrap, 'ArrowLeft'); await wait(60); }
+      await wait(S.keyRepeatMs + 250);
+      const fastEdge = said[said.length - 1] || '';
+      mo.disconnect();
+      record(id, 'Fast presses into the edge still name the edge once', fastEdge.startsWith('Edge of the map, left side, west.'), `"${fastEdge.slice(0, 60)}…"`);
+      said.length = 0; said.push(...firstEdgePair);
+      record(id, 'Second press at the same edge says just "Edge."', said.length === 2 && said[0].startsWith('Edge of the map, left side, west.') && said[1].startsWith('Edge. '),
+        said.map((t) => '"' + t.slice(0, 40) + '…"').join(' then '));
+      const mapName = wrap.getAttribute('aria-label');
+      const mapDesc = doc.getElementById(wrap.getAttribute('aria-describedby')).textContent;
+      record(id, 'Map has a short name and description', mapName === `Map: ${meta.title}` && mapDesc.split(' ').length <= 15, `"${mapName}" / "${mapDesc}"`);
 
       // Where am I
       J.moveTo(vx, vy);

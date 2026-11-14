@@ -307,7 +307,7 @@ button.big-button { border-radius: var(--radius); }
 .summary-box { border-left: 4px solid var(--accent); padding: 2px 0 2px 10px; margin: 8px 0; }
 .summary-box h3 { margin-top: 4px; }
 .compare-result { font-weight: 600; min-height: 1.5em; }
-.info-panel .label { margin: 0; text-transform: uppercase; letter-spacing: 0.04em; }
+.info-panel .label { margin: 0; font-weight: 600; } /* no text-transform: some screen readers spell out capitals */
 .mark-pin {
   position: absolute; width: 22px; height: 22px; margin: -11px 0 0 -11px;
   border-radius: 50%; background: #fff; color: #000; border: 2px solid #000;

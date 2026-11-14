@@ -66,6 +66,9 @@ export function askVoiceModeIfNeeded(onChosen = () => {}) {
     dlg.remove();
     stopSpeaking();
     announcePrefsChanged();
+    // Put focus somewhere useful: the page's main heading, so reading continues from the content.
+    const h1 = document.querySelector('main h1');
+    if (h1) { h1.tabIndex = -1; h1.focus(); }
     onChosen(mode);
   };
 

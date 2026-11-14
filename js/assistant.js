@@ -81,10 +81,9 @@ export function createAssistant({ container, say, commands = [], help = '', head
   container.setAttribute('aria-labelledby', 'assistant-heading');
   container.innerHTML = `
     <${h} id="assistant-heading">Ask Terra, the assistant</${h}>
-    <p class="muted small" id="assistant-help">Press <strong>V</strong> or Talk, then say what you want, for example
-      "where am I", "take me to Japan" or "compare here with the coolest". Or type it. Say "help" for more.</p>
+    <p class="muted small" id="assistant-help">Press V, or Talk, and say what you want, or type it. Say "help" for examples.</p>
     <div class="button-row">
-      <button type="button" id="talk-btn" aria-pressed="false">Talk to Terra (V)</button>
+      <button type="button" id="talk-btn" aria-pressed="false" accesskey="v">Talk to Terra (V)</button>
     </div>
     <form id="ask-form" class="control-row">
       <label for="ask-input">Or type a request</label>

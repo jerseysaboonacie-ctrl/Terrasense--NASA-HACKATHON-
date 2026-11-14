@@ -120,6 +120,17 @@ Explain this sound, Summary, Go to warmest / Next warmest / Go to coolest, Compa
 "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome" --autoplay-policy=no-user-gesture-required http://localhost:8000/tests/player-test.html
 ```
 
+`tools/sr_sim.py` is a screen-reader simulation: it drives Chrome through the DevTools protocol and prints
+what a screen reader would get: the page in reading order from Chrome's accessibility tree (what VoiceOver,
+NVDA and JAWS read), what each Tab stop announces, and every live announcement while keys are pressed.
+Standard library only; run it with the site served on port 8931:
+
+```sh
+python3 tools/sr_sim.py            # Home page: reading order and the first Tab stops
+```
+
+Import `ScreenReaderSim` from it to script longer walks (open, read, tab, key, type_text, heard).
+
 These tests check our code. They do not replace testing with real screen readers, real
 phones, and blind and low-vision people.
 
@@ -171,6 +182,7 @@ data/frames.json         one entry per frame: facts, legend table, no-data color
 data/accuracy.json       real MUR values at the ten-point pixels, with source and date
 data/countries.json      country names and simplified borders (Natural Earth, public domain)
 tools/build_countries.py builds data/countries.json from Natural Earth
+tools/sr_sim.py          screen-reader simulation (accessibility tree, Tab order, live announcements)
 frames/<id>/             self-hosted frame images and NASA colorbars
 tools/build_legends.py   rebuilds the legend tables from NASA's colorbars (needs Pillow)
 tools/legend_report.py   finds colors that could be confused

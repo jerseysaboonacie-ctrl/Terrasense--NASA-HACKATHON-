@@ -58,7 +58,7 @@
         <div class="button-row">
           <button id="tour-btn" type="button">Tour (T)</button>
           <button id="summary-btn" type="button">Summary</button>
-          <button id="where-btn" type="button" class="secondary">Where am I? (W)</button>
+          <button id="where-btn" type="button" class="secondary" accesskey="w">Where am I? (W)</button>
           <button id="demo-btn" type="button" class="secondary" aria-pressed="false">Demo, 1 minute (D)</button>
         </div>
         <div id="summary-box" class="summary-box" hidden>
@@ -74,7 +74,7 @@
       <!-- Frame area -->
       <section class="area-frame" aria-label="Map">
         <div id="frame-wrap" class="frame-wrap" tabindex="0" role="application"
-             aria-roledescription="map" aria-describedby="frame-help layout-text">
+             aria-roledescription="map" aria-describedby="map-desc">
           <canvas id="frame-canvas" aria-hidden="true"></canvas>
           <div id="cursor" class="cursor" hidden></div>
           <div id="marker-a" class="mark-pin" hidden aria-hidden="true">A</div>
@@ -86,6 +86,8 @@
           With a mouse, click or move; on a touch screen, drag a finger.
         </p>
         <p id="layout-text" class="muted small"></p>
+        <!-- What a screen reader says on reaching the map: short, because it is read every time. -->
+        <span id="map-desc" hidden>Arrow keys explore. W says where you are. Question mark lists every key.</span>
       </section>
 
       <!-- Info panel: what is under the pointer -->
@@ -142,7 +144,7 @@
         <div class="control-row">
           <label for="volume">Volume</label>
           <input type="range" id="volume" min="0" max="100" step="5" value="30" aria-valuetext="30 percent">
-          <output id="volume-out" for="volume">30%</output>
+          <span id="volume-out" aria-hidden="true">30%</span>
         </div>
         <p class="muted small">Keys: minus and plus change the volume.</p>
         <div class="control-row">
@@ -213,6 +215,7 @@
           <tr><td>T</td><td>Start the tour, or go to its next step</td></tr>
           <tr><td>D</td><td>Start or stop the one-minute demo</td></tr>
           <tr><td>V</td><td>Talk to Terra, the assistant (press again to stop listening)</td></tr>
+          <tr><td>Alt + Shift + V, Alt + Shift + W</td><td>Talk to Terra, Where am I, from anywhere, even when a screen reader uses V and W itself (Chrome and Edge on Windows; access keys differ by browser)</td></tr>
           <tr><td>S</td><td>Start or stop the scan</td></tr>
           <tr><td>M</td><td>Mute or unmute</td></tr>
           <tr><td>Minus, plus</td><td>Volume down, volume up</td></tr>
@@ -223,7 +226,7 @@
           <tr><td>Tab</td><td>Leave the map and go to the controls</td></tr>
         </tbody>
       </table>
-      <p>Letter keys work anywhere on this page except in a menu. With a screen reader, they reach the page when the map has focus, or in focus (forms) mode.</p>
+      <p>Letter keys work anywhere on this page except in a menu or text box. With a screen reader they reach the page when the map has focus (the map passes keys through) or in focus (forms) mode; in browse mode your screen reader may use them for its own navigation. The buttons and access keys always work.</p>
       <form method="dialog"><button>Close</button></form>
     </dialog>
   </main>

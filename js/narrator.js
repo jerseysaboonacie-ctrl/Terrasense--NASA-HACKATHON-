@@ -22,12 +22,16 @@ export function regionName(lat) {
  *   short   the value only ("about 28 °C")
  *   normal  variable, value and place (the default)
  *   full    normal, plus how far up the legend the value is
+ *   compact value and place, no variable name (used for repeated arrow-key steps)
  */
 export function describeResult(meta, r, detail = 'normal') {
   const value = r.status === 'value' ? r.text : `no data, ${r.reason}`;
   const place = `${regionName(r.lat)}, ${describePlace(r.lon, r.lat)}`;
   let narration = `${meta.spokenName}: ${value}, ${place}.`;
-  if (detail === 'short') narration = `${value}.`;
+  // Short and compact sentences start with the value, so give it a capital (a sentence cue for screen readers).
+  const capValue = value.charAt(0).toUpperCase() + value.slice(1);
+  if (detail === 'short') narration = `${capValue}.`;
+  else if (detail === 'compact') narration = `${capValue}, ${place}.`;
   else if (detail === 'full' && r.status === 'value') {
     narration += ` ${Math.round(r.t * 100)} percent of the way up the legend.`;
   }

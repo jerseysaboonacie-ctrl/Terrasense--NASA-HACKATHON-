@@ -7,7 +7,7 @@ same format (newest first under **History**) and tick your tasks in **Your tasks
 Status words: **Done** (built and tested), **Partly done** (some of it exists, see notes),
 **Not started**, **Yours** (only a person can do it).
 
-Last updated: 2026-11-14 16:46 (+07), session 3 finished (commit 458e64d).
+Last updated: 2026-11-14 17:30 (+07), session 4 in progress.
 
 ---
 
@@ -15,6 +15,68 @@ Last updated: 2026-11-14 16:46 (+07), session 3 finished (commit 458e64d).
 
 Live progress, newest session first, newest line at the bottom of each session. Times are the
 laptop's clock (+07). Each phase has an estimate; the heartbeat says when it actually started and finished.
+
+### Session 4: 2026-11-14 evening (in progress)
+
+**Task (from you):** simulate a screen reader as well as possible, find problems, fix them, and explain the
+intended solution for each.
+
+| Phase | What | Estimate | Status |
+|---|---|---|---|
+| 1 | Build a screen-reader simulator: Chrome's accessibility tree (what VoiceOver and NVDA read), Tab order, and every live announcement | 40 min | Done (17:15 to 17:20) |
+| 2 | Use every page as a blind user would and record what is heard | 30 min | Done (17:20) |
+| 3 | List the problems and the intended solution for each | 20 min | Done (17:20) |
+| 4 | Fix them | 40 min | Done (17:20 to 17:30) |
+| 5 | Re-run the simulation and all tests, docs, log, commit | 40 min | In progress |
+
+Total estimate: about 2 hours 50 minutes.
+
+- 17:15: Started.
+- 17:20: Simulator built (`tools/sr_sim.py`) and run on all six pages (first visit, browse mode, Tab, map keys,
+  Terra by typing, errors). What works: one h1 per page, landmarks, the skip link, the first question is a
+  proper modal dialog (only its 3 choices are reachable), every map key gives a polite announcement that
+  matches the panel, the help dialog returns focus to the map, Terra's typed answers are announced.
+  Problems found, each with the intended solution:
+  1. Holding an arrow key (or pressing it quickly) queues one announcement per step; the user hears places
+     they already left, for seconds. Solution: the tone still follows every step instantly, but speech
+     waits until the keys stop (about 0.35 s), then says only where you ended up.
+  2. Every step repeats "Sea surface temperature:". Solution: while you keep moving with the keys, steps say
+     only value and place; the variable name comes back after a 5 s pause (Normal detail only).
+  3. Pressing an arrow at the edge again repeats the whole edge sentence. Solution: the first time says
+     "Edge of the map, left side, west. …"; further presses at the same edge say just "Edge." with the bump.
+  4. Tabbing onto the map reads about 90 words (label plus two paragraphs) every time. Solution: short name
+     "Map: Sea Surface Temperature" and short description "Arrow keys explore. W says where you are.
+     Question mark lists every key." The layout text stays on screen, in the intro and in the tour.
+  5. After answering the first question, focus goes nowhere (to the page body), so a screen reader user is
+     lost. Solution: move focus to the page's main heading, so reading continues from the top of the content.
+  6. The volume number is an <output>, which browsers treat as a live region, so changing the volume would
+     be announced twice ("40%" and "Volume 40 percent"). Solution: hide the visual number from screen
+     readers; the slider itself says "40 percent".
+  7. A wrong frame address shows the error as an alert during page load, when screen readers are busy reading
+     the page and may skip it; the title still says "Jukebox Player". Solution: the title and heading become
+     "Frame not found", and the alert is set half a second after load.
+  8. Letter keys (V, T, D, M, S, B, C) are also screen-reader quick-navigation keys in browse mode (NVDA:
+     T table, D landmark, B button, V visited link...), so outside the map they may never reach the page.
+     Solution: keep them on the map (it passes keys through), and give Talk to Terra and Where am I access
+     keys (Alt+Shift+V, Alt+Shift+W in Chrome on Windows), which work in browse mode. Documented.
+  9. The opening message says "Tab to the map", but the map is 20 Tab stops down. Solution: say "use the
+     Skip to the map link at the top", which is one step.
+  10. Announcements stay in the hidden live region, so browsing to the end of the page reads a stale message.
+     Solution: clear the live region 6 s after each announcement.
+  11. "LAST ANNOUNCEMENT" is uppercase by CSS, which some screen readers spell out. Solution: normal case.
+  12. Terra's instructions (35 words) are read before every page's content. Solution: shorten to one line.
+  Phase 4 (fixes) started.
+- 17:30: All 12 fixed. Re-running the simulation found two more, both fixed:
+  13. Short and compact sentences started in lower case after a full stop ("west. about 31 °C").
+      Solution: they start with a capital ("west. About 31 °C"), a sentence cue for screen readers.
+  14. My fix for problem 3 remembered the edge when the key was pressed, so after fast presses into the
+      edge the first thing said was "Edge." and the full sentence was never heard. Solution: remember the
+      edge only when its sentence is actually spoken. Added a test for it.
+  After the fixes, the simulation hears: 14 fast presses give 2 announcements (was 14); "Edge of the map,
+  left side, west." once, then "Edge."; the map announces as "Map: Sea Surface Temperature" with a 12-word
+  description (was about 90 words); focus lands on the main heading after the first question; the error page
+  title is "Frame not found" and the alert is heard; nothing stale at the end of the page.
+  Phase 5 started: full test run.
 
 ### Session 3: 2026-11-14 afternoon (finished)
 

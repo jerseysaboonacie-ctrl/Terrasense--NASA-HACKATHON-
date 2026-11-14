@@ -76,6 +76,8 @@ export const SETTINGS = {
   referenceSeconds: 1,      // low / middle / high reference tones
   keyToneSeconds: 0.6,      // how long a tone plays after a key press
   narrationDelayMs: 600,    // wait this long after the pointer stops before announcing
+  keyRepeatMs: 350,         // arrow presses closer than this: speak only once the keys stop
+  compactWithinMs: 5000,    // keep moving within this time: steps leave out the variable name
 
   // Optional vibration (Android browsers; not iPhone).
   vibration: { threshold: 0.9, pulseMs: 40 },
