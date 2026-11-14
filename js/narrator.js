@@ -73,6 +73,7 @@ export function speechSupported() {
 let speechGen = 0;        // bumps on every new speak() or stop, so old events are ignored
 let active = 0;           // utterances of the current speak() still to finish
 let speakingUntil = 0;    // time limit for `active`
+let speakStarted = 0;     // when the current speak() began
 const keep = [];          // references, so Chrome does not drop utterances (and their end events)
 let voice = null;
 
@@ -109,7 +110,11 @@ export function canSpeakNow() {
 
 /** True while the built-in voice is reading something we asked it to read. */
 export function isSpeaking() {
-  return active > 0 && performance.now() < speakingUntil;
+  if (active <= 0 || performance.now() >= speakingUntil) return false;
+  // Chrome's own flag can stay stuck at true, but when it says false (after a moment to start), speech is over.
+  const synth = speechSupported() ? window.speechSynthesis : null;
+  if (synth && !synth.speaking && !synth.pending && performance.now() - speakStarted > 700) { active = 0; return false; }
+  return true;
 }
 
 /** Speak text, cutting off anything still being spoken. onEnd runs when it has all been read. */
@@ -121,6 +126,7 @@ export function speak(text, rate = 1, onEnd) {
   keep.length = 0;
   const parts = chunksForSpeech(text);
   active = parts.length;
+  speakStarted = performance.now();
   // About 150 words a minute at rate 1, plus a margin.
   speakingUntil = performance.now() + (text.split(/\s+/).length / (2.5 * rate)) * 1000 + 3000;
   parts.forEach((part, i) => {

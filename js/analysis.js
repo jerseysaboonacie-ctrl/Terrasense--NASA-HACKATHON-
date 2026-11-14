@@ -64,14 +64,19 @@ export function analyseFrame(frame) {
     }
   }
 
-  // Areas with enough data, each with the point closest to its average
-  // (a typical point for the area, not a single noisy pixel).
+  // Areas with enough data. Each gets two points to stand on: one near the top
+  // of its values (90th percentile, for "warmest") and one near the bottom
+  // (10th percentile, for "coolest"): close to the extreme, but never a single
+  // stray pixel. (The point closest to the average could be a middling value
+  // in a patchy area, e.g. scattered light rain.)
   const valid = [];
   for (const c of cells.values()) {
     if (c.n < MIN_POINTS || c.n / c.total < MIN_COVERAGE) continue;
     c.meanT = c.sumT / c.n;
     c.meanV = c.sumV / c.n;
-    c.rep = c.points.reduce((best, p) => (Math.abs(p.t - c.meanT) < Math.abs(best.t - c.meanT) ? p : best));
+    const sorted = c.points.slice().sort((p, q) => p.t - q.t);
+    c.repHigh = sorted[Math.floor(0.9 * (sorted.length - 1))];
+    c.repLow = sorted[Math.floor(0.1 * (sorted.length - 1))];
     valid.push(c);
   }
 
@@ -79,8 +84,8 @@ export function analyseFrame(frame) {
     points: points.length,
     total,
     grid: [cols, rows],
-    high: distinctAreas(valid.slice().sort((p, q) => q.meanT - p.meanT)),
-    low: distinctAreas(valid.slice().sort((p, q) => p.meanT - q.meanT)),
+    high: distinctAreas(valid.slice().sort((p, q) => q.meanT - p.meanT)).map((c) => ({ ...c, rep: c.repHigh })),
+    low: distinctAreas(valid.slice().sort((p, q) => p.meanT - q.meanT)).map((c) => ({ ...c, rep: c.repLow })),
     bands: latitudeBands(meta, points, frame),
   };
 }

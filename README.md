@@ -84,8 +84,9 @@ offered because none of our frames has dated versions yet; see Known limitations
 
 How it is computed (`js/analysis.js`): the frame is decoded on a grid of about 512 × 256 points.
 Points are grouped into 5° × 5° areas; an area counts if at least 25% of its points have a value.
-Areas are ranked by their average legend position; each is represented by its most typical point
-(the one closest to the area average), and "next" areas must be at least 15° away. The
+Areas are ranked by their average legend position; Go to stands on a point near the top of the area's
+values (90th percentile) for "warmest" and near the bottom (10th percentile) for "coolest", so it lands
+on a high or low value without chasing a single stray pixel; "next" areas must be at least 15° away. The
 equator-to-pole pattern compares 10° latitude bands (average value; for precipitation, the share
 of the area with precipitation). Differences are computed from the rounded values that are
 announced, so the spoken numbers add up; a value at the end of a legend makes the difference
@@ -216,6 +217,21 @@ python3 -m venv .venv && .venv/bin/pip install -r tools/requirements.txt
 .venv/bin/python tools/build_legends.py
 python3 tools/legend_report.py
 ```
+
+## Updating the frames to NASA's latest data
+
+```sh
+python3 tools/update_frames.py --check   # what is new at NASA
+python3 tools/update_frames.py           # download it into frames/ and update data/frames.json
+```
+
+Frames with a fixed "latest" address at NASA (`updateUrl` in frames.json: sea surface temperature, precipitation,
+vegetation) are downloaded, checked to be the same kind and size of picture, and their `imageUpdated`,
+`downloaded` and `date` are updated. The tool also downloads the date image NASA publishes with them
+(`frames/sst/frame-dated.jpg`, `frames/precip/date-stamp.png`): read it and put the data date in `date`.
+The air temperature frame is a 2023 preview still with no latest version, so it is left alone. The site
+itself never downloads anything, so the demo still works offline. After updating: open each frame in the
+Player, run the tests, and commit.
 
 ## Data sources
 

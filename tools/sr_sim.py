@@ -179,11 +179,11 @@ def describe(node):
 
 
 class ScreenReaderSim:
-    def __init__(self, base):
+    def __init__(self, base, extra_args=(), headless=True):
         self.base = base.rstrip('/')
         self.profile = tempfile.mkdtemp(prefix='srsim-')
-        self.proc = subprocess.Popen([CHROME, '--headless=new', f'--remote-debugging-port={PORT}', f'--user-data-dir={self.profile}',
-                                      '--autoplay-policy=no-user-gesture-required', '--window-size=1280,1000', 'about:blank'],
+        self.proc = subprocess.Popen([CHROME, *(['--headless=new'] if headless else []), f'--remote-debugging-port={PORT}', f'--user-data-dir={self.profile}',
+                                      '--autoplay-policy=no-user-gesture-required', '--window-size=1280,1000', *extra_args, 'about:blank'],
                                      stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
         for _ in range(100):
             try:

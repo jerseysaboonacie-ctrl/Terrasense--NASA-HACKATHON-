@@ -9,8 +9,8 @@
       "spokenName": "Sea surface temperature",
       "terms": {"high": "warmest", "low": "coolest", "higher": "warmer", "lower": "cooler", "area": "ocean area"},
       "units": "°C",
-      "date": "Data date not stated (image updated 2026-11-05)",
-      "dateNote": "The date is not printed on this image. SVS file sst_mur_no-dates_most_recent_print.jpg, last modified 2026-11-05 13:48 UTC, downloaded 2026-11-05.",
+      "date": "12 Nov 2026",
+      "dateNote": "Date printed on NASA's dated copy of this same image (frames/sst/frame-dated.jpg, sst_mur_most_recent_print.jpg, updated 2026-11-13 13:19 UTC); the map pixels of the two images match. Image updated 2026-11-13 13:32 UTC, downloaded 2026-11-14.",
       "listenFor": "Find the warmest ocean water.",
       "image": "frames/sst/frame.jpg",
       "imageSize": [1024, 512],
@@ -204,7 +204,13 @@
         {"color": [76, 26, 30], "value": 34.5, "t": 0.9875},
         {"color": [74, 25, 29], "value": 34.75, "t": 0.9938},
         {"color": [72, 25, 27], "value": 35.0, "t": 1.0}
-      ]
+      ],
+      "updateUrl": "https://svs.gsfc.nasa.gov/vis/a000000/a005100/a005101/sst_mur_no-dates_most_recent_print.jpg",
+      "dateTemplate": "Image updated {updated} (data date printed on NASA's dated copy, frames/sst/frame-dated.jpg)",
+      "imageUpdated": "2026-11-13 13:32 UTC",
+      "downloaded": "2026-11-14",
+      "dateImageUrl": "https://svs.gsfc.nasa.gov/vis/a000000/a005100/a005101/sst_mur_most_recent_print.jpg",
+      "dateImage": "frames/sst/frame-dated.jpg"
     },
     {
       "id": "t2m",
@@ -575,7 +581,9 @@
         {"color": [4, 75, 31], "value": 0.98, "t": 0.98},
         {"color": [2, 75, 31], "value": 0.99, "t": 0.99},
         {"color": [2, 69, 28], "value": 1.0, "t": 1.0}
-      ]
+      ],
+      "updateUrl": "https://svs.gsfc.nasa.gov/vis/a000000/a005500/a005544/nrtndvi_equi_print.jpg",
+      "dateTemplate": "Latest frame, image updated {updated}"
     },
     {
       "id": "precip",
@@ -591,8 +599,8 @@
         "area": "precipitation area"
       },
       "units": "mm/hour",
-      "date": "2026-11-05 09:30",
-      "dateNote": "As printed on the SVS date overlay that comes with this frame (frames/precip/date-stamp.png). The time zone is not stated. Downloaded 2026-11-05.",
+      "date": "2026-11-14 06:30",
+      "dateNote": "As printed on NASA's date overlay for this frame (frames/precip/date-stamp.png, imergert_dates.now.png). The time zone is not stated. Image updated 2026-11-14 11:50 UTC, downloaded 2026-11-14.",
       "listenFor": "Find the heaviest rain.",
       "image": "frames/precip/frame.png",
       "imageSize": [3600, 1800],
@@ -646,7 +654,13 @@
         {"color": [90, 47, 217], "value": 5.0, "high": 10, "family": "frozen", "t": 0.6818},
         {"color": [115, 33, 187], "value": 10, "high": 20, "family": "frozen", "t": 0.7727},
         {"color": [140, 20, 156], "value": 20, "high": null, "family": "frozen", "t": 0.8636}
-      ]
+      ],
+      "updateUrl": "https://svs.gsfc.nasa.gov/vis/a000000/a004200/a004285/imergert_alpha.now.png",
+      "dateImageUrl": "https://svs.gsfc.nasa.gov/vis/a000000/a004200/a004285/imergert_dates.now.png",
+      "dateImage": "frames/precip/date-stamp.png",
+      "dateTemplate": "Latest frame, image updated {updated} (data time on NASA's date overlay)",
+      "imageUpdated": "2026-11-14 11:50 UTC",
+      "downloaded": "2026-11-14"
     }
   ]
 }

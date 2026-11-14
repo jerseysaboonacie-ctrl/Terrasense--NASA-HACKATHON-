@@ -493,13 +493,34 @@
       record(T, 'Ignores its own words coming back through the microphone', s.assistantLog.length === logBefore,
         `heard "${echoText.slice(0, 50)}…": log ${logBefore} → ${s.assistantLog.length}`);
 
-      mic.voice.endAfterMs = 1500;
+      // While Terra talks: still listening; ignores phrases without "Terra"; "Terra, ..." interrupts it
+      mic.voice.endAfterMs = 4000;
+      let sessions = mic.insts.length;
       mic.active().hear('where am I');
-      await wait(600);
-      const pausedOk = !mic.active();
+      await wait(700);
+      const stillListening = Boolean(mic.active()) && mic.insts.length === sessions;
+      const talking = st().narrationLine;
+      mic.active().hear('summary');
+      await wait(500);
+      const ignoredWhileTalking = st().narrationLine === talking;
+      mic.active().hear('Terra, can you hear me');
+      await wait(700);
       mic.voice.endAfterMs = 20;
-      await wait(2200);
-      record(T, 'Pauses listening while it talks, then listens again', pausedOk && Boolean(mic.active()), `paused while talking ${pausedOk}, listening again ${Boolean(mic.active())}`);
+      record(T, 'Keeps listening while it talks; only "Terra, ..." gets through then', stillListening && ignoredWhileTalking && st().narrationLine.startsWith("Yes, I'm listening."),
+        `listening while talking ${stillListening}, "summary" ignored ${ignoredWhileTalking}, then "${st().narrationLine.slice(0, 40)}"`);
+      await wait(800);
+
+      // People talking in the room: no answer, nothing moves
+      const p0 = st().point, l0 = st().assistantLog.length, n1 = mic.spoken.length;
+      s = await hear('yeah that is right we should go up to the slides and finish them tomorrow before the deadline', 600);
+      s = await hear('what do you say', 600);
+      s = await hear('I think so', 600);
+      record(T, 'Room conversation gets no reply and moves nothing', s.point.x === p0.x && s.point.y === p0.y && s.assistantLog.length === l0 && mic.spoken.length === n1 &&
+        /stayed quiet/.test(doc.getElementById('assistant-heard').textContent), `log ${l0} → ${s.assistantLog.length}, spoken ${mic.spoken.length - n1}, pointer unchanged ${s.point.x === p0.x}`);
+      s = await hear('Terra, flibbertigibbet', 700);
+      record(T, 'Something said to Terra by name that it does not know gets "Sorry"', s.narrationLine.startsWith('Sorry, I did not catch "flibbertigibbet"'), `"${s.narrationLine.slice(0, 60)}"`);
+      s = await hear('move right a bit', 900);
+      record(T, 'A real short request without the name still works', s.narrationLine.length > 0 && s.point.x > p0.x, `x ${p0.x} → ${s.point.x}`);
 
       doc.getElementById('wake-toggle').click();
       const before = st().narrationLine;

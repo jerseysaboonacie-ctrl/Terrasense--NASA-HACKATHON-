@@ -90,7 +90,8 @@
       <li>Terra can ask you something back, for example after the summary: "Would you like me to take you to the warmest ocean area?" Answer yes or no.</li>
       <li>When you talk to Terra, it answers out loud with the built-in voice, whatever the Voice setting, so you always hear it. A line under the switch shows what Terra heard ("Heard: …"). If you use a screen reader and would rather hear Terra through it, untick "Terra answers out loud".</li>
       <li>Say its name any time: "Terra, are you still listening?" ("Yes, I'm listening."), "hey Terra, where am I?", or just "Terra" ("Yes? I'm listening."). Also "can you hear me?" and "are you there?".</li>
-      <li>Terra does not listen while it is talking. Wait for it to finish, then speak.</li>
+      <li>Terra keeps listening while it talks, but ignores what it hears then unless it starts with "Terra" (which interrupts it). Usually, wait for it to finish, then speak.</li>
+      <li>In a busy room Terra hears people talking. It stays quiet unless it hears a request it knows (short phrases such as "where am I" or "next") or its name. Long sentences without "Terra" count as conversation. To ask anything else, start with "Terra".</li>
       <li>In the Player, changing frame (the Frame menu, or "open the rain map") happens in the same page, so Terra keeps listening and keeps its voice.</li>
       <li>Browsers only let a page speak after you have pressed a key, clicked or tapped on it. If Terra opens the Player from another page, it keeps listening, and a note asks you to press a key or tap once so it can answer out loud (a screen reader still hears it before that).</li>
       <li>Terra stays on when it opens another page for you (for example "open the rain map"), and stays on until you switch it off or close the tab. The microphone is only used while Terra is on.</li>
@@ -100,6 +101,15 @@
       <li>Terra is not a general AI and does not send your requests to an AI service. It understands a fixed set of requests, uses the same functions as the buttons, and only says values decoded from the map.</li>
       <li>Speech recognition is done by your browser. In Chrome and Edge it uses an online service, so it needs an internet connection; Firefox does not offer it. Typing works everywhere, also offline.</li>
     </ul>
+
+    <h3>If Terra does not answer</h3>
+    <ol>
+      <li>Use Chrome, Edge or Safari, opened at the site's address (for example http://localhost:8931). A preview inside a code editor cannot use the microphone, and Firefox has no speech recognition.</li>
+      <li>Press "Check the microphone" (or say "Terra, check the microphone"). It listens for 3 seconds, then asks you to speak once, and tells you: whether any sound reaches the page, and whether speech recognition turned it into words.</li>
+      <li>"Sound: no" means the microphone is muted, the wrong one is chosen, or the browser has no permission (on a Mac: System Settings, Privacy and Security, Microphone, then allow your browser).</li>
+      <li>Sound yes but no words: Chrome and Edge need an internet connection for speech recognition. Speak closer to the microphone.</li>
+      <li>Watch the line under the switch: "Heard: …" shows each phrase Terra caught and what it did with it (answered, stayed quiet, or ignored because it was talking).</li>
+    </ol>
 
     <h2>Touch</h2>
     <p>Drag a finger across the map to hear it. The page does not scroll while you drag on the map. The tone stops when you lift your finger. Tap the map five times quickly in one spot to hear where you are, including the nearest country.</p>

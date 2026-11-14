@@ -5,7 +5,7 @@ run again on 2026-11-13 after adding Summary, Go to and Compare (section 7), and
 2026-11-13 after the navigation work for blind users (section 8).
 Each check is PASS, FAIL or NOT TESTED, with the evidence. "Simulated" means automated
 tests in headless Chrome on macOS using synthetic key and pointer events
-(`tests/player-test.html`, 338 checks, 0 failed; `tests/pages-test.html`, 77 checks, 0 failed;
+(`tests/player-test.html`, 341 checks, 0 failed; `tests/pages-test.html`, 77 checks, 0 failed;
 `decoder-test.html?auto=1`, 20 self-tests, 0 failed; all on 2026-11-14).
 
 ## Results
@@ -150,6 +150,18 @@ Tested with a stand-in speech recognizer and microphone inside headless Chrome (
 
 Not tested: a real microphone, real speech recognition accuracy, and how often room noise or a screen reader
 on speakers is heard as a request.
+
+## 13. Real microphone, and the newest NASA frames (added 2026-11-14)
+
+| # | Check | Result | Evidence |
+|---|---|---|---|
+| 13.1 | Chrome's real speech recognition on this Mac | PASS | Real microphone, real recognizer: text within 1 to 2 s. |
+| 13.2 | Terra in a noisy room (real microphone) | PASS after fixes | Before: Terra answered room conversation with spoken "Sorry…", stopped listening while saying it, and lost the real request; a casual "right" moved the map. After: about 100 phrases of conversation in 50 s, none answered, nothing moved, no errors. |
+| 13.3 | Terra answering a recognised spoken request with real audio | NOT SHOWN with real audio | Test phrases played from the speakers were drowned out by people near the microphone. The same code path passes with the stand-in recognizer (section 12). |
+| 13.4 | Check the microphone | PASS (real microphone) | "Sound: yes, I can hear your microphone. Speech recognition: works. I heard: …" |
+| 13.5 | Newest frames | PASS | Sea surface temperature: NASA's image of 2026-11-13, data for 12 Nov 2026 (date from NASA's dated copy; map pixels match, mean difference 0.02 of 255). Precipitation: image of 2026-11-14 11:50 UTC, data time 2026-11-14 06:30 from NASA's date overlay. Vegetation: unchanged at NASA. Air temperature: no newer version exists. |
+| 13.6 | New sea temperature image against real data (MUR 2026-11-12) | PASS | 335 points: median error 0.70 °C, worst 2.83 °C, all within one legend step. |
+| 13.7 | Decoder and Player with the new frames | PASS | 20 of 20 self-tests; 341 of 341 Player checks. Go to warmest and coolest now stand near the top or bottom of the area (90th or 10th percentile): on every frame, no independent grid point decodes beyond them. |
 
 ## Could not verify
 

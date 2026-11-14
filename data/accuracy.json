@@ -1,6 +1,8 @@
 {
   "about": "Real sea surface temperature at the ten-point check pixels, for the table on How it works. The page decodes each pixel live with the site's own decoder and compares it with these values. Copied from docs/accuracy-check.md, section 3.",
   "frame": "sst",
+  "image": "frames/sst/frame-2026-11-05.jpg",
+  "imageNote": "The sea temperature image downloaded on 2026-11-05, kept for this check. The Player shows a newer image.",
   "reference": {
     "name": "JPL MUR SST v4.1",
     "date": "2026-11-04",

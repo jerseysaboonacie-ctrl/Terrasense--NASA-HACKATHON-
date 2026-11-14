@@ -21,6 +21,18 @@ JPL MUR SST v4.1 (NOAA CoastWatch ERDDAP, dataset `jplMURSST41`).
 The frame matches the 2026-11-04 analysis slightly better, but the frame itself carries
 no date, so we do not claim one.
 
+### Re-check with the newest image (2026-11-14)
+
+The sea temperature frame was updated to NASA's newest image (data for 12 Nov 2026, date read from NASA's
+dated copy of the same image; the map pixels of the two match). Same method, same 32 × 16 grid:
+
+| MUR day | Ocean points | Mean error | Median error | 95th percentile | Worst | Within one legend step (5 °C) |
+|---|---|---|---|---|---|---|
+| 2026-11-12 | 335 | +0.03 °C | 0.70 °C | 1.37 °C | 2.83 °C | 100% |
+
+The ten-point table below, and the one on How it works, still use the image of 2026-11-05 (kept as
+`frames/sst/frame-2026-11-05.jpg`), because that is the image those points were checked on.
+
 ## 2. Automatic self-tests (all frames)
 
 Run in Chrome by `decoder-test.html?auto=1`. All passed.

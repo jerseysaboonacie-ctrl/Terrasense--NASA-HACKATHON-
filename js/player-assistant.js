@@ -117,7 +117,8 @@ export function playerCommands(api) {
       } },
     { name: 'mark', match: (t) => t.match(/ mark (?:this |here |it )?(?:as )?(?:point )?(a|b) /),
       run: (ctx, m) => { const p = api.point(); api.markAt(m[1].toUpperCase(), p.x, p.y); } },
-    { name: 'next warmest', match: (t) => has(t, 'next', 'another', 'another one', 'the next one', 'one more'),
+    // Short phrases only, so "next week" in a conversation does not count.
+    { name: 'next warmest', match: (t) => words(t) <= 4 && has(t, 'next', 'another', 'another one', 'the next one', 'one more'),
       run: () => { api.goTo('high', api.highIndex() + 1); } },
     { name: 'coolest', match: (t) => has(t, ...LOW()) && !has(t, 'summary'),
       run: () => { api.goTo('low', 0); } },
@@ -161,12 +162,16 @@ export function playerCommands(api) {
       run: (ctx, m, t) => api.rateBy(has(t, 'slower', 'slow down') ? -1 : 1) },
     { name: 'go to a place', match: async (t, text) => { await ready; return findPlace(countries, text, api.lonLat(api.point().x, api.point().y).lon); },
       run: (ctx, place) => goToPlace(place) },
-    { name: 'move', match: (t) => Object.keys(DIRS).find((d) => has(t, d)),
+    // "move north", "go left a bit", or just "north": not any sentence that contains "right" or "up".
+    { name: 'move', match: (t) => (has(t, 'move', 'go', 'head', 'step', 'nudge', 'shift', 'pan', 'jump') || words(t) <= 3) && Object.keys(DIRS).find((d) => has(t, d)),
       run: (ctx, dir, t) => { const [dx, dy] = DIRS[dir]; const n = amount(t); api.moveBy(dx * n, dy * n); } },
-    { name: 'value here', match: (t) => asksValue(t) && has(t, 'here', 'there', 'now', 'it', 'this') ,
+    { name: 'value here', match: (t) => words(t) <= 8 && asksValue(t) && has(t, 'here', 'there', 'now', 'it', 'this'),
       run: () => { const p = api.point(); api.show(p.x, p.y, { prefix: '' }); } },
   ];
 }
+
+/** Number of words in normalised text. */
+function words(t) { return t.trim().split(' ').filter(Boolean).length; }
 
 /** Lower case, letters and digits only (keeps word order for splitting "X and Y"). */
 function normalise2(text) {

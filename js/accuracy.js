@@ -21,7 +21,9 @@ function cell(tr, text) {
 
 try {
   const acc = await (await fetch('data/accuracy.json', { cache: 'no-cache' })).json();
-  const meta = (await loadFrameList()).find((f) => f.id === acc.frame);
+  const listed = (await loadFrameList()).find((f) => f.id === acc.frame);
+  // The check was done on one particular image; use that one, not the newest frame.
+  const meta = { ...listed, image: acc.image || listed.image };
   const frame = await loadFrame(meta);
   const info = meta.legendInfo;
   const ref = acc.reference;

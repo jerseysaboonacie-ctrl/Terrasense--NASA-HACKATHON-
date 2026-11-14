@@ -7,7 +7,7 @@ same format (newest first under **History**) and tick your tasks in **Your tasks
 Status words: **Done** (built and tested), **Partly done** (some of it exists, see notes),
 **Not started**, **Yours** (only a person can do it).
 
-Last updated: 2026-11-14 18:47 (+07), session 6 finished.
+Last updated: 2026-11-14 19:14 (+07), session 7 in progress.
 
 ---
 
@@ -15,6 +15,44 @@ Last updated: 2026-11-14 18:47 (+07), session 6 finished.
 
 Live progress, newest session first, newest line at the bottom of each session. Times are the
 laptop's clock (+07). Each phase has an estimate; the heartbeat says when it actually started and finished.
+
+### Session 7: 2026-11-14 night (in progress)
+
+**Report (from you):** Terra still does not respond with a real microphone. Also: make sure the images are
+updated with the latest data.
+
+| Phase | What | Estimate | Status |
+|---|---|---|---|
+| 1 | Real-microphone test: Chrome's real speech recognition, fed with real recorded speech through a fake microphone device (macOS "say" makes the recordings) | 40 min | Done (19:01 to 19:14) |
+| 2 | Fix what it shows; a "Check the microphone" button that shows the sound level and each step, so any remaining problem is visible | 45 min | Done (19:14) |
+| 3 | Latest data: an update tool that downloads NASA's newest frames, then refresh the frames and re-check them | 45 min | In progress |
+| 4 | Tests, docs, log, commit | 30 min | Waiting |
+
+- 19:01: Started. The earlier tests used a stand-in for speech recognition, which cannot show what goes wrong
+  with a real microphone. This time the real recognizer is used.
+- 19:14: What the real-microphone tests showed (Chrome's real speech recognition, your Mac's real microphone):
+  - Chrome's recognition works on this Mac: it turns speech into text within a second or two.
+  - Note: Chrome ignores the "fake microphone" sound file for speech recognition and uses the real
+    microphone, so the first probe picked up people talking in the room. Nothing of it was kept or used.
+    Later runs only counted what Terra heard and printed nothing of the room.
+  - The real bug: the room is noisy, and Terra answered every bit of conversation it heard with a spoken
+    "Sorry, I did not catch …". While saying that, it stopped listening, and restarting the listener took
+    up to 4 s, so the actual question was lost. A casual "right" or "up" in someone's sentence also moved
+    the map. Exactly what you saw: Terra seemed not to respond.
+  - Fixes: (1) Terra stays quiet about anything that is not a request it knows (unless you start with
+    "Terra"), and sentences over 8 words without "Terra" are treated as conversation; (2) Terra keeps
+    listening while it talks, ignores its own voice, and a request starting with "Terra" interrupts it;
+    (3) "move", "next" and "what is the value" need short, clear phrases; (4) a supported English variant
+    for recognition (your browser's variant, e.g. en-TH, might not be), falling back to en-US; (5) after
+    repeated unexplained errors Terra says so instead of failing silently; (6) "is Terra speaking" also
+    trusts Chrome when it says speech has ended.
+  - After the fixes, a 50 s real-microphone run in the noisy room: about 100 phrases of conversation heard,
+    none answered, nothing moved, no errors. My test phrases played from the speakers were drowned out by
+    the people near the microphone, so the last step (Terra answering a recognised request) could not be
+    shown with real audio here; it is the same code the stand-in tests check, which pass (112 of 112).
+  - New: "Check the microphone" button (and "Terra, check the microphone"): measures the sound level, then
+    runs one recognition, and says and shows the result. Run on this Mac: "Sound: yes … Speech recognition:
+    works. I heard: …".
 
 ### Session 6: 2026-11-14 evening (finished)
 
