@@ -7,7 +7,7 @@ same format (newest first under **History**) and tick your tasks in **Your tasks
 Status words: **Done** (built and tested), **Partly done** (some of it exists, see notes),
 **Not started**, **Yours** (only a person can do it).
 
-Last updated: 2026-11-14 17:30 (+07), session 4 in progress.
+Last updated: 2026-11-14 17:40 (+07), session 4 finished.
 
 ---
 
@@ -16,7 +16,7 @@ Last updated: 2026-11-14 17:30 (+07), session 4 in progress.
 Live progress, newest session first, newest line at the bottom of each session. Times are the
 laptop's clock (+07). Each phase has an estimate; the heartbeat says when it actually started and finished.
 
-### Session 4: 2026-11-14 evening (in progress)
+### Session 4: 2026-11-14 evening (finished)
 
 **Task (from you):** simulate a screen reader as well as possible, find problems, fix them, and explain the
 intended solution for each.
@@ -27,9 +27,9 @@ intended solution for each.
 | 2 | Use every page as a blind user would and record what is heard | 30 min | Done (17:20) |
 | 3 | List the problems and the intended solution for each | 20 min | Done (17:20) |
 | 4 | Fix them | 40 min | Done (17:20 to 17:30) |
-| 5 | Re-run the simulation and all tests, docs, log, commit | 40 min | In progress |
+| 5 | Re-run the simulation and all tests, docs, log, commit | 40 min | Done (17:30 to 17:40) |
 
-Total estimate: about 2 hours 50 minutes.
+Total estimate: about 2 hours 50 minutes. Actual: finished 17:40 (laptop clock).
 
 - 17:15: Started.
 - 17:20: Simulator built (`tools/sr_sim.py`) and run on all six pages (first visit, browse mode, Tab, map keys,
@@ -77,6 +77,11 @@ Total estimate: about 2 hours 50 minutes.
   description (was about 90 words); focus lands on the main heading after the first question; the error page
   title is "Frame not found" and the alert is heard; nothing stale at the end of the page.
   Phase 5 started: full test run.
+- 17:40: One check compared the Value field ("about 27 °C") with the narration, which now starts with a capital
+  ("About 27 °C"); made that comparison ignore case. Final: 320 of 320 Player checks, 77 of 77 page checks.
+  Committed. Docs: README (simulator), Accessibility page (access keys, fast arrow keys), verification.md
+  section 11. Still needs a person: VoiceOver, NVDA and TalkBack, which the simulator cannot reproduce
+  (browse-mode keys, speech timing, verbosity).
 
 ### Session 3: 2026-11-14 afternoon (finished)
 
@@ -294,6 +299,10 @@ Tick these as you go and add a line under History with what you found.
 ## History
 
 Newest first. Claude's entries name the commit so you can see exactly what changed.
+
+### 2026-11-14: Screen-reader simulation and fixes (Claude, commit 98a17b6)
+- New `tools/sr_sim.py`. It found 14 problems; all fixed (see session 4 above for each problem and solution).
+- Tests: 320 of 320 Player checks, 77 of 77 page checks.
 
 ### 2026-11-14: Terra, first-visit question, countries in Where am I (Claude, commit 458e64d)
 - Terra, the voice assistant (V, on every page; speak or type), with follow-up questions and back-and-forth
