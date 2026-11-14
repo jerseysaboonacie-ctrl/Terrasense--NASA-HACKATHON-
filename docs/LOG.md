@@ -7,7 +7,7 @@ same format (newest first under **History**) and tick your tasks in **Your tasks
 Status words: **Done** (built and tested), **Partly done** (some of it exists, see notes),
 **Not started**, **Yours** (only a person can do it).
 
-Last updated: 2026-11-14 16:34 (+07), session 3 in progress.
+Last updated: 2026-11-14 16:46 (+07), session 3 finished (commit 458e64d).
 
 ---
 
@@ -16,7 +16,7 @@ Last updated: 2026-11-14 16:34 (+07), session 3 in progress.
 Live progress, newest session first, newest line at the bottom of each session. Times are the
 laptop's clock (+07). Each phase has an estimate; the heartbeat says when it actually started and finished.
 
-### Session 3: 2026-11-14 afternoon (in progress)
+### Session 3: 2026-11-14 afternoon (finished)
 
 **Task (from you):** (1) "Where am I" by tapping the map 5 times on a phone, listed with the keys;
 "you are here" also names a nearby country, e.g. "south-west of Israel". (2) When the site opens, first ask:
@@ -30,9 +30,9 @@ person can simply tell what they want, with back-and-forth conversation.
 | 3 | First-visit question on every page: built-in voice / screen reader / off | 30 min | Done (code; tested in phase 6) |
 | 4 | Assistant core: talk (speech recognition) or type, conversation log, back-and-forth | 60 min | Done (code; tested in phase 6) |
 | 5 | Assistant commands: Player (where, go to a country, warmest, compare, scan, volume, frames...) and other pages | 60 min | Done (code; tested in phase 6) |
-| 6 | Tests, docs, log, commit | 45 min | In progress |
+| 6 | Tests, docs, log, commit | 45 min | Done (16:34 to 16:46) |
 
-Total estimate: about 4 hours 10 minutes, finishing around 20:40.
+Total estimate: about 4 hours 10 minutes, finishing around 20:40. Actual: finished 16:46 (laptop clock).
 
 - 16:26: Started. Downloaded Natural Earth 1:50m country borders (public domain) for the
   country names; checking how to make them small enough to load quickly and work offline.
@@ -55,6 +55,16 @@ Total estimate: about 4 hours 10 minutes, finishing around 20:40.
   - Decision: Terra understands a fixed set of requests (no AI service). A real AI model would need an
     API key and a server, which this static site does not have; the brief forbids keys in the code.
   Phase 6 (tests) started.
+- 16:46: Tests. First full run: everything passed except Terra's tests, which could not start (my test loaded the
+  place code from the wrong folder). Fixed in the site code: `places.js` now finds its data relative to itself.
+  Then 2 real problems on all four maps: "use the built-in voice" did nothing (typed and spoken text says
+  "built-in" with a hyphen; Terra only knew "built in"), fixed; and a test that looked for a log line that had
+  already scrolled out of the 30-line log, fixed in the test.
+  Final: 302 of 302 Player checks, 77 of 77 page checks. Your Israel example: "About 100 km west of Israel."
+  Committed as 458e64d. Docs: Accessibility page (first question, Terra, five taps and the screen-reader
+  caveat on phones), README, Credits (Natural Earth), verification.md section 10.
+  Not tested by me: talking to Terra with a real microphone, the back-and-forth listening, accents,
+  real screen readers and phones.
 
 ### Session 2: 2026-11-14 morning (finished)
 
@@ -206,6 +216,8 @@ Tick these as you go and add a line under History with what you found.
 - [ ] Screen reader test (about 20 min): VoiceOver (Mac: Cmd + F5), NVDA (Windows) or TalkBack (Android). Eyes closed: open the Player, take the tour (T), get the summary, jump to the warmest area, press W, walk into an edge, compare two places, change volume with minus and plus, mute, change frame. Try each Voice setting once. Note where you got lost, heard nothing, or heard two voices, and whether the letter keys reached the page.
 - [ ] By-eye check: open `decoder-test.html?frame=sst&fill=1` (then `t2m`, `ndvi`, `precip`), type the value you read from the colorbar for each row, and paste the Markdown export into `docs/accuracy-check.md`.
 - [ ] Check the Summary against the picture for each frame (does the "warmest" place look warmest?).
+- [ ] Talk to Terra with a real microphone in Chrome (press V): try "where am I", "take me to Japan", "compare Brazil and Norway", "summary" then "yes", "open the rain map". Note what it misheard or did not understand, and send me the exact words so I can add them.
+- [ ] On a phone with TalkBack or VoiceOver on: does the first question read well, and can you reach "Talk to Terra" and "Where am I?"
 - [ ] Listen to the Demo (press D) and the sound cues with headphones: are the chimes and ticks clear, not annoying? Try High contrast and Large text.
 - [ ] Test on a real phone with headphones: drag on the map, sound start, volume.
 - [ ] Test in a second browser (Safari or Firefox).
@@ -220,6 +232,14 @@ Tick these as you go and add a line under History with what you found.
 ## History
 
 Newest first. Claude's entries name the commit so you can see exactly what changed.
+
+### 2026-11-14: Terra, first-visit question, countries in Where am I (Claude, commit 458e64d)
+- Terra, the voice assistant (V, on every page; speak or type), with follow-up questions and back-and-forth
+  listening in built-in voice mode. A fixed set of requests, not an AI service (no API key or server).
+- First visit: "How would you like to hear this site?" (built-in voice, screen reader, text only).
+- Where am I names the nearest country; five quick taps on the map = Where am I.
+- Tests: 302 of 302 Player checks, 77 of 77 page checks.
+- Not tested: real microphone and speech recognition, real screen readers, phones, people.
 
 ### 2026-11-14: Sound cues, display, demo, accuracy table, wording (Claude, commit fdd5c0d)
 - Sound cues (scan chimes, jump, A/B ticks, still-fade), High contrast / Large text / Reduce motion on every page,
