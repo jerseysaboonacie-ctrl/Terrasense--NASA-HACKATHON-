@@ -7,7 +7,7 @@ same format (newest first under **History**) and tick your tasks in **Your tasks
 Status words: **Done** (built and tested), **Partly done** (some of it exists, see notes),
 **Not started**, **Yours** (only a person can do it).
 
-Last updated: 2026-11-14 10:49 (+07), session 2 in progress.
+Last updated: 2026-11-14 10:51 (+07), session 2 finished (commit fdd5c0d).
 
 ---
 
@@ -16,7 +16,7 @@ Last updated: 2026-11-14 10:49 (+07), session 2 in progress.
 Live progress, newest session first, newest line at the bottom of each session. Times are the
 laptop's clock (+07). Each phase has an estimate; the heartbeat says when it actually started and finished.
 
-### Session 2: 2026-11-14 morning (in progress)
+### Session 2: 2026-11-14 morning (finished)
 
 **Task (from you):** apply the remaining changes: sound cues, display settings, Demo mode,
 the 10-point table on How it works, and the wording fixes.
@@ -28,9 +28,9 @@ the 10-point table on How it works, and the wording fixes.
 | 3 | Display settings: high contrast, large text, reduced motion (remembered, in Reset) | 30 min | Done (code; tested in phase 6) |
 | 4 | Demo mode: 60-second guided run with Stop | 40 min | Done (code; tested in phase 6) |
 | 5 | 10-point accuracy table on How it works | 20 min | Done (code; tested in phase 6) |
-| 6 | Tests for everything new, all tests re-run, docs, log, commit | 35 min | In progress |
+| 6 | Tests for everything new, all tests re-run, docs, log, commit | 35 min | Done (10:11 to 10:51) |
 
-Total estimate: about 3 hours 10 minutes, finishing around 13:15.
+Total estimate: about 3 hours 10 minutes, finishing around 13:15. Actual: finished 10:51, well inside the estimate.
 
 - 10:06: Started. Plan and estimates written above.
 - 10:08: Phase 1 done. "color" is now the only spelling (175 replacements in pages, code, tools and docs;
@@ -55,6 +55,11 @@ Total estimate: about 3 hours 10 minutes, finishing around 13:15.
 - 10:49: The re-run timed out too, with no checks recorded at all. Chrome's console showed why: a mistake in
   my new test code (a variable named twice), so the test page never started. The site itself was not at
   fault. Fixed; the test page now also posts its progress after every check. Re-running.
+- 10:51: All tests pass: 214 of 214 Player checks (29 new), 73 of 73 page checks, 20 of 20 decoder self-tests.
+  The full one-minute demo ran to the end (60.5 s). Committed as fdd5c0d. Docs updated: README,
+  Accessibility page, How it works, verification.md section 9.
+  Not tested by me (needs you): how the cues and the demo sound to a person, high contrast for a
+  low-vision user, a real screen reader, a real phone.
 
 ### Session 1: 2026-11-13 evening (finished)
 
@@ -112,19 +117,19 @@ Total estimate: about 2.5 hours, finishing around 23:45. Actual: 2 hours, finish
 | Narration for every action, with a Voice mode switch | Claude | Done (simulated) | 2026-11-13, commit 3c29d96. Voice switch (Screen reader / Built-in voice / Off, one voice at a time), opening message, Where am I (W), edges, volume keys, errors in an alert region, detail levels, mouse moves not announced by default, touch reads on lift. Not done: announcing a frame change inside the page (changing frame reloads the page, which then gives the opening message). Needs a real screen reader test. |
 | Summary, Go to warmest, Go to coolest, Next warmest, Compare | Claude | Done | 2026-11-13. All facts computed from decoded values. 109 automated checks pass. SST summary checked against real MUR data (docs/verification.md, section 7). Still to do by a person: check the Summary against the picture by eye. |
 | First-time guide read aloud (Tour, T key) | Claude | Done (simulated) | 2026-11-13, commit 3c29d96. Six steps; layout text built from frames.json and shown under the map. Wording not yet checked by a blind listener. |
-| Sound cues for land, edges and no data | Claude | Partly done | Done: soft click for no data/land, edge bump, error tone, Sound cues on/off. Missing: scan start/end chimes, jump chime, A/B ticks, fade after about 1 s of stillness. |
-| Accuracy check shown on How it works | Claude + you | Partly done | The page states the MUR comparison (0.7 °C typical, 1.8 °C worst). Missing: the table of 10 points. The "by eye" column needs a person (see Your tasks). |
+| Sound cues for land, edges and no data | Claude | Done (simulated) | 2026-11-14, commit fdd5c0d. Click for no data, edge bump, error tone, scan start/end chimes, jump note, A/B ticks, fade after 1 s of stillness, Sound cues on/off. Cue sounds were counted by the tests, not judged by ear. |
+| Accuracy check shown on How it works | Claude + you | Done for SST; by eye is yours | 2026-11-14: ten-point table decoded live and compared with MUR (10 of 10 within one legend step, worst 2.0 °C), plus 2 no-data rows. The "by eye" column still needs a person (see Your tasks). |
 | Test with a real screen reader | Yours | Not started | See Your tasks. Nothing has been tried with VoiceOver, NVDA or TalkBack yet. |
 
 ### Tier 2: do next
 
 | Item | Owner | Status | Notes |
 |---|---|---|---|
-| Settings panel (speech speed, detail level, high contrast, large text, reduced motion), remembered, Reset button | Claude | Partly done | Done 2026-11-13: voice, speech speed, detail, volume, sound cues, mouse announcements; remembered; Reset. Missing: high contrast, large text, reduced motion switches (the site already follows the system's dark mode). |
-| 60-second Demo mode with Stop | Claude | Not started | |
+| Settings panel (speech speed, detail level, high contrast, large text, reduced motion), remembered, Reset button | Claude | Done (simulated) | Voice, speech speed, detail, volume, sound cues, mouse announcements (2026-11-13); high contrast, large text, reduced motion on every page (2026-11-14). All remembered; Reset clears them. |
+| 60-second Demo mode with Stop | Claude | Done (simulated) | 2026-11-14: D key or button. Tones, equator scan, warmest, coolest, compare, summary; Escape or Stop demo. Full run tested on SST; start and stop on all four frames. |
 | Two more frames with checked legends | Claude + you | Not started | Candidates found on 2026-11-05, both from the same SVS gallery: SST Anomaly (SVS 5176) and GEOS-FP Near-Surface Wind Speed (SVS 5148). The wind legend is transparent below about 4 m/s, which needs care. Each needs its 10-point check. |
-| Wording: one spelling of color | Claude | Not started | Headings say "color"; the approximate-values note says "colors". |
-| Wording: legend readout shows the matched range | Claude | Not started | Today: "Legend color: matched legend color". Plan: e.g. "Legend range: 28 to 30 °C". |
+| Wording: one spelling of color | Claude | Done | 2026-11-14: "color" everywhere (pages, code, tools, docs). |
+| Wording: legend readout shows the matched range | Claude | Done | 2026-11-14: "On the legend: between the 25 and 30 °C marks" (printed tick marks); a class for precipitation; percent from Low to High for NDVI. |
 | Quotes from blind or low-vision testers, with consent | Yours | Not started | |
 
 ### Tier 3: only if ahead
@@ -146,7 +151,7 @@ Total estimate: about 2.5 hours, finishing around 23:45. Actual: 2 hours, finish
 
 | Issue | Owner | Status | Notes |
 |---|---|---|---|
-| SST date is the image's update date, not the data date | Claude | Open | The site says "Most recent frame on 2026-11-05". The image has no data date. It fits the MUR analysis for 2026-11-04 slightly better, but we cannot claim that. Fix: say "data date not stated; image updated 2026-11-05". |
+| SST date is the image's update date, not the data date | Claude | Fixed | The site says "Most recent frame on 2026-11-05". The image has no data date. It fits the MUR analysis for 2026-11-04 slightly better, but we cannot claim that. Fixed 2026-11-14: "Data date not stated (image updated 2026-11-05)". |
 | Player reading order differs from the plan | Claude | Fixed | 2026-11-13: title, Start here (voice, tour, summary, where am I, frame), map, readout, find and compare, controls, legends. Controls stay after the map, so the map is reached sooner. |
 | Navigation on a coarse grid with row/column, and two sliders for phones | Claude | Not started | Today the arrow keys move 1% of the map width per press. |
 | Feedback contact on the Accessibility page | Yours | Open | Needs an email address or form link. |
@@ -161,6 +166,7 @@ Tick these as you go and add a line under History with what you found.
 - [ ] Screen reader test (about 20 min): VoiceOver (Mac: Cmd + F5), NVDA (Windows) or TalkBack (Android). Eyes closed: open the Player, take the tour (T), get the summary, jump to the warmest area, press W, walk into an edge, compare two places, change volume with minus and plus, mute, change frame. Try each Voice setting once. Note where you got lost, heard nothing, or heard two voices, and whether the letter keys reached the page.
 - [ ] By-eye check: open `decoder-test.html?frame=sst&fill=1` (then `t2m`, `ndvi`, `precip`), type the value you read from the colorbar for each row, and paste the Markdown export into `docs/accuracy-check.md`.
 - [ ] Check the Summary against the picture for each frame (does the "warmest" place look warmest?).
+- [ ] Listen to the Demo (press D) and the sound cues with headphones: are the chimes and ticks clear, not annoying? Try High contrast and Large text.
 - [ ] Test on a real phone with headphones: drag on the map, sound start, volume.
 - [ ] Test in a second browser (Safari or Firefox).
 - [ ] Try the demo with Wi-Fi off on the demo laptop.
@@ -174,6 +180,13 @@ Tick these as you go and add a line under History with what you found.
 ## History
 
 Newest first. Claude's entries name the commit so you can see exactly what changed.
+
+### 2026-11-14: Sound cues, display, demo, accuracy table, wording (Claude, commit fdd5c0d)
+- Sound cues (scan chimes, jump, A/B ticks, still-fade), High contrast / Large text / Reduce motion on every page,
+  one-minute Demo (D), live ten-point table on How it works, "color" spelling, legend line, honest SST date.
+- Tests: 214 of 214 Player checks, 73 of 73 page checks, 20 of 20 decoder self-tests.
+- A mistake in my own test code stopped the test page from starting; found from Chrome's console and fixed.
+- Not tested: real screen readers, phones, other browsers, people; how the cues sound to a listener.
 
 ### 2026-11-13: Navigation for blind users (Claude, commit 3c29d96)
 - Voice switch, Start here section before the map, opening message, Where am I, tour, edge bump and announcement,
