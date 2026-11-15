@@ -524,7 +524,7 @@ Tick these as you go and add a line under History with what you found.
 
 Newest first. Claude's entries name the commit so you can see exactly what changed.
 
-### 2026-11-15: Start at the Gallery; Terra's microphone made visible (Claude, this commit)
+### 2026-11-15: Start at the Gallery; Terra's microphone made visible (Claude, commit 96b3e4b)
 - Link visits go to the Gallery: Terra introduces itself, asks how to hear the site and which map; answer
   by voice. `tools/serve.py` (no-cache, microphone log); "Microphone:" status line; no restarts in quiet moments.
 - Tests: 369 of 369 Player checks, 85 of 85 page checks.
