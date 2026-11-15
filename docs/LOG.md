@@ -549,7 +549,7 @@ Tick these as you go and add a line under History with what you found.
 
 Newest first. Claude's entries name the commit so you can see exactly what changed.
 
-### 2026-11-15: Terra listens to the real microphone, not a silent virtual one (Claude, this commit)
+### 2026-11-15: Terra listens to the real microphone, not a silent virtual one (Claude, commit 257a7f1)
 - Chrome preferred "AirgoCast Audio (Virtual)"; Terra now picks the microphone itself. Level bar, Microphone
   and Narrator menus, Test the voice, speech in the log. 370 of 370 Player checks, 85 of 85 page checks.
 
