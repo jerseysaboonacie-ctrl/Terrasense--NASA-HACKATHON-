@@ -3,7 +3,7 @@
 // (welcome.js). On the Gallery, where the site starts when opened from a link, Terra greets you,
 // asks how to hear the site and which map to explore, and switches on the microphone.
 
-import { askVoiceModeIfNeeded, afterChoice, greetOnGallery, pickFromGreeting, greetingOpen } from './welcome.js';
+import { askVoiceModeIfNeeded, afterChoice, greetOnGallery, pickFromGreeting } from './welcome.js';
 import { createAssistant, pageSay, recognitionSupported } from './assistant.js';
 import { loadFrameList } from './decoder.js';
 
@@ -27,9 +27,6 @@ if (main && h1) {
         run: (c, n) => (pickFromGreeting(n) ? undefined : 'Say the name of a map, for example "open the vegetation map".') },
     ],
   });
-  // While Terra reads out "which map?", a short answer ("vegetation", "number four") interrupts it.
-  // (Up to 3 words: Terra's own longer sentences coming back through a speaker are not taken for an answer.)
-  assistant.acceptWhileTalking = (text) => greetingOpen() && text.trim().split(/\s+/).length <= 3;
   window.__assistant = assistant; // for the automated page tests
 }
 

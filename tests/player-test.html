@@ -463,7 +463,7 @@
       const voice = { endAfterMs: 20 };
       class FakeRecognition {
         constructor() { insts.push(this); this.started = false; this.results = []; }
-        start() { this.started = true; this.results = []; }
+        start(track) { this.started = true; this.results = []; this.track = track || null; }
         stop() { this.abort(); }
         abort() { if (!this.started) return; this.started = false; setTimeout(() => this.onend && this.onend(), 0); }
         // Like Chrome: a session's results add up; the last one may be unfinished (interim) and gets replaced.
@@ -482,12 +482,13 @@
       w.__testUserActivation = true; // the page may speak (as after a key press)
       w.speechSynthesis.speak = (u) => { spoken.push(u.text); setTimeout(() => u.onstart && u.onstart(), 5); setTimeout(() => u.onend && u.onend(), voice.endAfterMs); };
       const gum = [];
-      try { Object.defineProperty(w.navigator.mediaDevices, 'getUserMedia', { configurable: true, value: async (c) => { gum.push(c); return { getTracks: () => [{ stop() {} }] }; } }); } catch (e) { /* none */ }
+      const track = { kind: 'audio', enabled: true, muted: false, readyState: 'live', stop() {} }; // the microphone signal
+      try { Object.defineProperty(w.navigator.mediaDevices, 'getUserMedia', { configurable: true, value: async (c) => { gum.push(c); return { getTracks: () => [track], getAudioTracks: () => [track] }; } }); } catch (e) { /* none */ }
       // Like the Mac where Terra heard nothing: a virtual device (AirgoCast) is the browser's default microphone.
       const devices = [{ kind: 'audioinput', deviceId: 'default', label: 'Default - AirgoCast Audio (Virtual)' }, { kind: 'audioinput', deviceId: 'airgo', label: 'AirgoCast Audio (Virtual)' },
         { kind: 'audioinput', deviceId: 'mba', label: 'MacBook Air Microphone (Built-in)' }, { kind: 'audiooutput', deviceId: 'spk', label: 'MacBook Air Speakers' }];
       try { Object.defineProperty(w.navigator.mediaDevices, 'enumerateDevices', { configurable: true, value: async () => devices }); } catch (e) { /* none */ }
-      return { insts, spoken, voice, gum, active: () => insts.filter((i) => i.started).pop() };
+      return { insts, spoken, voice, gum, track, active: () => insts.filter((i) => i.started).pop() };
     }
 
     async function testMicrophone() {
@@ -497,8 +498,12 @@
       const st = () => J.getState();
       const mic = fakeMicrophone(w);
       // Like a person: wait until Terra has finished talking and listens again, then speak.
+      const paused = () => doc.getElementById('mic-status').dataset.paused === '1';
+      const turn = async () => { // Terra's microphone pauses while she talks (no echo): wait for your turn
+        for (let i = 0; i < 80 && (!mic.active() || paused()); i++) await wait(100);
+      };
       const hear = async (text, ms = 900) => {
-        for (let i = 0; i < 40 && !mic.active(); i++) await wait(100);
+        await turn();
         const a = mic.active(); if (a) a.hear(text);
         await wait(ms); return st();
       };
@@ -520,6 +525,16 @@
       record(T, 'Listens to the real microphone, not a virtual one that is the browser\'s default', opened[opened.length - 1] === 'mba' &&
         menu[0] === 'Automatic: MacBook Air Microphone (Built-in)' && menu.some((m) => /AirgoCast.*virtual, usually silent/.test(m)),
         `opened ${opened.join(', ')}; menu: ${menu.join(' | ')}`);
+
+      // No echo: while Terra talks her microphone signal is off; it comes back when she has finished
+      mic.voice.endAfterMs = 1500;
+      J.ask('what is today\'s date');
+      await wait(300);
+      const offWhileTalking = mic.track.enabled === false && mic.active() && mic.active().track === mic.track;
+      await turn();
+      record(T, 'No echo: the microphone is off while Terra talks (and a moment after), then on again', offWhileTalking && mic.track.enabled === true,
+        `while talking: enabled ${!offWhileTalking}, recognizer uses Terra's microphone ${Boolean(mic.active() && mic.active().track === mic.track)}; after: enabled ${mic.track.enabled}`);
+      mic.voice.endAfterMs = 20;
 
       let n = mic.spoken.length;
       s = await hear('take me to Japan');
@@ -555,20 +570,25 @@
       record(T, 'Ignores its own words coming back through the microphone', s.assistantLog.length === logBefore,
         `heard "${echoText.slice(0, 50)}…": log ${logBefore} → ${s.assistantLog.length}`);
 
-      // While Terra talks: still listening; ignores phrases without "Terra"; "Terra, ..." interrupts it
-      mic.voice.endAfterMs = 4000;
+      // While Terra talks her microphone is paused (no echo of her own voice), and she is never cut off:
+      // nothing heard then is taken, not even "Terra, ..."; after she finishes, requests work again.
+      mic.voice.endAfterMs = 3000;
       let sessions = mic.insts.length;
+      const spokenBefore = mic.spoken.length;
       mic.active().hear('where am I');
       await wait(700);
       const stillListening = Boolean(mic.active()) && mic.insts.length === sessions;
       const talking = st().narrationLine;
       mic.active().hear('summary');
-      await wait(500);
-      const ignoredWhileTalking = st().narrationLine === talking;
+      await wait(400);
+      mic.active().hear('Terra, can you hear me');
+      await wait(400);
+      const ignoredWhileTalking = st().narrationLine === talking && mic.spoken.length === spokenBefore + 1;
+      mic.voice.endAfterMs = 20;
+      await wait(3000 + S.echoTailMs);
       mic.active().hear('Terra, can you hear me');
       await wait(700);
-      mic.voice.endAfterMs = 20;
-      record(T, 'Keeps listening while it talks; only "Terra, ..." gets through then', stillListening && ignoredWhileTalking && st().narrationLine.startsWith("Yes, I'm listening."),
+      record(T, 'Never interrupts herself: nothing heard while she talks is taken (not even "Terra, ..."); afterwards it is', stillListening && ignoredWhileTalking && st().narrationLine.startsWith("Yes, I'm listening."),
         `listening while talking ${stillListening}, "summary" ignored ${ignoredWhileTalking}, then "${st().narrationLine.slice(0, 40)}"`);
       await wait(800);
 
@@ -616,7 +636,7 @@
       record(T, 'After switching, requests use the new frame', s.narrationLine.startsWith('Heaviest precipitation area'), `"${s.narrationLine.slice(0, 50)}…"`);
 
       // Chrome only finishes a phrase after silence. With people talking it may never do so: Terra must not wait for it.
-      for (let i = 0; i < 40 && !mic.active(); i++) await wait(100);
+      await turn();
       let a = mic.active(), sessions0 = mic.insts.length;
       a.interim('Terra are you'); await wait(300); a.interim('Terra are you still listening');
       await wait(S.stillMs - 400);
@@ -629,12 +649,13 @@
       s = await hear('so anyway Sarah where am I', 1200);
       record(T, 'Knows its name as Chrome often writes it ("Sarah"), also after other words', s.narrationLine.startsWith('You are here.'), `"${s.narrationLine.slice(0, 50)}…"`);
       for (let i = 0; i < 40 && !mic.active(); i++) await wait(100);
+      await turn();
       mic.active().hear('Jenna flibbertigibbet', 'Terra flibbertigibbet'); await wait(900);
       record(T, 'Looks for its name in all of Chrome\'s guesses, not only the first', st().narrationLine.startsWith('Sorry, I did not catch "flibbertigibbet"'),
         `"${st().narrationLine.slice(0, 50)}"`);
 
       // People talking all the time: the words never stop changing, so the request after "Terra" is taken anyway.
-      for (let i = 0; i < 40 && !mic.active(); i++) await wait(100);
+      await turn();
       a = mic.active();
       const room = 'we should finish the slides tonight and practise the demo sessions0 the judges come round with the poster'.split(' ');
       let said = 'and then Terra are you still listening';
@@ -649,12 +670,13 @@
         `"${st().narrationLine.slice(0, 40)}" after ${Math.round(tookMs)} ms`);
 
       // A quiet moment: the session is left alone (restarting then would cut off someone who starts talking).
+      await turn();
       await wait(1500);
       sessions0 = mic.insts.length;
       await wait(S.stalledMs + 800);
       const quietKept = mic.insts.length === sessions0;
       // Speech that stops producing words (Chrome can stall): started afresh.
-      for (let i = 0; i < 40 && !mic.active(); i++) await wait(100);
+      await turn();
       mic.active().interim('we should finish the');
       const sessions1 = mic.insts.length;
       await wait(S.stalledMs + 800);
@@ -698,13 +720,14 @@
       const spoken = [];
       w.__testUserActivation = true; // like arriving from the Gallery after a click
       w.speechSynthesis.speak = (u) => { spoken.push(u.text); setTimeout(() => u.onstart && u.onstart(), 5); setTimeout(() => u.onend && u.onend(), 60); };
-      for (let i = 0; i < 80 && spoken.length < 5; i++) await wait(100);
+      for (let i = 0; i < 100 && spoken.length < 6; i++) await wait(100);
       const all = spoken.join(' | ');
-      record(T, 'A map opens with the guide: higher note = higher value, then the low, middle and high notes with values',
-        /^Sea Surface Temperature, .*How to listen: every place on the map plays a note\. The higher the note, the warmer it is/.test(spoken[0] || '') &&
-        /^Low note: about -?−?5 °C, the coolest end\.$/.test(spoken[1] || '') && /^Middle note: about 15 °C\.$/.test(spoken[2] || '') &&
-        /^High note: about 35 °C, the warmest end\.$/.test(spoken[3] || '') && /^Silence with one soft click means no data/.test(spoken[4] || ''),
-        all.slice(0, 330));
+      record(T, 'A map opens with where you start (value, place, nearest country), then how to listen and the low, middle and high notes',
+        /^Sea Surface Temperature is open, .*You start in the middle of the map\. Sea surface temperature: about \d+ °C, .*0°, 0°\. .*(km|coast|In ).*Africa/.test(spoken[0] || '') &&
+        /^How to listen: the higher the note, the warmer it is/.test(spoken[1] || '') &&
+        /^Low note: about -?−?5 °C, the coolest end\.$/.test(spoken[2] || '') && /^Middle note: about 15 °C\.$/.test(spoken[3] || '') &&
+        /^High note: about 35 °C, the warmest end\.$/.test(spoken[4] || '') && /^No data is silence with one click/.test(spoken[5] || ''),
+        all.slice(0, 400));
       // Moving the mouse stops it
       const n = spoken.length;
       w.__jukebox.ask('play the guide'); await wait(300);
@@ -712,7 +735,7 @@
       wrap.dispatchEvent(new w.PointerEvent('pointermove', { pointerType: 'mouse', clientX: wrap.getBoundingClientRect().left + 200, clientY: wrap.getBoundingClientRect().top + 150, bubbles: true }));
       await wait(2500);
       const after = spoken.slice(n);
-      record(T, '"Terra, play the guide" replays it; moving the mouse stops it and reads the value', /^Sea Surface Temperature/.test(after[0] || '') &&
+      record(T, '"Terra, play the guide" replays it; moving the mouse stops it after the sentence in progress (never cut off) and reads the value', /^Sea Surface Temperature/.test(after[0] || '') &&
         !after.some((t) => /^Middle note/.test(t)) && after.some((t) => /^Sea surface temperature: /.test(t)), after.map((t) => t.slice(0, 40)).join(' | '));
 
       // No click or key press yet: a prompt, and the first key press starts the sound and the guide
@@ -724,7 +747,7 @@
       const shown = Boolean(prompt && !prompt.hidden) && /Click anywhere or press any key/.test(prompt.textContent);
       w2.__testUserActivation = true;
       w2.document.dispatchEvent(new w2.KeyboardEvent('keydown', { key: 'x', bubbles: true }));
-      const guideLine = () => spoken2.find((t) => /^Land Vegetation \(NDVI\).*The higher the note, the greener it is/.test(t));
+      const guideLine = () => spoken2.find((t) => /^How to listen: the higher the note, the greener it is/.test(t));
       for (let i = 0; i < 30 && !guideLine(); i++) await wait(100);
       record(T, 'Without a click yet: "click anywhere or press any key"; the first key press starts the guide', shown && prompt.hidden && Boolean(guideLine()),
         `prompt shown ${shown}, then hidden ${prompt && prompt.hidden}; "${(guideLine() || spoken2.join(' | ')).slice(0, 90)}"`);
@@ -821,7 +844,7 @@
 
       // Voice mode: exactly one channel per announcement
       let spoken = [];
-      w.speechSynthesis.speak = (u) => { spoken.push(u.text); setTimeout(() => u.onstart && u.onstart(), 5); };
+      w.speechSynthesis.speak = (u) => { spoken.push(u.text); setTimeout(() => u.onstart && u.onstart(), 5); setTimeout(() => u.onend && u.onend(), 40); };
       w.speechSynthesis.cancel = () => {};
       record(id, 'Voice mode defaults to screen reader', st().prefs.voiceMode === 'screenreader' && doc.querySelector('input[value="screenreader"]').checked,
         'voiceMode = ' + st().prefs.voiceMode);
@@ -830,8 +853,10 @@
         `live "${clean(st().live).slice(0, 60)}…", spoken ${spoken.length}`);
       const pick = (v) => { const r = doc.querySelector(`input[name="voice-mode"][value="${v}"]`); r.click(); };
       pick('voice');
+      await wait(300);
       spoken = []; doc.getElementById('live').textContent = '';
       J.moveTo(Math.floor(W / 3), Math.floor(H / 3));
+      await wait(400);
       record(id, 'Built-in voice mode: spoken, live region silent', spoken.length === 1 && spoken[0] === st().narrationLine && st().live === '',
         `spoken: "${(spoken[0] || '').slice(0, 60)}…", live "${st().live}"`);
       pick('off');

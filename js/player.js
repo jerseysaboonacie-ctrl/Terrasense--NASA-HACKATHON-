@@ -131,7 +131,7 @@ let saidSomething = false; // anything announced yet (the opening message must n
 let assistant = null;      // Terra (assistant.js), created at start-up
 
 let sayCount = 0;         // how many things have been said (the guide only starts when nothing else spoke)
-function say(text, { aloud = false } = {}) {
+function say(text, { aloud = false, priority = 'high' } = {}) {
   saidSomething = true;
   sayCount++;
   stopGuide(); // anything else said (an answer, a value) ends the listening guide
@@ -140,7 +140,7 @@ function say(text, { aloud = false } = {}) {
   // Terra answering out loud (you talked to it): the built-in voice instead of the live region.
   const mode = aloud || (assistant && assistant.answersAloud()) ? 'voice' : prefs.voiceMode;
   if (mode === 'screenreader') setLive(text);
-  else if (mode === 'voice') speak(text, prefs.speechRate);
+  else if (mode === 'voice') speak(text, prefs.speechRate, undefined, { priority });
 }
 const announce = say;
 
@@ -225,10 +225,12 @@ function showPoint({ announce: when = false, hold, force = false, prefix = '', s
   // Hover and arrow keys: read what the panel shows, including the nearest country and the continent.
   const near = (when === 'later' || when === 'keys') && !suffix ? placeWords(r) : '';
   const sentence = prefix + d.narration + (suffix ? ' ' + suffix : '') + (near ? ' ' + near : '');
-  const speakNow = () => { say(sentence); if (onSpoken) onSpoken(); };
+  // What is under the pointer waits for Terra to finish (she is never cut off); only the newest reading is kept.
+  const priority = when === 'later' || when === 'keys' ? 'low' : 'high';
+  const speakNow = () => { say(sentence, { priority }); if (onSpoken) onSpoken(); };
   if (when === 'now') speakNow();
   else if (when === 'keys') narrateTimer = setTimeout(speakNow, S.keyRepeatMs);
-  else if (when === 'later') narrateTimer = setTimeout(() => announce(sentence), S.narrationDelayMs);
+  else if (when === 'later') narrateTimer = setTimeout(() => say(sentence, { priority }), S.narrationDelayMs);
 }
 
 // "Nearest country" and "Continent" in the panel. The borders load once, in the background; looking up
@@ -1073,12 +1075,14 @@ function guideSteps(meta, lead = '') {
   const T = meta.terms;
   const refs = referenceTones(meta);
   const end = (r) => (r.name === 'Low' ? `, the ${T.low} end` : r.name === 'High' ? `, the ${T.high} end` : '');
+  // Where you start: the middle of the map, with what is there (the panel's value, place, country, continent).
+  const here = point ? decodeAt(frame, point.x, point.y) : null;
+  const start = here ? ` You start in the middle of the map. ${describeResult(meta, here, 'normal').narration} ${placeWords(here)}`.trimEnd() : '';
   return [
-    { text: `${lead ? lead + ' ' : ''}${meta.title}, ${dateInSentence(meta)}. How to listen: every place on the map plays a note. ` +
-      `The higher the note, the ${T.higher} it is; the lower the note, the ${T.lower}. Here are three notes from low to high.` },
+    { text: `${lead ? lead + ' ' : ''}${meta.title} is open, ${dateInSentence(meta)}.${start}` },
+    { text: `How to listen: the higher the note, the ${T.higher} it is; the lower, the ${T.lower}. Here are the low, middle and high notes.` },
     ...refs.map((r) => ({ text: `${r.name} note: ${/^[\d−-]/.test(r.label) ? 'about ' + r.label : 'the ' + r.label.charAt(0).toLowerCase() + r.label.slice(1)}${end(r)}.`, tone: r })),
-    { text: 'Silence with one soft click means no data there. Left and right in your headphones are west and east. ' +
-      'Move the mouse over the map, or use the arrow keys: I read the value, the place, the nearest country and the continent. ' +
+    { text: 'No data is silence with one click. Move the mouse or use the arrow keys, and I will tell you what is there. ' +
       'Say "Terra, play the guide" to hear this again.' },
   ];
 }
@@ -1091,6 +1095,9 @@ async function playGuide({ lead = '', force = false } = {}) {
   guideGivenFor = meta.id;
   const token = ++guideToken;
   if (!isStarted()) await ensureAudio();
+  if (!countryList) { // the starting point names the nearest country: wait briefly for the borders
+    try { countryList = (await Promise.race([loadCountries(), new Promise((r) => setTimeout(() => r(null), 1500))])) || countryList; } catch (e) { /* without */ }
+  }
   if (token !== guideToken) return; // something else was said meanwhile: that comes first
   const steps = guideSteps(meta, lead);
   els.status.textContent = 'Listening guide: ' + steps.map((s) => s.text).join(' ');
@@ -1292,7 +1299,7 @@ async function switchFrame(id) {
   }
   history.replaceState(null, '', 'player.html?frame=' + encodeURIComponent(id));
   if (await openFrame(meta)) {
-    if (isStarted() || soundAllowed()) playGuide({ lead: `${meta.title} is open.` });
+    if (isStarted() || soundAllowed()) playGuide();
     else say(`${meta.title} is open, ${dateInSentence(meta)}. ${meta.listenFor}`);
   }
 }

@@ -10,7 +10,7 @@
 // Open it again with ?welcome in the address, or by asking Terra "introduce yourself".
 
 import { loadPrefs, savePrefs } from './prefs.js';
-import { speak, speechSupported, stopSpeaking } from './narrator.js';
+import { speak, speechSupported, stopSpeaking, canSpeakNow } from './narrator.js';
 
 const ASKED_KEY = 'terrasense-jukebox-welcomed-v1';
 
@@ -157,12 +157,13 @@ const MAP_CHOICES = [
 ];
 
 /**
- * Terra's greeting on the Gallery, once per visit (tab), or with ?welcome:
- *   1. Terra introduces itself and how to tell it what to do, then asks how to hear the site
- *      (the earlier answer is marked).
- *   2. "What would you like to explore?" Sea surface temperature, air temperature, vegetation or
- *      precipitation (keys 1 to 4, the buttons, or by voice: Terra switches the microphone on
- *      here, so saying "vegetation" opens it), or 5 / Escape to look around the Gallery first.
+ * Terra's greeting on the Gallery, once per visit (tab), or with ?welcome. It asks straight away:
+ * "Which map would you like to explore?" Sea surface temperature, air temperature, vegetation or
+ * precipitation (keys 1 to 4, the buttons, or by voice: Terra switches the microphone on here), or 5 /
+ * Escape to look around the Gallery first. How Terra talks (built-in voice, screen reader, text only) is
+ * a smaller choice underneath, set to the built-in voice unless chosen before.
+ * Browsers only allow speech after a key press or click, so Terra speaks the question on the first one
+ * (a number key both answers and starts the sound).
  *   listen()       switch Terra on quietly; resolves true if it is listening
  *   say(text)      speak or announce in the chosen voice mode
  *   frames         the frame list (to check the four maps exist)
@@ -175,16 +176,35 @@ export function greetOnGallery({ listen, say, frames = [] }) {
   try { sessionStorage.setItem(GREETED_KEY, '1'); } catch (e) { /* fine */ }
 
   const voiceOk = speechSupported();
-  const before = alreadyAsked() ? loadPrefs().voiceMode : null;
+  // Never asked before: the built-in voice (the page reads aloud); a screen reader user picks 2 below.
+  let mode = alreadyAsked() ? loadPrefs().voiceMode : (voiceOk ? 'voice' : 'screenreader');
   const choices = MAP_CHOICES.filter((c) => !frames.length || frames.some((f) => f.id === c.id));
   const dlg = document.createElement('dialog');
   dlg.className = 'welcome-dialog';
   dlg.setAttribute('aria-labelledby', 'welcome-title');
+  dlg.setAttribute('aria-describedby', 'welcome-desc');
   document.body.append(dlg);
   open = dlg;
   window.__welcomeOpen = true;
-  let step = 1, mode = before || 'screenreader', listening = false;
-  const mark = (m) => (before === m ? ' (your choice last time)' : '');
+  let listening = false, spokeQuestion = false;
+  const MODES = [['voice', "Terra's built-in voice"], ['screenreader', 'My screen reader'], ['off', 'Text only']];
+
+  dlg.innerHTML = `
+    <h2 id="welcome-title">Hi, I'm Terra. Which map would you like to explore?</h2>
+    <p id="welcome-desc">Each one is a NASA map of the Earth turned into sound. Press 1 to 4, click one, or just say it, for example "vegetation".</p>
+    <div class="welcome-choices">
+      ${choices.map((c, i) => `<button type="button" data-frame="${c.id}" class="big-button">${i + 1}. ${c.label} <span class="choice-what">– ${c.what}</span></button>`).join('')}
+      <button type="button" data-frame="" class="big-button secondary">5. Show me the gallery first</button>
+    </div>
+    <p id="welcome-listen" class="mic-status small">Switching on the microphone so you can just say it…</p>
+    <p class="pitch-guide small"><strong>How to listen:</strong> every place on a map plays a note. <strong>The higher the note, the higher the value</strong>: on the temperature maps a high note is warm and a low note is cold. Each map starts by telling you where you are and playing its low, middle and high notes with their values.</p>
+    <fieldset class="welcome-voice">
+      <legend>How should I talk to you?</legend>
+      ${MODES.map(([m, label]) => `<label class="check"><input type="radio" name="welcome-voice" value="${m}"${m === mode ? ' checked' : ''}${m === 'voice' && !voiceOk ? ' disabled' : ''}> ${label}</label>`).join('')}
+    </fieldset>`;
+
+  const mapQuestion = () => `Hi, I'm Terra. Which map would you like to explore? ${choices.map((c, i) => `${i + 1}: ${c.label}, ${c.what}.`).join(' ')} ` +
+    `Or 5 to look around the gallery first. Press the number${listening ? ', or just say it, when I finish' : ''}.`;
 
   const finish = () => {
     window.__welcomeOpen = false;
@@ -192,115 +212,70 @@ export function greetOnGallery({ listen, say, frames = [] }) {
     dlg.close();
     dlg.remove();
   };
-
-  // Step 1: the introduction and the voice question
-  dlg.setAttribute('aria-describedby', 'welcome-desc welcome-question');
-  dlg.innerHTML = `
-    <h2 id="welcome-title">Hi, I'm Terra</h2>
-    <div id="welcome-desc">
-      <p>I'm the voice assistant for TerraSense Jukebox. This site turns NASA maps of the Earth into sound: sea temperature, air temperature, vegetation, and rain and snow.</p>
-      <p class="pitch-guide"><strong>How to listen:</strong> every place on a map plays a note. <strong>The higher the note, the higher the value</strong>: on the temperature maps a high note is warm and a low note is cold; on the rain map a higher note is heavier rain; on the vegetation map, greener land. Silence with one soft click means no data. Left and right in your headphones are west and east. Each map starts by playing its low, middle and high notes with their values, so you can tell the values without the color key.</p>
-      <p><strong>You can tell me what to do.</strong> Just talk to me, for example:</p>
-      <ul class="welcome-examples">
-        <li>"Take me to Japan"</li>
-        <li>"Open the vegetation map"</li>
-        <li>"Where is the warmest place?"</li>
-        <li>"What is today's date?"</li>
-        <li>"Help"</li>
-      </ul>
-      <p>V switches my listening on and off. You can also type to me, or explore a map yourself with the arrow keys or a finger.</p>
-    </div>
-    <p id="welcome-question" class="welcome-question"><strong>First, how would you like to hear this site?</strong></p>
-    <div class="welcome-choices">
-      <button type="button" data-mode="voice" class="big-button"${voiceOk ? '' : ' disabled'}>1. Read it aloud to me (Terra's built-in voice)${voiceOk ? mark('voice') : ' – not available in this browser'}</button>
-      <button type="button" data-mode="screenreader" class="big-button">2. I already use a screen reader${mark('screenreader')}</button>
-      <button type="button" data-mode="off" class="big-button">3. No voice, text only${mark('off')}</button>
-    </div>
-    <p class="muted small">Keys: 1, 2 or 3. ${voiceOk ? 'Press any other key, or tap outside the buttons, to hear me read this aloud (browsers only let a page speak after a key press or tap).' : ''}</p>`;
-
-  const mapQuestion = () =>
-    `What would you like to explore? ${choices.map((c, i) => `${i + 1}: ${c.label}, ${c.what}.`).join(' ')} ` +
-    `Or 5 to look around the gallery first.${listening ? ' You can also just say it, for example: vegetation.' : ''}`;
-
+  const saveMode = () => {
+    const prefs = loadPrefs();
+    prefs.voiceMode = mode;
+    savePrefs(prefs);
+    markAsked();
+    announcePrefsChanged();
+  };
   const openMap = (id) => {
+    saveMode();
     finish();
-    say(`Opening ${MAP_CHOICES.find((c) => c.id === id).label}.`);
-    setTimeout(() => { location.href = 'player.html?frame=' + encodeURIComponent(id); }, 600);
+    // No "Opening …" here: the map itself starts by saying what is open and where you are.
+    location.href = 'player.html?frame=' + encodeURIComponent(id);
   };
-
-  const showMaps = async () => {
-    step = 2;
-    dlg.setAttribute('aria-describedby', 'welcome-maps-q');
-    dlg.innerHTML = `
-      <h2 id="welcome-title">What would you like to explore?</h2>
-      <p id="welcome-maps-q">Choose a map. ${choices.length} NASA maps of the Earth, each turned into sound.</p>
-      <div class="welcome-choices">
-        ${choices.map((c, i) => `<button type="button" data-frame="${c.id}" class="big-button">${i + 1}. ${c.label} <span class="choice-what">– ${c.what}</span></button>`).join('')}
-        <button type="button" data-frame="" class="big-button secondary">5. Show me the gallery first</button>
-      </div>
-      <p id="welcome-listen" class="mic-status small">${mode === 'off' ? 'Keys: 1 to 5.' : 'Switching on the microphone so you can just say it…'}</p>`;
-    dlg.querySelectorAll('button[data-frame]').forEach((b) => b.addEventListener('click', () => (b.dataset.frame ? openMap(b.dataset.frame) : leave())));
-    dlg.querySelector('button[data-frame]').focus();
-    const status = dlg.querySelector('#welcome-listen');
-    if (mode !== 'off') {
-      listening = await listen();
-      if (!dlg.isConnected) return;
-      status.textContent = listening ? 'Terra is listening: say the name of a map, for example "vegetation", or press 1 to 5.'
-        : 'Terra cannot hear you here (see the Microphone line on the page). Press 1 to 5.';
-      status.dataset.kind = listening ? 'on' : 'warn';
-    }
-    // Chose straight away (the first click or key press): the introduction and how to listen come first.
-    if (mode === 'voice' && voiceOk) { const lead = introHeard ? '' : TERRA_INTRO + ' '; introHeard = true; speak(lead + mapQuestion(), loadPrefs().speechRate || 1); }
-    else if (mode === 'screenreader') say(mapQuestion());
-  };
-
   const leave = () => {
+    saveMode();
     finish();
     const h1 = document.querySelector('main h1');
     if (h1) { h1.tabIndex = -1; h1.focus(); }
     say(`Here is the gallery: ${choices.length} maps.${listening ? ' Say the name of one to open it, or press Tab to go through them.' : ' Press Tab to go through them.'}`);
   };
-
-  const chooseMode = (m) => {
-    if (m === 'voice' && !voiceOk) return;
-    const prefs = loadPrefs();
-    prefs.voiceMode = m;
-    savePrefs(prefs);
-    markAsked();
-    mode = m;
-    stopSpeaking();
-    announcePrefsChanged();
-    showMaps();
+  const askAloud = () => {
+    if (spokeQuestion) return;
+    spokeQuestion = true;
+    if (mode === 'voice' && voiceOk) { introHeard = true; speak(mapQuestion(), loadPrefs().speechRate || 1); }
+    else if (mode === 'screenreader') say(mapQuestion());
   };
 
-  const readAloud = () => {
-    if (!voiceOk) return;
-    introHeard = true;
-    speak(step === 1 ? `${TERRA_INTRO} ${QUESTION}` : mapQuestion(), loadPrefs().speechRate || 1);
-  };
-  dlg.querySelectorAll('button[data-mode]').forEach((b) => b.addEventListener('click', () => chooseMode(b.dataset.mode)));
+  dlg.querySelectorAll('button[data-frame]').forEach((b) => b.addEventListener('click', () => (b.dataset.frame ? openMap(b.dataset.frame) : leave())));
+  dlg.querySelectorAll('input[name="welcome-voice"]').forEach((r) => r.addEventListener('change', () => {
+    mode = r.value; saveMode();
+    if (mode === 'voice' && voiceOk) { stopSpeaking(); spokeQuestion = false; askAloud(); }
+  }));
   dlg.addEventListener('keydown', (e) => {
     const n = Number(e.key);
-    if (step === 1 && n >= 1 && n <= 3) { e.preventDefault(); chooseMode(['voice', 'screenreader', 'off'][n - 1]); }
-    else if (step === 2 && n >= 1 && n <= choices.length) { e.preventDefault(); openMap(choices[n - 1].id); }
-    else if (step === 2 && n === 5) { e.preventDefault(); leave(); }
-    else if (!['Tab', 'Shift', 'Enter', ' ', 'Escape', 'ArrowUp', 'ArrowDown'].includes(e.key)) readAloud();
+    if (n >= 1 && n <= choices.length) { e.preventDefault(); openMap(choices[n - 1].id); }
+    else if (n === choices.length + 1) { e.preventDefault(); leave(); }
+    else if (!['Tab', 'Shift', 'Enter', ' ', 'Escape', 'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].includes(e.key)) askAloud();
   });
-  dlg.addEventListener('pointerdown', (e) => { if (!e.target.closest('button')) readAloud(); });
-  // Escape: keep the current voice mode (screen reader on a first visit), then the Gallery.
-  dlg.addEventListener('cancel', (e) => { e.preventDefault(); if (step === 1) chooseMode(mode); else leave(); });
+  // The first click anywhere (outside the map buttons) starts Terra's voice: she asks the question.
+  dlg.addEventListener('pointerdown', (e) => { if (!e.target.closest('button[data-frame]')) askAloud(); });
+  document.addEventListener('keydown', function first(e) { if (dlg.isConnected && !/^[1-5]$/.test(e.key)) askAloud(); document.removeEventListener('keydown', first, true); }, true);
+  dlg.addEventListener('cancel', (e) => { e.preventDefault(); leave(); });
 
-  greetingAsking = () => step === 2 && dlg.isConnected;
-  // Spoken "one", "number three", "five" while the map question is open (see site.js).
+  greetingAsking = () => dlg.isConnected;
+  // Spoken "one", "number three", "five" (see site.js).
   greetingPick = (n) => {
-    if (step !== 2 || !dlg.isConnected) return false;
+    if (!dlg.isConnected) return false;
     if (n >= 1 && n <= choices.length) { openMap(choices[n - 1].id); return true; }
     if (n === choices.length + 1) { leave(); return true; }
     return false;
   };
 
   dlg.showModal();
-  const firstChoice = dlg.querySelector(`button[data-mode="${before || 'voice'}"]:not([disabled])`) || dlg.querySelector('button[data-mode]:not([disabled])');
-  if (firstChoice) firstChoice.focus();
+  dlg.querySelector('button[data-frame]').focus();
+  // The page may already speak (arrived after a click on this site): ask at once.
+  if (canSpeakNow()) askAloud();
+  // Terra listens, so the answer can be spoken (her microphone pauses while she talks: no echo).
+  listen().then((on) => {
+    listening = on;
+    if (!dlg.isConnected) return;
+    const status = dlg.querySelector('#welcome-listen');
+    status.textContent = on ? 'Terra is listening: say the name of a map when she finishes, or press 1 to 5.'
+      : 'Terra cannot hear you here (see the Microphone line on the page). Press 1 to 5.';
+    status.dataset.kind = on ? 'on' : 'warn';
+  });
   return true;
 }

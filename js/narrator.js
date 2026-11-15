@@ -115,6 +115,7 @@ export function canSpeakNow() {
 
 /** True while the built-in voice is reading something we asked it to read. */
 export function isSpeaking() {
+  if (queue.length || waitingNext) return true; // more to say: still "talking" (Terra's microphone stays paused)
   if (active <= 0 || performance.now() >= speakingUntil) return false;
   // Chrome's own flag can stay stuck at true, but when it says false (after a moment to start), speech is over.
   const synth = speechSupported() ? window.speechSynthesis : null;
@@ -130,10 +131,35 @@ export function isSpeaking() {
  * then with another voice (Google's own voices are played by Chrome itself, a different route); and
  * if nothing works, the page is told (speechTrouble), so it can ask the person to restart Chrome.
  */
-export function speak(text, rate = 1, onEnd) {
+export function speak(text, rate = 1, onEnd, { priority = 'high' } = {}) {
   if (!speechSupported() || !text) { if (onEnd) onEnd(); return; }
-  speakAttempt(text, rate, onEnd, 0);
+  // Terra never cuts herself off: while something important is being said, new speech waits its turn.
+  // Low-priority speech (what is under the pointer) waits too, and only the newest one is kept.
+  if (busyHigh()) {
+    if (priority === 'low') { pendingLow = { text, rate, onEnd }; return; }
+    if (queue.length < 4) queue.push({ text, rate, onEnd });
+    return;
+  }
+  pendingLow = null;
+  currentPriority = priority;
+  window.dispatchEvent(new Event('terrasense-speech-start')); // Terra's microphone pauses at once (no echo)
+  speakAttempt(text, rate, () => { currentPriority = null; if (onEnd) onEnd(); playNext(); }, 0);
 }
+
+let queue = [];            // important speech waiting for the current speech to finish
+let pendingLow = null;     // the newest pointer reading waiting (older ones are dropped)
+let currentPriority = null; // 'high' | 'low' while something is being said
+
+function busyHigh() { return currentPriority === 'high' && isSpeaking(); }
+
+function playNext() {
+  let next = queue.shift(), priority = 'high';
+  if (!next && pendingLow) { next = pendingLow; pendingLow = null; priority = 'low'; }
+  if (!next) return;
+  waitingNext = true;
+  setTimeout(() => { waitingNext = false; speak(next.text, next.rate, next.onEnd, { priority }); }, 150);
+}
+let waitingNext = false;
 
 let troubleShown = false;
 /** True after speech failed to start even after the retries (shown once per page). */
@@ -193,5 +219,6 @@ function speakAttempt(text, rate, onEnd, attempt) {
 export function stopSpeaking() {
   speechGen++;
   active = 0;
+  queue = []; pendingLow = null; currentPriority = null;
   if (speechSupported()) window.speechSynthesis.cancel();
 }

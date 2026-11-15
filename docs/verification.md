@@ -230,6 +230,17 @@ playback could not be used: the Mac cancels its own speaker sound from the micro
 | 18.6 | Automated checks | PASS | 374 of 374 Player checks, 85 of 85 page checks. |
 | 18.7 | Hearing the voice in your Chrome | NOT TESTED by us | Needs you. |
 
+## 19. Echo, no interrupting, map question first (added 2026-11-15)
+
+| # | Check | Result | Evidence |
+|---|---|---|---|
+| 19.1 | Your log (15:05 to 15:14) | FOUND | After restarting Chrome the voice worked. Terra heard her own speech: hundreds of word updates while she talked, phrases of 16 and 21 words treated as room talk. |
+| 19.2 | Fix: microphone off while Terra talks | PASS | Visible Chrome set up like yours, real speakers and microphone: during about 45 s of Terra talking (Gallery question, vegetation opening) the microphone was paused every second, and not one word reached the recognizer. Test: the microphone signal is off while she talks and on again after. |
+| 19.3 | Two bugs found on the way | FIXED | A microphone opened while Terra was already talking was not paused; the status line could say "listening" while paused. |
+| 19.4 | Never interrupts herself | PASS | Nothing heard while she talks is taken, not even "Terra, …"; afterwards it is. Speech is queued; the pointer reading waits for the current sentence. |
+| 19.5 | Map question first; starting point | PASS | Gallery dialog: "Hi, I'm Terra. Which map would you like to explore?" with the four maps (and the voice choice underneath). The map opens with "… is open, date. You start in the middle of the map. Sea surface temperature: about 29 °C, near the equator, 0°, 0°. About 600 km south-east of Ghana; nearest land Africa.", then the shorter listening guide. |
+| 19.6 | Automated checks | PASS | 375 of 375 Player checks, 85 of 85 page checks; recorded voices 11 of 12. |
+
 ## Could not verify
 
 - The official challenge text and its resource links (5.4).

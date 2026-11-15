@@ -208,7 +208,7 @@
       localStorage.setItem(WELCOMED, '1');
     }
 
-    // Opened from a link: the Gallery, where Terra introduces itself, asks how to hear the site, then which map
+    // Opened from a link: the Gallery, where Terra asks straight away which map to explore
     {
       const GREETED = 'terrasense-greeted-v1';
       sessionStorage.removeItem(GREETED);
@@ -217,19 +217,16 @@
       iframe.referrerPolicy = '';
       const landed = w.location.pathname.endsWith('/gallery.html');
       const dlg = w.document.querySelector('dialog.welcome-dialog');
-      const step1 = dlg ? dlg.querySelector('h2').textContent : '';
-      const intro = dlg ? dlg.textContent : '';
-      record('(link)', 'Opening the site from a link lands on the Gallery with Terra\'s introduction and how to listen (higher note = higher value)', landed && step1 === "Hi, I'm Terra" &&
-        /You can tell me what to do/.test(intro) && /how would you like to hear this site/i.test(intro) && /your choice last time/.test(intro) &&
-        /The higher the note, the higher the value/.test(intro) && /a high note is warm and a low note is cold/.test(intro),
-        `${w.location.pathname}; "${step1}"`);
-      if (dlg) dlg.dispatchEvent(new KeyboardEvent('keydown', { key: '2', bubbles: true }));
-      await wait(300);
-      const step2 = dlg && dlg.isConnected ? dlg.querySelector('h2').textContent : '';
-      const maps = dlg && dlg.isConnected ? [...dlg.querySelectorAll('button[data-frame]')].map((b) => b.textContent) : [];
-      record('(link)', 'Then asks which of the four maps to explore', step2 === 'What would you like to explore?' && maps.length === 5 &&
+      const title = dlg ? dlg.querySelector('h2').textContent : '';
+      const text = dlg ? dlg.textContent : '';
+      const maps = dlg ? [...dlg.querySelectorAll('button[data-frame]')].map((b) => b.textContent) : [];
+      const voices = dlg ? [...dlg.querySelectorAll('input[name="welcome-voice"]')].map((r) => r.value) : [];
+      record('(link)', 'Opening the site from a link: the Gallery, and Terra asks at once which of the four maps to explore', landed &&
+        title === "Hi, I'm Terra. Which map would you like to explore?" && maps.length === 5 &&
         /Sea surface temperature/.test(maps[0]) && /Air temperature/.test(maps[1]) && /Vegetation/.test(maps[2]) && /Precipitation/.test(maps[3]) && /gallery first/.test(maps[4]),
-        `"${step2}": ${maps.map((m) => m.slice(0, 26)).join(' | ')}`);
+        `${w.location.pathname}; "${title}": ${maps.map((m) => m.slice(0, 22)).join(' | ')}`);
+      record('(link)', 'The same dialog says how to listen (higher note = higher value) and how Terra should talk', /The higher the note, the higher the value/.test(text) &&
+        /a high note is warm and a low note is cold/.test(text) && voices.join() === 'voice,screenreader,off', `voice choices: ${voices.join(', ')}`);
       await wait(800);
       await w.__assistant.handle('number two');
       for (let i = 0; i < 30 && !/player\.html/.test(iframe.contentWindow.location.href); i++) await wait(100);
@@ -237,9 +234,7 @@
 
       sessionStorage.removeItem(GREETED);
       w = await load('../gallery.html', 1200);
-      let d2 = w.document.querySelector('dialog.welcome-dialog');
-      if (d2) d2.dispatchEvent(new KeyboardEvent('keydown', { key: '2', bubbles: true }));
-      await wait(300);
+      const d2 = w.document.querySelector('dialog.welcome-dialog');
       if (d2) d2.dispatchEvent(new KeyboardEvent('keydown', { key: '3', bubbles: true }));
       for (let i = 0; i < 30 && !/player\.html/.test(iframe.contentWindow.location.href); i++) await wait(100);
       const byKey = iframe.contentWindow.location.href;

@@ -88,6 +88,10 @@ offered because none of our frames has dated versions yet; see Known limitations
 - **Hover** reads the panel when the mouse rests (on by default): value, place, nearest country, continent.
 - **Voice that does not start** (Chrome on a Mac can get stuck): reset and retry, then Google's voice, then
   a message to quit and reopen Chrome. Novelty voices are never picked.
+- **No echo, no interrupting**: while Terra talks, and for 0.9 s after, her microphone signal is switched off
+  (`track.enabled = false`), so her own voice from the speakers never comes back as a request; nothing heard
+  then is taken. Speech is queued, never cut off: a new answer waits for the current one; what is under the
+  pointer waits too (only the newest reading is kept). Escape or "stop" still stops everything.
 - **Short phrases Terra does not know** get a short "Sorry, I did not catch …"; only long sentences and fillers
   ("okay so") without "Terra" are treated as people talking.
 - **Which microphone**: Terra opens the microphone itself and hands it to Chrome's recognizer
@@ -142,12 +146,11 @@ keeps **Terra's microphone log**: on localhost only, the page reports what the s
 to `.terra-log.jsonl` (ignored by git). Any static server works for everything else, including GitHub Pages.
 
 **Where it starts:** opened from a link, a bookmark or the address bar, the site goes to the Gallery
-(`index.html` forwards there; Home from inside the site stays on Home). There Terra introduces itself and
-what you can tell it, asks how you would like to hear the site (built-in voice, screen reader, text only),
-then asks which map to explore: sea surface temperature, air temperature, vegetation or precipitation
-(keys 1 to 4, the buttons, or by voice: Terra switches the microphone on at this point, so saying
-"vegetation" or "number three" opens it, even while Terra is still reading the choices). Once per visit
-(tab); `?welcome` shows it again.
+(`index.html` forwards there; Home from inside the site stays on Home). There Terra asks straight away which
+map to explore: sea surface temperature, air temperature, vegetation or precipitation (keys 1 to 4, the
+buttons, or by voice when she has finished: "vegetation", "number three"). How Terra talks (built-in voice,
+screen reader, text only) is a smaller choice in the same dialog. The map then opens with where you start
+(value, place, nearest country, continent) and the listening guide. Once per visit (tab); `?welcome` again.
 
 Open a frame directly with `player.html?frame=sst` (or `t2m`, `ndvi`, `precip`).
 

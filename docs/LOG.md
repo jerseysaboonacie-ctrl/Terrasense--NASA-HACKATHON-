@@ -7,7 +7,7 @@ same format (newest first under **History**) and tick your tasks in **Your tasks
 Status words: **Done** (built and tested), **Partly done** (some of it exists, see notes),
 **Not started**, **Yours** (only a person can do it).
 
-Last updated: 2026-11-15 15:10 (+07), session 12 finished.
+Last updated: 2026-11-15 16:20 (+07), session 13 finished.
 
 ---
 
@@ -15,6 +15,29 @@ Last updated: 2026-11-15 15:10 (+07), session 12 finished.
 
 Live progress, newest session first, newest line at the bottom of each session. Times are the
 laptop's clock (+07). Each phase has an estimate; the heartbeat says when it actually started and finished.
+
+### Session 13: 2026-11-15 late afternoon (finished)
+
+**Report and request (from you):** Terra hears what she said herself (e.g. "the temperature near the Sea of Japan
+is 29 °C") and that ruins the conversation. Ask straight away which data to explore and give the options; say the
+starting point; read the summary when the cursor moves; never let Terra interrupt herself.
+
+| Phase | What | Estimate | Status |
+|---|---|---|---|
+| 1 | Read the log | 10 min | Done (15:14 to 15:20) |
+| 2 | Microphone off while Terra talks; queued speech; map question first; starting point | 45 min | Done (15:20 to 15:50) |
+| 3 | Tests (including two bugs they found), real echo test, docs, commit | 30 min | Done (15:50 to 16:20) |
+
+- 15:14: Your log: after restarting Chrome the voice worked. Terra's own speech came back through the microphone
+  (hundreds of word updates while she talked).
+- 15:50: Now the microphone signal is switched off while Terra talks and for 0.9 s after; nothing heard then is
+  taken. Speech waits its turn instead of cutting her off; the pointer reading waits too. The Gallery asks at
+  once "Which map would you like to explore?"; each map opens with where you start, then a shorter guide.
+- 16:05: Tests found two real bugs (a microphone opened mid-sentence was not paused; the status line could say
+  "listening" while paused); fixed. Real speakers and microphone, Chrome set up like yours: 45 s of Terra
+  talking, not one word reached the recognizer.
+- 16:20: 375 of 375 Player checks, 85 of 85 page checks. Version 2026-11-15e.
+- Not tested: your Chrome.
 
 ### Session 12: 2026-11-15 afternoon (finished)
 
@@ -550,6 +573,7 @@ Tick these as you go and add a line under History with what you found.
 - [ ] Screen reader test (about 20 min): VoiceOver (Mac: Cmd + F5), NVDA (Windows) or TalkBack (Android). Eyes closed: open the Player, take the tour (T), get the summary, jump to the warmest area, press W, walk into an edge, compare two places, change volume with minus and plus, mute, change frame. Try each Voice setting once. Note where you got lost, heard nothing, or heard two voices, and whether the letter keys reached the page.
 - [ ] By-eye check: open `decoder-test.html?frame=sst&fill=1` (then `t2m`, `ndvi`, `precip`), type the value you read from the colorbar for each row, and paste the Markdown export into `docs/accuracy-check.md`.
 - [ ] Check the Summary against the picture for each frame (does the "warmest" place look warmest?).
+- [ ] After session 13 (2 min): reload (Cmd+Shift+R), version 2026-11-15e; answer the map question; wait for Terra to finish, then ask "where am I"; hover; tell Claude "check the log".
 - [ ] After session 12 (2 min): quit Chrome completely (Cmd+Q) and reopen it, open http://localhost:8931, press 1, then 3: you should hear the vegetation guide. Hover over the map. Then tell Claude "check the log".
 - [ ] After session 11 (2 min): reload with Cmd+Shift+R, check Terra's panel says version 2026-11-15c, set Narrator to Built-in voice, press Test the voice, switch Terra on and watch the level bar while you talk, then tell Claude "check the log".
 - [ ] Talk to Terra after session 10 (2 min): reload http://localhost:8931 in Chrome (Cmd+Shift+R), answer the two questions, say "vegetation". Then tell Claude "check the log": the microphone log shows what Terra heard (counts only).
@@ -573,6 +597,10 @@ Tick these as you go and add a line under History with what you found.
 ## History
 
 Newest first. Claude's entries name the commit so you can see exactly what changed.
+
+### 2026-11-15: No echo, no interrupting, map question first (Claude, this commit)
+- Microphone off while Terra talks; speech queued, never cut off; Gallery asks which map at once; the map opens
+  with the starting point. 375 of 375 Player checks, 85 of 85 page checks.
 
 ### 2026-11-15: Listening guide, sound unlock, hover reads the panel, voice recovery (Claude, commit 2696a03)
 - Each map opens with the pitch guide and its low, middle and high notes; hover reads value, place, country,

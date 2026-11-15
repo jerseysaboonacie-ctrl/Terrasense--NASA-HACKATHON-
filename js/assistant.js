@@ -169,7 +169,11 @@ export function createAssistant({ container, say, commands = [], help = '', head
   const aloudBox = $('aloud-toggle'), heardEl = $('assistant-heard'), micEl = $('mic-status');
   const micSelect = $('mic-select'), micLive = $('mic-live'), narratorSelect = $('narrator-select'), voiceTestBtn = $('voice-test-btn');
   /** The visible "Microphone: ..." line: where listening has got to, so a problem can be seen. */
-  const micState = (text, kind = '') => { micEl.textContent = 'Microphone: ' + text; micEl.dataset.kind = kind; };
+  const micState = (text, kind = '') => {
+    // While Terra talks the microphone is paused: Chrome's "listening" events must not claim otherwise.
+    if (micPaused && (kind === 'on' || kind === '')) { text = 'paused while I talk, so I do not hear myself. Speak when I have finished.'; kind = 'quiet'; }
+    micEl.textContent = 'Microphone: ' + text; micEl.dataset.kind = kind;
+  };
   const checkBtn = $('mic-check-btn'), levelEl = $('mic-level');
   const allToggles = [talkBtn, ...toggles];
   const statusEl = $('assistant-status'), logEl = $('assistant-log');
@@ -183,6 +187,8 @@ export function createAssistant({ container, say, commands = [], help = '', head
   };
 
   let listeningOn = false;  // Terra switched on: keep listening
+  let micPaused = false;    // Terra is talking: her microphone is paused (no echo)
+  let quietUntil = 0;       // ...until this time
   let rec = null;           // the running recognition session (restarted as needed)
   let retryAt = 0;          // do not restart before this time
   let wakeUntil = 0;        // after "Terra" alone: the next request needs no wake word until then
@@ -628,9 +634,10 @@ export function createAssistant({ container, say, commands = [], help = '', head
     micDevice = chooseInput(list);
     micStream = await navigator.mediaDevices.getUserMedia({ audio: micDevice ? { deviceId: { exact: micDevice.deviceId } } : true });
     micTrack = micStream.getAudioTracks ? micStream.getAudioTracks()[0] : null;
+    if (micTrack) micTrack.enabled = !micPaused; // opened while Terra talks: paused straight away
     fillMicMenu(list, micDevice);
     lastLoud = performance.now();
-    if (micStream.getAudioTracks) startMeter(micStream);
+    try { if (micStream.getAudioTracks) startMeter(micStream); } catch (e) { /* no level bar, listening still works */ }
     terraLog('microphone chosen', { device: deviceName(micDevice).slice(0, 60), virtual: VIRTUAL.test((micDevice && micDevice.label) || ''),
       inputs: list.map((d) => deviceName(d).slice(0, 40) + (VIRTUAL.test(d.label) ? ' [virtual]' : '')).slice(0, 8), saved: Boolean(loadPrefs().terraMic) });
     return micTrack;
@@ -749,6 +756,7 @@ export function createAssistant({ container, say, commands = [], help = '', head
         restart();
       } else if ((r.speechActive && now - r.lastEvent > S.stalledMs) || now - r.lastEvent > S.idleSessionMs) restart();
     };
+    r.dropUnfinished = () => { clearTimeout(stillTimer); used = current.length; lastTaken = []; nameSeenAt = 0; phraseSince = 0; };
     const take = (fromName) => {
       let ws = current.slice(used);
       if (fromName) {
@@ -863,15 +871,11 @@ export function createAssistant({ container, say, commands = [], help = '', head
     const words = splitWords(text), at = attentionIndex(words);
     if (at > 0) text = words.slice(at).join(' ');
     const addressed = WAKE.test(normalise(text));
-    if (speaking() && acceptWhileTalking(text)) {
-      // An answer to the question Terra is reading out (e.g. "vegetation" to "which map?"): interrupt it.
-      stopSpeaking();
-    } else if (speaking()) {
-      // While Terra talks the microphone hears Terra too: only a request that starts with "Terra"
-      // (and is not Terra's own words) gets through, and it interrupts Terra.
-      if (!addressed || echoOfLast(text)) { heardEl.textContent = `Heard "${text}" while I was talking (ignored). Wait for me to finish, or start with "Terra".`; return; }
-      stopSpeaking();
-    } else if (isEcho(text)) { heardEl.textContent = `Heard "${text}" (ignored: it sounded like Terra itself).`; return; }
+    // While Terra talks (and a moment after) the microphone is paused: what arrives then is Terra's own voice.
+    // Terra never interrupts herself, so nothing is taken until she has finished.
+    if (micPaused || speaking()) { heardEl.textContent = 'Heard something while I was talking (ignored, it was probably my own voice). Speak when I finish.'; terraLog('ignored while talking', { words: splitWords(text).length }); return; }
+    if (isEcho(text)) { heardEl.textContent = `Heard "${text}" (ignored: it sounded like Terra itself).`; return; }
+    void addressed;
     heardEl.textContent = `Heard: "${text}"`;
     if (terraAloudSetting() && !canSpeakNow()) statusEl.textContent = SPEAK_HINT;
     if (loadPrefs().terraWakeWord && performance.now() > wakeUntil) {
@@ -883,6 +887,24 @@ export function createAssistant({ container, say, commands = [], help = '', head
     wakeUntil = 0;
     handle(text, { spoken: true });
   }
+
+  // --- No echo: the microphone is paused while Terra talks, and for a moment after --------------------
+  // (On a Mac, Terra's voice from the speakers reaches the microphone and came back as if you had said it.)
+  function pauseMic(paused) {
+    if (paused === micPaused) return;
+    micPaused = paused;
+    micEl.dataset.paused = paused ? '1' : '0';
+    if (micTrack) micTrack.enabled = !paused;              // the recognizer gets silence while Terra talks
+    if (rec && rec.dropUnfinished) rec.dropUnfinished();   // forget what was heard of an unfinished phrase
+    if (listeningOn && micEl.dataset.kind !== 'error') {
+      micState(paused ? 'paused while I talk, so I do not hear myself. Speak when I have finished.' : `on (${deviceName(micDevice)}). Listening: your turn.`, paused ? 'quiet' : 'on');
+    }
+  }
+  window.addEventListener('terrasense-speech-start', () => { quietUntil = performance.now() + S.echoTailMs; pauseMic(true); });
+  setInterval(() => {
+    if (speaking()) quietUntil = performance.now() + S.echoTailMs;
+    pauseMic(performance.now() < quietUntil);
+  }, 100);
 
   // Keep listening while Terra is on: restart whenever the browser ends a session.
   // (Terra no longer stops listening while it talks: restarting took seconds and lost what you said.
