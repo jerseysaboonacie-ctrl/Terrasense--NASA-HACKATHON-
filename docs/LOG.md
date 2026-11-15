@@ -198,7 +198,7 @@ updated with the latest data.
 | 1 | Real-microphone test: Chrome's real speech recognition, fed with real recorded speech through a fake microphone device (macOS "say" makes the recordings) | 40 min | Done (19:01 to 19:14) |
 | 2 | Fix what it shows; a "Check the microphone" button that shows the sound level and each step, so any remaining problem is visible | 45 min | Done (19:14) |
 | 3 | Latest data: an update tool that downloads NASA's newest frames, then refresh the frames and re-check them | 45 min | Done |
-| 4 | Tests, docs, log, commit | 30 min | Done (19:34, commit 27b407d) |
+| 4 | Tests, docs, log, commit | 30 min | Done (19:34, commit d76e938) |
 
 - 19:01: Started. The earlier tests used a stand-in for speech recognition, which cannot show what goes wrong
   with a real microphone. This time the real recognizer is used.
@@ -236,7 +236,7 @@ updated with the latest data.
     checked on (frames/sst/frame-2026-11-05.jpg).
   - The new precipitation data showed that "Go to lightest" could land on a middling value; Go to now stands
     near the top (warmest) or bottom (coolest) of the area. Every frame: nothing decodes beyond it.
-  - Tests: 341 of 341 Player checks, 77 of 77 page checks, 20 of 20 decoder self-tests. Committed 27b407d.
+  - Tests: 341 of 341 Player checks, 77 of 77 page checks, 20 of 20 decoder self-tests. Committed d76e938.
 
 ### Session 6: 2026-11-14 evening (finished)
 
@@ -264,7 +264,7 @@ its name to ask a question gets no answer.
      always understood; "Terra" alone answers "Yes? I'm listening."; "are you (still) listening", "can you
      hear me", "are you there" get "Yes, I'm listening."
   Also: a line under the switch shows what Terra heard, so you can see whether the microphone works.
-- 18:47: All fixed and committed (54c51c5). Found two more on the way:
+- 18:47: All fixed and committed (713dad5). Found two more on the way:
   5. Switching frame reloaded the Player, and a freshly loaded page may not speak until a key press or tap
      (browser rule), so after "open the rain map" Terra listened but could not answer out loud. Fix: frames
      now switch inside the Player page (Frame menu and Terra). From other pages a reload cannot be avoided,
@@ -291,7 +291,7 @@ so that while it is on it hears you and answers whenever you speak.
 Total estimate: about 2 hours 15 minutes. Actual: finished 18:14 (laptop clock).
 
 - 18:01: Started. Today V listens for one request only; the change makes V (and a button) a switch.
-- 18:14: Done and committed (b20781f).
+- 18:14: Done and committed (df6e215).
   - V, or the "Terra listening" switch (in Start here and in the Player's top bar), turns Terra on and off.
     While on, Terra keeps listening and answers every request; it restarts by itself when the browser
     ends a listening session; "stop listening" or V switches it off.
@@ -418,7 +418,7 @@ Total estimate: about 4 hours 10 minutes, finishing around 20:40. Actual: finish
   "built-in" with a hyphen; Terra only knew "built in"), fixed; and a test that looked for a log line that had
   already scrolled out of the 30-line log, fixed in the test.
   Final: 302 of 302 Player checks, 77 of 77 page checks. Your Israel example: "About 100 km west of Israel."
-  Committed as 458e64d. Docs: Accessibility page (first question, Terra, five taps and the screen-reader
+  Committed as b1a1833. Docs: Accessibility page (first question, Terra, five taps and the screen-reader
   caveat on phones), README, Credits (Natural Earth), verification.md section 10.
   Not tested by me: talking to Terra with a real microphone, the back-and-forth listening, accents,
   real screen readers and phones.
@@ -463,7 +463,7 @@ Total estimate: about 3 hours 10 minutes, finishing around 13:15. Actual: finish
   my new test code (a variable named twice), so the test page never started. The site itself was not at
   fault. Fixed; the test page now also posts its progress after every check. Re-running.
 - 10:51: All tests pass: 214 of 214 Player checks (29 new), 73 of 73 page checks, 20 of 20 decoder self-tests.
-  The full one-minute demo ran to the end (60.5 s). Committed as fdd5c0d. Docs updated: README,
+  The full one-minute demo ran to the end (60.5 s). Committed as 02605b4. Docs updated: README,
   Accessibility page, How it works, verification.md section 9.
   Not tested by me (needs you): how the cues and the demo sound to a person, high contrast for a
   low-vision user, a real screen reader, a real phone.
@@ -510,7 +510,7 @@ Total estimate: about 2.5 hours, finishing around 23:45. Actual: 2 hours, finish
 - 22:47: Re-run: 185 of 185 Player checks pass. New page test (`tests/pages-test.html`): 70 of 70 pass
   on all six pages. Read the evidence for each new check to be sure they test something real.
 - 22:55: Screenshots at laptop and phone width look right. Measured every page at 390 px: no sideways scrolling.
-- 23:07: Committed as 3c29d96. Docs updated: README, Accessibility page, verification.md section 8.
+- 23:07: Committed as e8f0fe4. Docs updated: README, Accessibility page, verification.md section 8.
 - 23:08: Session finished. Not tested by me (needs you): a real screen reader, real speech, touch on a real phone.
 
 ---
@@ -521,10 +521,10 @@ Total estimate: about 2.5 hours, finishing around 23:45. Actual: 2 hours, finish
 
 | Item | Owner | Status | Notes |
 |---|---|---|---|
-| Narration for every action, with a Voice mode switch | Claude | Done (simulated) | 2026-11-13, commit 3c29d96. Voice switch (Screen reader / Built-in voice / Off, one voice at a time), opening message, Where am I (W), edges, volume keys, errors in an alert region, detail levels, mouse moves not announced by default, touch reads on lift. Not done: announcing a frame change inside the page (changing frame reloads the page, which then gives the opening message). Needs a real screen reader test. |
+| Narration for every action, with a Voice mode switch | Claude | Done (simulated) | 2026-11-13, commit e8f0fe4. Voice switch (Screen reader / Built-in voice / Off, one voice at a time), opening message, Where am I (W), edges, volume keys, errors in an alert region, detail levels, mouse moves not announced by default, touch reads on lift. Not done: announcing a frame change inside the page (changing frame reloads the page, which then gives the opening message). Needs a real screen reader test. |
 | Summary, Go to warmest, Go to coolest, Next warmest, Compare | Claude | Done | 2026-11-13. All facts computed from decoded values. 109 automated checks pass. SST summary checked against real MUR data (docs/verification.md, section 7). Still to do by a person: check the Summary against the picture by eye. |
-| First-time guide read aloud (Tour, T key) | Claude | Done (simulated) | 2026-11-13, commit 3c29d96. Six steps; layout text built from frames.json and shown under the map. Wording not yet checked by a blind listener. |
-| Sound cues for land, edges and no data | Claude | Done (simulated) | 2026-11-14, commit fdd5c0d. Click for no data, edge bump, error tone, scan start/end chimes, jump note, A/B ticks, fade after 1 s of stillness, Sound cues on/off. Cue sounds were counted by the tests, not judged by ear. |
+| First-time guide read aloud (Tour, T key) | Claude | Done (simulated) | 2026-11-13, commit e8f0fe4. Six steps; layout text built from frames.json and shown under the map. Wording not yet checked by a blind listener. |
+| Sound cues for land, edges and no data | Claude | Done (simulated) | 2026-11-14, commit 02605b4. Click for no data, edge bump, error tone, scan start/end chimes, jump note, A/B ticks, fade after 1 s of stillness, Sound cues on/off. Cue sounds were counted by the tests, not judged by ear. |
 | Accuracy check shown on How it works | Claude + you | Done for SST; by eye is yours | 2026-11-14: ten-point table decoded live and compared with MUR (10 of 10 within one legend step, worst 2.0 °C), plus 2 no-data rows. The "by eye" column still needs a person (see Your tasks). |
 | Test with a real screen reader | Yours | Not started | See Your tasks. Nothing has been tried with VoiceOver, NVDA or TalkBack yet. |
 
@@ -598,52 +598,52 @@ Tick these as you go and add a line under History with what you found.
 
 Newest first. Claude's entries name the commit so you can see exactly what changed.
 
-### 2026-11-15: No echo, no interrupting, map question first (Claude, commit 1fa2504)
+### 2026-11-15: No echo, no interrupting, map question first (Claude, commit 5a91f0d)
 - Microphone off while Terra talks; speech queued, never cut off; Gallery asks which map at once; the map opens
   with the starting point. 375 of 375 Player checks, 85 of 85 page checks.
 
-### 2026-11-15: Listening guide, sound unlock, hover reads the panel, voice recovery (Claude, commit 2696a03)
+### 2026-11-15: Listening guide, sound unlock, hover reads the panel, voice recovery (Claude, commit cef51d4)
 - Each map opens with the pitch guide and its low, middle and high notes; hover reads value, place, country,
   continent; Terra answers short phrases; voice retries. 374 of 374 Player checks, 85 of 85 page checks.
 
-### 2026-11-15: Terra listens to the real microphone, not a silent virtual one (Claude, commit 257a7f1)
+### 2026-11-15: Terra listens to the real microphone, not a silent virtual one (Claude, commit 3157fa1)
 - Chrome preferred "AirgoCast Audio (Virtual)"; Terra now picks the microphone itself. Level bar, Microphone
   and Narrator menus, Test the voice, speech in the log. 370 of 370 Player checks, 85 of 85 page checks.
 
-### 2026-11-15: Start at the Gallery; Terra's microphone made visible (Claude, commit 96b3e4b)
+### 2026-11-15: Start at the Gallery; Terra's microphone made visible (Claude, commit d6cea53)
 - Link visits go to the Gallery: Terra introduces itself, asks how to hear the site and which map; answer
   by voice. `tools/serve.py` (no-cache, microphone log); "Microphone:" status line; no restarts in quiet moments.
 - Tests: 369 of 369 Player checks, 85 of 85 page checks.
 
-### 2026-11-15: Country and continent under the pointer; Terra's date, map switching, introduction (Claude, commit b70c526)
+### 2026-11-15: Country and continent under the pointer; Terra's date, map switching, introduction (Claude, commit 4ba57f6)
 - Panel: "Nearest country" and "Continent". Terra: today's date and time, "move me to the vegetation",
   "what maps are there", "what is NDVI", honest about outside questions. First visit: Terra introduces itself.
 - Tests: 369 of 369 Player checks, 80 of 80 page checks, 20 of 20 decoder self-tests.
 
-### 2026-11-14: Terra answers with people talking nearby (Claude, commit 35d2919)
+### 2026-11-14: Terra answers with people talking nearby (Claude, commit 32cdca6)
 - Found with Google's real recognizer on recorded requests: Terra waited for Chrome to finish a phrase,
   which with people talking never happens, and Chrome's recognizer then stalls. Now Terra answers when the
   words stop, or shortly after its name; restarts stalled sessions; knows "Tara", "Sarah", "Terror".
 - `tools/terra_voice_test.py`. Tests: 346 of 346 Player checks, 77 of 77 page checks.
 
-### 2026-11-14: Terra with a real microphone; newest NASA frames (Claude, commit 27b407d)
+### 2026-11-14: Terra with a real microphone; newest NASA frames (Claude, commit d76e938)
 - Real-microphone tests found why Terra seemed deaf in a busy room; fixed. New "Check the microphone".
 - `tools/update_frames.py`; SST now data for 12 Nov 2026, precipitation 2026-11-14 06:30.
 - Tests: 341 of 341 Player checks, 77 of 77 page checks.
 
-### 2026-11-14: Terra answers out loud and understands its name (Claude, commit 54c51c5)
+### 2026-11-14: Terra answers out loud and understands its name (Claude, commit 713dad5)
 - Fixes your report that Terra did not listen or respond; six causes found and fixed (see session 6).
 - Tests: 338 of 338 Player checks, 77 of 77 page checks.
 
-### 2026-11-14: Terra on/off with continuous listening (Claude, commit b20781f)
+### 2026-11-14: Terra on/off with continuous listening (Claude, commit df6e215)
 - V or the "Terra listening" switch turns Terra on and off; while on it answers whenever you speak.
 - Tests: 330 of 330 Player checks, 77 of 77 page checks (with a stand-in microphone).
 
-### 2026-11-14: Screen-reader simulation and fixes (Claude, commit 98a17b6)
+### 2026-11-14: Screen-reader simulation and fixes (Claude, commit aebd95f)
 - New `tools/sr_sim.py`. It found 14 problems; all fixed (see session 4 above for each problem and solution).
 - Tests: 320 of 320 Player checks, 77 of 77 page checks.
 
-### 2026-11-14: Terra, first-visit question, countries in Where am I (Claude, commit 458e64d)
+### 2026-11-14: Terra, first-visit question, countries in Where am I (Claude, commit b1a1833)
 - Terra, the voice assistant (V, on every page; speak or type), with follow-up questions and back-and-forth
   listening in built-in voice mode. A fixed set of requests, not an AI service (no API key or server).
 - First visit: "How would you like to hear this site?" (built-in voice, screen reader, text only).
@@ -651,14 +651,14 @@ Newest first. Claude's entries name the commit so you can see exactly what chang
 - Tests: 302 of 302 Player checks, 77 of 77 page checks.
 - Not tested: real microphone and speech recognition, real screen readers, phones, people.
 
-### 2026-11-14: Sound cues, display, demo, accuracy table, wording (Claude, commit fdd5c0d)
+### 2026-11-14: Sound cues, display, demo, accuracy table, wording (Claude, commit 02605b4)
 - Sound cues (scan chimes, jump, A/B ticks, still-fade), High contrast / Large text / Reduce motion on every page,
   one-minute Demo (D), live ten-point table on How it works, "color" spelling, legend line, honest SST date.
 - Tests: 214 of 214 Player checks, 73 of 73 page checks, 20 of 20 decoder self-tests.
 - A mistake in my own test code stopped the test page from starting; found from Chrome's console and fixed.
 - Not tested: real screen readers, phones, other browsers, people; how the cues sound to a listener.
 
-### 2026-11-13: Navigation for blind users (Claude, commit 3c29d96)
+### 2026-11-13: Navigation for blind users (Claude, commit e8f0fe4)
 - Voice switch, Start here section before the map, opening message, Where am I, tour, edge bump and announcement,
   volume keys, alert region for errors, detail levels, settings remembered with Reset, frame menu.
 - Tests: 185 of 185 Player checks (76 new), 70 of 70 page checks (new `tests/pages-test.html`), 20 of 20 decoder self-tests.
@@ -669,7 +669,7 @@ Newest first. Claude's entries name the commit so you can see exactly what chang
 - Created this log and filled in the status board against the upgrade plan.
 - Nothing in the site changed in this step.
 
-### 2026-11-13: Summary, Go to, Compare (Claude, commit 776988e)
+### 2026-11-13: Summary, Go to, Compare (Claude, commit 43b66ec)
 - Added Summary, Go to warmest, Next warmest, Go to coolest and Compare (keys A, B, C).
 - Every announcement now goes through one function: the same text appears in the panel's "Last announcement" line and the polite live region.
 - Tests: 109 automated Player checks pass (32 new). SST summary against MUR: warmest point decoded about 32 °C vs MUR 31.45 °C; coolest about −2 °C vs −1.8 °C.
@@ -678,11 +678,11 @@ Newest first. Claude's entries name the commit so you can see exactly what chang
 ### 2026-11-12: Local server restarted (Claude)
 - The site would not open because the local server had stopped with the previous session. Restarted it on port 8931.
 
-### 2026-11-06: Player with sound (Claude, commit c3e875f)
+### 2026-11-06: Player with sound (Claude, commit df27766)
 - Built the audio engine, the Player (pointer, keyboard, scan, reference tones, Explain this sound), narration, Home sound check, audio test page, How it works and Accessibility pages.
 - Tests: 77 automated Player checks pass.
 
-### 2026-11-05: Decoder and validation (Claude, commits ce05d93 and 110fa39)
+### 2026-11-05: Decoder and validation (Claude, commits b68c19d and ccc26ee)
 - Chose four frames from the SVS Daily Visualizations gallery and measured their legends from NASA's colorbars.
 - Built the six-page skeleton, the gallery and credits from `data/frames.json`, and the decoder with its test page.
 - Validated SST against real MUR data: median error 0.7 °C, worst 1.8 °C over 336 points; ten-point table in `docs/accuracy-check.md`.
