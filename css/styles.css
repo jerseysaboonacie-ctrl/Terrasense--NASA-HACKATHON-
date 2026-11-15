@@ -403,3 +403,10 @@ button.big-button { border-radius: var(--radius); }
 .terra-state { font-size: 0.8em; font-weight: 700; padding: 1px 8px; border-radius: 999px; border: 2px solid currentColor; }
 .terra-toggle.on { background: var(--good); border-color: var(--good); color: var(--bg); }
 .terra-toggle.on .terra-state::before { content: "● "; }
+
+/* "Click anywhere or press any key to turn on the sound" (Player, until the browser allows sound) */
+.sound-unlock { position: fixed; left: 50%; top: 16px; transform: translateX(-50%); z-index: 50; max-width: calc(100vw - 32px);
+  font-size: 1.15rem; padding: 0.8em 1.4em; border-radius: var(--radius); background: var(--accent); color: var(--accent-text); border: 0;
+  box-shadow: 0 6px 24px rgba(0, 0, 0, 0.45); cursor: pointer; }
+.sound-unlock[hidden] { display: none; }
+.pitch-guide { border-left: 4px solid var(--accent); padding-left: 10px; }

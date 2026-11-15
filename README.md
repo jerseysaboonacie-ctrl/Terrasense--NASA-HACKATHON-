@@ -79,6 +79,17 @@ offered because none of our frames has dated versions yet; see Known limitations
   an honest "I am not connected to the internet or to an AI service".
 - **First visit**: see "Where it starts" above (`greetOnGallery` in `js/welcome.js`). On other pages a first
   visit gets Terra's introduction and the voice question. Choosing a voice switches Terra's listening on.
+- **Listening guide** (Player): when a map opens, Terra says how to listen ("the higher the note, the warmer it
+  is") and plays the low, middle and high notes with their approximate values (from the legend), so values can
+  be told by ear without the color key. G or "Terra, play the guide" repeats it; moving or any key stops it.
+  The same rule is in Terra's introduction on the Gallery, spoken on the first click or key press.
+- **Sound unlock**: browsers allow sound only after a click or key press. Arriving from another page of the
+  site usually counts (sound starts at once); otherwise a large "Click anywhere or press any key" button.
+- **Hover** reads the panel when the mouse rests (on by default): value, place, nearest country, continent.
+- **Voice that does not start** (Chrome on a Mac can get stuck): reset and retry, then Google's voice, then
+  a message to quit and reopen Chrome. Novelty voices are never picked.
+- **Short phrases Terra does not know** get a short "Sorry, I did not catch …"; only long sentences and fillers
+  ("okay so") without "Terra" are treated as people talking.
 - **Which microphone**: Terra opens the microphone itself and hands it to Chrome's recognizer
   (`recognition.start(track)`), because Chrome's own preferred microphone can be a virtual device
   (screen-casting or meeting apps, e.g. "AirgoCast Audio (Virtual)") that sends silence. Automatic picks the

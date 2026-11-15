@@ -122,30 +122,62 @@ export function isSpeaking() {
   return true;
 }
 
-/** Speak text, cutting off anything still being spoken. onEnd runs when it has all been read. */
+/**
+ * Speak text, cutting off anything still being spoken. onEnd runs when it has all been read.
+ *
+ * Chrome on a Mac can get its speech engine stuck: it says it is speaking, but no sound comes and no
+ * "start" event arrives. So if speech has not started within a second, it is reset and tried again;
+ * then with another voice (Google's own voices are played by Chrome itself, a different route); and
+ * if nothing works, the page is told (speechTrouble), so it can ask the person to restart Chrome.
+ */
 export function speak(text, rate = 1, onEnd) {
   if (!speechSupported() || !text) { if (onEnd) onEnd(); return; }
+  speakAttempt(text, rate, onEnd, 0);
+}
+
+let troubleShown = false;
+/** True after speech failed to start even after the retries (shown once per page). */
+export let speechTrouble = false;
+
+function speakAttempt(text, rate, onEnd, attempt) {
   const synth = window.speechSynthesis;
   const gen = ++speechGen;
   synth.cancel();
+  if (attempt > 0) { try { synth.resume(); } catch (e) { /* fine */ } }
   keep.length = 0;
   const parts = chunksForSpeech(text);
   active = parts.length;
   speakStarted = performance.now();
   // About 150 words a minute at rate 1, plus a margin.
   speakingUntil = performance.now() + (text.split(/\s+/).length / (2.5 * rate)) * 1000 + 3000;
-  // For Terra's log: does the voice actually start? (Chrome can stay silent: a stuck speech queue or a broken voice.)
   let started = false;
+  const voiceFor = () => {
+    if (attempt === 0) return pickVoice();
+    const all = synth.getVoices();
+    if (attempt === 1) return pickVoice();
+    // Attempt 2: a different route: Google's voice (played by Chrome), else the system default voice.
+    return all.find((v) => /^Google US English/.test(v.name)) || all.find((v) => /^Google/.test(v.name) && /^en/.test(v.lang)) || null;
+  };
+  const chosen = voiceFor();
   setTimeout(() => {
-    if (gen === speechGen && !started && !synth.speaking) terraLog('speech did not start', { voice: (pickVoice() || {}).name || 'none', pending: synth.pending, voices: synth.getVoices().length });
-  }, 1500);
+    if (gen !== speechGen || started) return;
+    terraLog('speech did not start', { attempt, voice: chosen ? chosen.name : 'default', speaking: synth.speaking, pending: synth.pending, voices: synth.getVoices().length });
+    if (attempt < 2) { speakAttempt(text, rate, onEnd, attempt + 1); return; }
+    speechTrouble = true;
+    if (!troubleShown) { troubleShown = true; window.dispatchEvent(new CustomEvent('terrasense-speech-trouble')); }
+    active = 0;
+    if (onEnd) onEnd();
+  }, attempt === 0 ? 1200 : 1500);
   parts.forEach((part, i) => {
     const u = new SpeechSynthesisUtterance(part);
-    u.onstart = () => { started = true; if (!loggedStart) { loggedStart = true; terraLog('speech works', { voice: u.voice ? u.voice.name : 'default' }); } };
+    u.onstart = () => {
+      started = true;
+      if (!loggedStart || attempt > 0) { loggedStart = true; terraLog(attempt ? 'speech recovered' : 'speech works', { attempt, voice: u.voice ? u.voice.name : 'default' }); }
+      if (attempt === 2 && chosen) voice = chosen; // keep the voice that works
+    };
     u.lang = 'en-US';
     u.rate = rate;
-    const v = pickVoice();
-    if (v) u.voice = v;
+    if (chosen) u.voice = chosen;
     const done = () => {
       if (gen !== speechGen) return;
       active = Math.max(0, active - 1);

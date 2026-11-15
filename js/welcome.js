@@ -28,9 +28,15 @@ export function announcePrefsChanged() {
 }
 
 /** Terra's introduction: what the site is and how to tell Terra what to do (also used by "introduce yourself"). */
+export const PITCH_GUIDE =
+  'How to listen: every place on a map plays a note. The higher the note, the higher the value: on the temperature maps, ' +
+  'a high note is warm and a low note is cold; on the rain map, a higher note is heavier rain; on the vegetation map, greener land. ' +
+  'Silence with one soft click means no data. Left and right in your headphones are west and east. ' +
+  'Each map starts by playing its low, middle and high notes with their values, so you can tell the values without the color key.';
+
 export const TERRA_INTRO =
   'Hi, I am Terra, the voice assistant for TerraSense Jukebox. This site turns NASA maps of the Earth into sound: ' +
-  'sea temperature, air temperature, vegetation, and rain and snow. Higher pitch means a higher value. ' +
+  'sea temperature, air temperature, vegetation, and rain and snow. ' + PITCH_GUIDE + ' ' +
   'You can tell me what to do. Press V to switch me on, then just talk, for example: ' +
   '"take me to Japan", "open the vegetation map", "where is the warmest place", "where am I", ' +
   '"what is today\'s date", or "help". You can also type your request. ' +
@@ -62,7 +68,8 @@ export function askVoiceModeIfNeeded(onChosen = () => {}, { force = false } = {}
   dlg.innerHTML = `
     <h2 id="welcome-title">Hi, I'm Terra</h2>
     <div id="welcome-desc">
-      <p>I'm the voice assistant for TerraSense Jukebox. This site turns NASA maps of the Earth into sound: sea temperature, air temperature, vegetation, and rain and snow. Higher pitch means a higher value.</p>
+      <p>I'm the voice assistant for TerraSense Jukebox. This site turns NASA maps of the Earth into sound: sea temperature, air temperature, vegetation, and rain and snow.</p>
+      <p class="pitch-guide"><strong>How to listen:</strong> every place on a map plays a note. <strong>The higher the note, the higher the value</strong>: on the temperature maps a high note is warm and a low note is cold; on the rain map a higher note is heavier rain; on the vegetation map, greener land. Silence with one soft click means no data. Left and right in your headphones are west and east. Each map starts by playing its low, middle and high notes with their values, so you can tell the values without the color key.</p>
       <p><strong>You can tell me what to do.</strong> Press <kbd>V</kbd> to switch me on, then just talk, for example:</p>
       <ul class="welcome-examples">
         <li>"Take me to Japan"</li>
@@ -191,7 +198,8 @@ export function greetOnGallery({ listen, say, frames = [] }) {
   dlg.innerHTML = `
     <h2 id="welcome-title">Hi, I'm Terra</h2>
     <div id="welcome-desc">
-      <p>I'm the voice assistant for TerraSense Jukebox. This site turns NASA maps of the Earth into sound: sea temperature, air temperature, vegetation, and rain and snow. Higher pitch means a higher value.</p>
+      <p>I'm the voice assistant for TerraSense Jukebox. This site turns NASA maps of the Earth into sound: sea temperature, air temperature, vegetation, and rain and snow.</p>
+      <p class="pitch-guide"><strong>How to listen:</strong> every place on a map plays a note. <strong>The higher the note, the higher the value</strong>: on the temperature maps a high note is warm and a low note is cold; on the rain map a higher note is heavier rain; on the vegetation map, greener land. Silence with one soft click means no data. Left and right in your headphones are west and east. Each map starts by playing its low, middle and high notes with their values, so you can tell the values without the color key.</p>
       <p><strong>You can tell me what to do.</strong> Just talk to me, for example:</p>
       <ul class="welcome-examples">
         <li>"Take me to Japan"</li>
@@ -241,7 +249,8 @@ export function greetOnGallery({ listen, say, frames = [] }) {
         : 'Terra cannot hear you here (see the Microphone line on the page). Press 1 to 5.';
       status.dataset.kind = listening ? 'on' : 'warn';
     }
-    if (mode === 'voice' && voiceOk) speak(mapQuestion(), loadPrefs().speechRate || 1);
+    // Chose straight away (the first click or key press): the introduction and how to listen come first.
+    if (mode === 'voice' && voiceOk) { const lead = introHeard ? '' : TERRA_INTRO + ' '; introHeard = true; speak(lead + mapQuestion(), loadPrefs().speechRate || 1); }
     else if (mode === 'screenreader') say(mapQuestion());
   };
 

@@ -219,8 +219,9 @@
       const dlg = w.document.querySelector('dialog.welcome-dialog');
       const step1 = dlg ? dlg.querySelector('h2').textContent : '';
       const intro = dlg ? dlg.textContent : '';
-      record('(link)', 'Opening the site from a link lands on the Gallery with Terra\'s introduction', landed && step1 === "Hi, I'm Terra" &&
-        /You can tell me what to do/.test(intro) && /how would you like to hear this site/i.test(intro) && /your choice last time/.test(intro),
+      record('(link)', 'Opening the site from a link lands on the Gallery with Terra\'s introduction and how to listen (higher note = higher value)', landed && step1 === "Hi, I'm Terra" &&
+        /You can tell me what to do/.test(intro) && /how would you like to hear this site/i.test(intro) && /your choice last time/.test(intro) &&
+        /The higher the note, the higher the value/.test(intro) && /a high note is warm and a low note is cold/.test(intro),
         `${w.location.pathname}; "${step1}"`);
       if (dlg) dlg.dispatchEvent(new KeyboardEvent('keydown', { key: '2', bubbles: true }));
       await wait(300);

@@ -11,7 +11,7 @@ export const DEFAULTS = Object.freeze({
   detail: 'normal',           // 'short' | 'normal' | 'full'
   speechRate: 1,              // built-in voice speed
   volume: 30,                 // percent, 0..100 (the audio engine caps the output)
-  announceMoving: false,      // read the value when the mouse stops moving
+  announceHover: true,        // read the panel (value, place, nearest country, continent) when the mouse stops moving
   soundCues: true,            // edge bump and error tone
   vibrate: true,
   highContrast: false,        // display settings, applied on every page by display.js

@@ -134,6 +134,8 @@ export function playerCommands(api) {
       run: () => api.describeFrame() },
     { name: 'date', match: (t) => has(t, 'what date', 'which date', 'what day', 'when is this', 'when was this', 'how old', 'what time'),
       run: () => { const m = api.meta(); return `This frame: ${m.date}. ${m.dateNote}`; } },
+    { name: 'guide', match: (t) => has(t, 'guide', 'how do i listen', 'how to listen', 'how do i hear', 'how does the pitch work', 'what does high mean', 'what does a high note mean', 'how do i know the temperature'),
+      run: () => { api.guide(); } },
     { name: 'sound legend', match: (t) => has(t, 'what does the sound mean', 'what do the sounds mean', 'what does the pitch mean', 'reference tones', 'reference tone', 'sound scale', 'how does the sound work', 'legend', 'the range', 'what is the range', 'low and high'),
       run: () => { api.referenceTones(); } },
     { name: 'explain', match: (t) => has(t, 'explain', 'why this sound', 'how did you get'),
@@ -165,7 +167,9 @@ export function playerCommands(api) {
     // "move north", "go left a bit", or just "north": not any sentence that contains "right" or "up".
     { name: 'move', match: (t) => (has(t, 'move', 'go', 'head', 'step', 'nudge', 'shift', 'pan', 'jump') || words(t) <= 3) && Object.keys(DIRS).find((d) => has(t, d)),
       run: (ctx, dir, t) => { const [dx, dy] = DIRS[dir]; const n = amount(t); api.moveBy(dx * n, dy * n); } },
-    { name: 'value here', match: (t) => words(t) <= 8 && asksValue(t) && has(t, 'here', 'there', 'now', 'it', 'this'),
+    // "What's the value here", and short questions without "here": "what's the temperature", "how hot is it".
+    { name: 'value here', match: (t) => (words(t) <= 8 && asksValue(t) && has(t, 'here', 'there', 'now', 'it', 'this')) ||
+        (words(t) <= 5 && has(t, 'temperature', 'value', 'how hot', 'how warm', 'how cold', 'how green', 'how much rain', 'how wet', 'reading', 'what is it', 'whats it')),
       run: () => { const p = api.point(); api.show(p.x, p.y, { prefix: '' }); } },
   ];
 }

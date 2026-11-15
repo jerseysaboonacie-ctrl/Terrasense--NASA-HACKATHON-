@@ -436,7 +436,9 @@ export function createAssistant({ container, say, commands = [], help = '', head
     // Heard from the room without "Terra" and not a request Terra knows: say nothing (it may be people talking).
     const wordCount = t.trim().split(' ').length;
     // Long sentences without "Terra" are conversation in the room, not requests (requests are short).
-    if (spoken && !addressed && (wordCount > 8 || !(await understands(t, text)))) {
+    // Short phrases it does not understand still get a short answer (silence felt like Terra was not listening);
+    // only longer ones without "Terra" count as people talking in the room.
+    if (spoken && !addressed && (wordCount > 6 || (wordCount > 0 && !(await understands(t, text)) && looksLikeChatter(t)))) {
       heardEl.textContent = `Heard "${original}": not a request I know, so I stayed quiet. Start with "Terra" to ask me anything.`;
       micState(`heard ${wordCount} words, but not a request I know, so I stayed quiet. Start with "Terra", for example "Terra, where am I?"`, 'quiet');
       terraLog('quiet', { words: wordCount, reason: wordCount > 8 ? 'long, no name' : 'not a known request, no name' });
@@ -489,6 +491,11 @@ export function createAssistant({ container, say, commands = [], help = '', head
     if (answer) typeof answer === 'string' ? reply(answer) : reply(answer.text, { echo: answer.echo });
     // Keep logging for a moment: some replies arrive later (a comparison speaks after its tones).
     captureTimer = setTimeout(() => { capturing = false; requestSpoken = false; }, 3000);
+  }
+
+  /** A short phrase that is probably not meant for Terra: one or two filler words ("yeah", "okay so", "um"). */
+  function looksLikeChatter(t) {
+    return /^ (yeah|yes|no|ok|okay|um+|uh+|hmm+|so|and|but|right|oh|ah|well|like|i mean|you know|okay so|yeah yeah|mm+)( (so|yeah|okay|and|um))? $/.test(t) || t.trim().length < 3;
   }
 
   /** Would some command answer this? (Used to stay quiet about room chatter.) */
@@ -590,23 +597,24 @@ export function createAssistant({ container, say, commands = [], help = '', head
     an.fftSize = 1024;
     ac.createMediaStreamSource(stream).connect(an);
     const buf = new Float32Array(an.fftSize);
-    let alive = true, frame = 0;
+    let alive = true, frame = 0, timer = 0;
     const resume = () => ac.state === 'suspended' && ac.resume().catch(() => {});
     document.addEventListener('pointerdown', resume, { once: true });
     document.addEventListener('keydown', resume, { once: true });
     resume();
-    const tick = () => {
+    // Measured on a timer, not on screen redraws (Chrome pauses those when the window is behind others,
+    // which made the microphone look silent).
+    timer = setInterval(() => {
       if (!alive) return;
       an.getFloatTimeDomainData(buf);
       let sum = 0;
       for (let i = 0; i < buf.length; i++) sum += buf[i] * buf[i];
       const rms = Math.sqrt(sum / buf.length);
-      if (rms > 0.004) lastLoud = performance.now();
-      micLive.style.width = Math.min(100, Math.round(rms * 600)) + '%';
-      frame = requestAnimationFrame(tick);
-    };
-    tick();
-    meter = { stop() { alive = false; cancelAnimationFrame(frame); ac.close().catch(() => {}); }, state: () => ac.state };
+      if (rms > 0.0025) lastLoud = performance.now();
+      cancelAnimationFrame(frame);
+      frame = requestAnimationFrame(() => { micLive.style.width = Math.min(100, Math.round(rms * 600)) + '%'; });
+    }, 100);
+    meter = { stop() { alive = false; clearInterval(timer); cancelAnimationFrame(frame); ac.close().catch(() => {}); }, state: () => ac.state };
   }
   /** Open the chosen microphone (asking permission first if needed). Returns the audio track. */
   async function openMic() {
@@ -691,7 +699,9 @@ export function createAssistant({ container, say, commands = [], help = '', head
     setOn(true);
     micState('starting…');
     await cue('listenStart');
-    if (!quiet) reply(resume ? 'Terra is still listening.' : 'Terra is listening. Say what you want, at any time. Say stop listening, or press V, to switch me off.', { echo: false });
+    // On a new page Terra stays on without talking over the page's own start (the Player's listening guide).
+    if (resume) statusEl.textContent = 'Terra is still listening.';
+    else if (!quiet) reply('Terra is listening. Say what you want, at any time. Say stop listening, or press V, to switch me off.', { echo: false });
     if (resume && terraAloudSetting() && !canSpeakNow()) statusEl.textContent = SPEAK_HINT;
     retryAt = performance.now() + 300;
     return true;
@@ -809,7 +819,7 @@ export function createAssistant({ container, say, commands = [], help = '', head
       if (rec === r) micState(`on (${deviceName(micDevice)}). Listening: speak whenever you like; the bar moves when it hears you.`, 'on');
       setTimeout(() => {
         if (rec !== r || !listeningOn || speaking()) return;
-        const silent = meter ? performance.now() - lastLoud > 9000 : !heardSound;
+        const silent = meter && meter.state() === 'running' ? performance.now() - lastLoud > 9000 && !heardSound : false;
         if (silent) {
           micState(`on, but no sound from ${deviceName(micDevice)} for 10 seconds. Choose another microphone in the menu below, or check it is not muted.`, 'warn');
           terraLog('silent microphone', { device: deviceName(micDevice).slice(0, 60), meterState: meter ? meter.state() : 'none' });
@@ -972,6 +982,12 @@ export function createAssistant({ container, say, commands = [], help = '', head
     const text = input.value;
     input.value = '';
     handle(text);
+  });
+
+  // Chrome's voice did not start even after the retries (narrator.js): say what to do, visibly.
+  window.addEventListener('terrasense-speech-trouble', () => {
+    statusEl.textContent = 'The built-in voice is not working in this Chrome window. Quit Chrome completely (Cmd+Q on a Mac), open it again, and reload this page.';
+    micState('heard you, but Chrome\'s voice is not working, so my answers are only written here. Quit Chrome (Cmd+Q) and open it again.', 'error');
   });
 
   // Narrator (the voice mode), on every page, so it is clear whether the page reads aloud.

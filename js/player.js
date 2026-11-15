@@ -11,7 +11,7 @@ import {
   setVolume, setMuted, isMuted, frequencyFor, panFor, waveformFor, audioState, playCue,
 } from './audio.js';
 import { drawLegend, referenceTones } from './legend.js';
-import { describeResult, describeLayout, speak, speechSupported, stopSpeaking } from './narrator.js';
+import { describeResult, describeLayout, speak, speechSupported, stopSpeaking, canSpeakNow, isSpeaking } from './narrator.js';
 import { analyseFrame, describePattern, describeDifference } from './analysis.js';
 import { SETTINGS as S } from './settings.js';
 import { loadPrefs, savePrefs, clearPrefs, DEFAULTS } from './prefs.js';
@@ -124,12 +124,17 @@ function setLive(text) {
  *   off           nowhere else
  * Only one of the two voices is ever used, so they never talk at once.
  */
+let guideToken = 0;      // bumps to stop the listening guide in progress
+let guideGivenFor = '';  // the frame the listening guide was last given for
 let saidSomething = false; // anything announced yet (the opening message must not talk over it)
 
 let assistant = null;      // Terra (assistant.js), created at start-up
 
+let sayCount = 0;         // how many things have been said (the guide only starts when nothing else spoke)
 function say(text, { aloud = false } = {}) {
   saidSomething = true;
+  sayCount++;
+  stopGuide(); // anything else said (an answer, a value) ends the listening guide
   els.narration.textContent = text;
   if (assistant) assistant.heard(text);
   // Terra answering out loud (you talked to it): the built-in voice instead of the live region.
@@ -217,7 +222,9 @@ function showPoint({ announce: when = false, hold, force = false, prefix = '', s
   vibrate(r);
 
   clearTimeout(narrateTimer);
-  const sentence = prefix + d.narration + (suffix ? ' ' + suffix : '');
+  // Hover and arrow keys: read what the panel shows, including the nearest country and the continent.
+  const near = (when === 'later' || when === 'keys') && !suffix ? placeWords(r) : '';
+  const sentence = prefix + d.narration + (suffix ? ' ' + suffix : '') + (near ? ' ' + near : '');
   const speakNow = () => { say(sentence); if (onSpoken) onSpoken(); };
   if (when === 'now') speakNow();
   else if (when === 'keys') narrateTimer = setTimeout(speakNow, S.keyRepeatMs);
@@ -229,6 +236,15 @@ function showPoint({ announce: when = false, hold, force = false, prefix = '', s
 let countryList = null, whereKey = '', wherePending = null, whereFrame = 0;
 loadCountries().then((c) => { countryList = c; if (last) showWhere(last); })
   .catch(() => { els.infoCountry.textContent = 'Country names could not be loaded.'; els.infoContinent.textContent = '–'; });
+
+/** "In Japan, Asia." / "About 300 km west of Chile; nearest land South America." (approximate), or ''. */
+function placeWords(r) {
+  if (!countryList || r.lon == null) return '';
+  const w = whereIs(countryList, r.lon, r.lat);
+  if (!w.sentence) return '';
+  if (!w.continent) return w.sentence;
+  return w.atSea ? `${w.sentence.replace(/\.$/, '')}; nearest land ${w.continent}.` : `${w.sentence.replace(/\.$/, '')}, ${w.continent}.`;
+}
 
 function showWhere(r) {
   if (!countryList || r.lon == null || r.lat == null) return;
@@ -362,7 +378,8 @@ els.wrap.addEventListener('pointermove', (e) => {
   // Touch and pen: read it when the finger lifts (endPress).
   const mouse = e.pointerType === 'mouse';
   if (!mouse) dragMoved = true;
-  showPoint({ announce: mouse && prefs.announceMoving ? 'later' : false });
+  if (mouse) stopGuide();
+  showPoint({ announce: mouse && prefs.announceHover ? 'later' : false });
 });
 
 function endPress(e) {
@@ -444,7 +461,9 @@ document.addEventListener('keydown', (e) => {
   const typing = t.tagName === 'TEXTAREA' || t.tagName === 'SELECT' ||
     (t.tagName === 'INPUT' && !['checkbox', 'radio', 'range', 'button'].includes(t.type));
   if (typing) return;
+  if (!['Shift', 'Control', 'Alt', 'Meta'].includes(e.key) && !(e.key === 'g' || e.key === 'G')) stopGuide();
   if (e.key === 'm' || e.key === 'M') { e.preventDefault(); toggleMute(); }
+  else if (e.key === 'g' || e.key === 'G') { e.preventDefault(); playGuide({ force: true }); }
   else if (e.key === 't' || e.key === 'T') { e.preventDefault(); tourStep(); }
   else if (e.key === 'w' || e.key === 'W') { e.preventDefault(); whereAmI(); }
   else if (e.key === 'd' || e.key === 'D') { e.preventDefault(); toggleDemo(); }
@@ -794,7 +813,7 @@ function applyPrefs() {
   els.voiceRadios.forEach((r) => { r.checked = r.value === prefs.voiceMode; });
   els.detailSelect.value = prefs.detail;
   els.rateSelect.value = String(prefs.speechRate);
-  els.movingToggle.checked = prefs.announceMoving;
+  els.movingToggle.checked = prefs.announceHover;
   els.cuesToggle.checked = prefs.soundCues;
   els.vibrateToggle.checked = prefs.vibrate;
   els.hcToggle.checked = prefs.highContrast;
@@ -837,7 +856,7 @@ els.rateSelect.addEventListener('change', () => {
   setPref('speechRate', Number(els.rateSelect.value));
   if (prefs.voiceMode === 'voice') say('This is the new speed.');
 });
-els.movingToggle.addEventListener('change', () => setPref('announceMoving', els.movingToggle.checked));
+els.movingToggle.addEventListener('change', () => setPref('announceHover', els.movingToggle.checked));
 els.cuesToggle.addEventListener('change', () => setPref('soundCues', els.cuesToggle.checked));
 els.vibrateToggle.addEventListener('change', () => setPref('vibrate', els.vibrateToggle.checked));
 for (const [box, key] of [[els.hcToggle, 'highContrast'], [els.largeToggle, 'largeText'], [els.motionToggle, 'reduceMotion']]) {
@@ -1042,6 +1061,95 @@ async function showAt(x, y, { prefix = '', suffix = '' } = {}) {
   showPoint({ announce: 'now', hold: S.referenceSeconds, force: true, prefix, suffix, detail: atLeastNormal() });
 }
 
+// ---------------------------------------------------------------------------
+// The listening guide: how to tell the value by ear, without the color key
+// ---------------------------------------------------------------------------
+
+
+function stopGuide() { guideToken++; }
+
+/** The guide in steps: what the pitch means, then the low, middle and high notes with their values. */
+function guideSteps(meta, lead = '') {
+  const T = meta.terms;
+  const refs = referenceTones(meta);
+  const end = (r) => (r.name === 'Low' ? `, the ${T.low} end` : r.name === 'High' ? `, the ${T.high} end` : '');
+  return [
+    { text: `${lead ? lead + ' ' : ''}${meta.title}, ${dateInSentence(meta)}. How to listen: every place on the map plays a note. ` +
+      `The higher the note, the ${T.higher} it is; the lower the note, the ${T.lower}. Here are three notes from low to high.` },
+    ...refs.map((r) => ({ text: `${r.name} note: ${/^[\d−-]/.test(r.label) ? 'about ' + r.label : 'the ' + r.label.charAt(0).toLowerCase() + r.label.slice(1)}${end(r)}.`, tone: r })),
+    { text: 'Silence with one soft click means no data there. Left and right in your headphones are west and east. ' +
+      'Move the mouse over the map, or use the arrow keys: I read the value, the place, the nearest country and the continent. ' +
+      'Say "Terra, play the guide" to hear this again.' },
+  ];
+}
+
+/** Play the guide: each step is spoken, then its note plays. Stops when you move or press a key. */
+async function playGuide({ lead = '', force = false } = {}) {
+  if (!frame) return;
+  const meta = frame.meta;
+  if (!force && guideGivenFor === meta.id) return;
+  guideGivenFor = meta.id;
+  const token = ++guideToken;
+  if (!isStarted()) await ensureAudio();
+  if (token !== guideToken) return; // something else was said meanwhile: that comes first
+  const steps = guideSteps(meta, lead);
+  els.status.textContent = 'Listening guide: ' + steps.map((s) => s.text).join(' ');
+  const voice = prefs.voiceMode === 'voice' && speechSupported();
+  const next = (i) => {
+    if (token !== guideToken || i >= steps.length) return;
+    const step = steps[i];
+    const after = () => {
+      if (token !== guideToken) return;
+      if (step.tone && isStarted() && !isMuted()) playTone({ t: step.tone.t, xFraction: 0.5, family: step.tone.family, holdSeconds: 0.9 });
+      setTimeout(() => next(i + 1), step.tone ? 1200 : 250);
+    };
+    els.narration.textContent = step.text;
+    if (assistant) assistant.heard(step.text);
+    if (voice) speak(step.text, prefs.speechRate, after);
+    else { if (prefs.voiceMode === 'screenreader') setLive(step.text); setTimeout(after, Math.max(1500, step.text.split(' ').length * 330)); }
+  };
+  saidSomething = true;
+  next(0);
+}
+
+// Sound (tones and the voice) may only start after a click or key press on the page. Arriving from another
+// page of the site usually counts; if not, a prompt asks for one click or key press, and that starts it all.
+const unlockEl = (() => {
+  const b = document.createElement('button');
+  b.type = 'button';
+  b.id = 'sound-unlock';
+  b.className = 'sound-unlock';
+  b.textContent = 'Click anywhere or press any key to turn on the sound and hear the map';
+  b.hidden = true;
+  document.body.append(b); // last in the page: the skip link stays first; it is shown fixed at the top
+  return b;
+})();
+
+function soundAllowed() {
+  return canSpeakNow();
+}
+
+async function startSoundAndGuide(lead = '', { ifQuiet = false } = {}) {
+  unlockEl.hidden = true;
+  const before = sayCount;
+  await ensureAudio();
+  if (!ifQuiet) { playGuide({ lead }); return; }
+  // After a click or key press that may itself say something (V switches Terra on, Enter reads the value):
+  // the guide only if nothing else has spoken. "Terra, play the guide" or G gives it any time.
+  setTimeout(() => { if (sayCount === before && !window.__welcomeOpen) playGuide({ lead }); }, 450);
+}
+
+function offerUnlock() {
+  unlockEl.hidden = false; // the opening message already says to press a key
+  const go = () => {
+    document.removeEventListener('pointerdown', go, true);
+    document.removeEventListener('keydown', go, true);
+    startSoundAndGuide('', { ifQuiet: true });
+  };
+  document.addEventListener('pointerdown', go, true);
+  document.addEventListener('keydown', go, true);
+}
+
 function playReferenceTones() {
   const refs = referenceTones(frame.meta);
   say('The sound scale: higher values play higher notes, the same scale on every map. ' +
@@ -1099,6 +1207,7 @@ function assistantApi() {
       return i === RATES.length - 1 && dir > 0 ? 'This is the fastest speed.' : i === 0 && dir < 0 ? 'This is the slowest speed.' : 'Is this better?';
     },
     referenceTones: playReferenceTones,
+    guide: () => playGuide({ force: true }),
     explainText: () => {
       if (!last) return 'Move to a point first.';
       els.explain.hidden = false;
@@ -1182,7 +1291,10 @@ async function switchFrame(id) {
     return;
   }
   history.replaceState(null, '', 'player.html?frame=' + encodeURIComponent(id));
-  if (await openFrame(meta)) say(`${meta.title} is open, ${dateInSentence(meta)}. ${meta.listenFor}`);
+  if (await openFrame(meta)) {
+    if (isStarted() || soundAllowed()) playGuide({ lead: `${meta.title} is open.` });
+    else say(`${meta.title} is open, ${dateInSentence(meta)}. ${meta.listenFor}`);
+  }
 }
 
 /**
@@ -1236,7 +1348,14 @@ async function init() {
   if (!(await openFrame(meta))) return;
   // Opening message, once the page has settled (a screen reader reads the
   // page title first; this polite message follows it).
-  setTimeout(() => saidSomething || window.__welcomeOpen || say(`Player ready: ${meta.title}. Press T for a tour, or use the Skip to the map link at the top of the page, then the arrow keys.`), 1000);
+  setTimeout(() => {
+    if (window.__welcomeOpen) return; // the first question comes first; the guide follows the answer
+    if (!soundAllowed()) {
+      if (!saidSomething) say(`Player ready: ${meta.title}. Press any key to turn on the sound and hear the listening guide, then use the arrow keys.`);
+      offerUnlock();
+    } else if (!saidSomething) startSoundAndGuide(); // sound allowed: the guide first thing
+    else ensureAudio();                              // already busy (asked Terra, moved): sound on, no guide now
+  }, 1000);
 
   // Terra, the assistant, with the Player's commands (player-assistant.js).
   assistant = createAssistant({
@@ -1249,9 +1368,9 @@ async function init() {
 
   // First visit: ask how to hear the site (welcome.js), then greet in that voice.
   askVoiceModeIfNeeded(async (mode) => {
-    if (mode === 'off') return;
-    const on = await assistant.startListening({ quiet: true }); // so Terra can hear you straight away
-    say(afterChoice(mode, `${meta.title} is open. Press T for a tour, or use the Skip to the map link at the top of the page, then the arrow keys.`, on));
+    const on = mode !== 'off' && await assistant.startListening({ quiet: true }); // so Terra can hear you straight away
+    // Then the listening guide, led by Terra's confirmation (choosing was a key press or click, so sound may start).
+    startSoundAndGuide(mode === 'off' ? '' : afterChoice(mode, '', on));
   });
 
   // Read-only hooks for the automated tests in tests/player-test.html.

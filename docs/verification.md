@@ -218,6 +218,18 @@ playback could not be used: the Mac cancels its own speaker sound from the micro
 | 17.5 | Built-in voice on this Mac | PASS | Picked voice Samantha speaks (3.8 s for a test sentence). Novelty voices are never picked. Your own Chrome's voice: now logged ("speech works" / "did not start" / errors). |
 | 17.6 | Automated checks | PASS | 370 of 370 Player checks, 85 of 85 page checks; recorded voices 11 of 12. |
 
+## 18. Your second test: heard, but silent (added 2026-11-15)
+
+| # | Check | Result | Evidence |
+|---|---|---|---|
+| 18.1 | Your log (13:53 to 13:57) | FOUND | The new microphone choice worked (MacBook Air Microphone); Terra heard you and answered "are you listening" twice. But no speech event at all: the voice never started. Six short phrases got no reply ("not a known request, no name"). The "no sound for 10 s" warnings were wrong (the level was measured on screen redraws, which Chrome pauses for hidden windows). |
+| 18.2 | Chrome's voice with the microphone open, on this Mac | PASS | Samantha starts and finishes with no microphone, with the microphone open (echo cancellation on and off), and with recognition running. Leaving a page mid-sentence did not break it either. Your Chrome's silent voice is not reproduced: most likely Chrome's speech engine was stuck. Now: reset and retry, then Google's voice, then a message to quit and reopen Chrome; every step is logged. |
+| 18.3 | Full flow in a visible Chrome set up like yours (AirgoCast first) | PASS | Gallery greeting, voice spoken (Samantha), key 3 → vegetation map; sound on at once; the listening guide starts by itself; hover reads "Vegetation: … 40° N, 132° E. About 200 km south-east of North Korea; nearest land Asia."; Terra on with the MacBook microphone. |
+| 18.4 | Listening guide | PASS | "The higher the note, the warmer it is" then "Low note: about −5 °C, the coolest end", "Middle note: about 15 °C", "High note: about 35 °C, the warmest end", each followed by its note. Replay with G or "play the guide"; moving stops it. Without a click yet: the prompt; the first key press starts the guide. |
+| 18.5 | Short phrases | PASS | "What do you say" gets "Sorry, I did not catch …"; long sentences and "okay so" stay unanswered; nothing moves. "What's the temperature" now reads the value. |
+| 18.6 | Automated checks | PASS | 374 of 374 Player checks, 85 of 85 page checks. |
+| 18.7 | Hearing the voice in your Chrome | NOT TESTED by us | Needs you. |
+
 ## Could not verify
 
 - The official challenge text and its resource links (5.4).

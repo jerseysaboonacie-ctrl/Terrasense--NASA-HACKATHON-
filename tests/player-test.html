@@ -480,7 +480,7 @@
       }
       w.SpeechRecognition = FakeRecognition;
       w.__testUserActivation = true; // the page may speak (as after a key press)
-      w.speechSynthesis.speak = (u) => { spoken.push(u.text); setTimeout(() => u.onend && u.onend(), voice.endAfterMs); };
+      w.speechSynthesis.speak = (u) => { spoken.push(u.text); setTimeout(() => u.onstart && u.onstart(), 5); setTimeout(() => u.onend && u.onend(), voice.endAfterMs); };
       const gum = [];
       try { Object.defineProperty(w.navigator.mediaDevices, 'getUserMedia', { configurable: true, value: async (c) => { gum.push(c); return { getTracks: () => [{ stop() {} }] }; } }); } catch (e) { /* none */ }
       // Like the Mac where Terra heard nothing: a virtual device (AirgoCast) is the browser's default microphone.
@@ -525,7 +525,7 @@
       s = await hear('take me to Japan');
       const japanSpoken = mic.spoken.slice(n).join(' ');
       record(T, 'Answers out loud even in screen reader mode (and not twice)', s.narrationLine.startsWith('Japan.') && japanSpoken.startsWith('Japan.') && !s.live.includes('Japan'),
-        `spoken "${japanSpoken.slice(0, 60)}…"; live region "${s.live.slice(0, 30)}"`);
+        `narration "${s.narrationLine.slice(0, 50)}"; spoken "${japanSpoken.slice(0, 60)}…"; live region "${s.live.slice(0, 30)}"`);
       record(T, 'Shows what it heard', doc.getElementById('assistant-heard').textContent === 'Heard: "take me to Japan"', doc.getElementById('assistant-heard').textContent);
 
       s = await hear('Terra, are you still listening?', 700);
@@ -575,10 +575,12 @@
       // People talking in the room: no answer, nothing moves
       const p0 = st().point, l0 = st().assistantLog.length, n1 = mic.spoken.length;
       s = await hear('yeah that is right we should go up to the slides and finish them tomorrow before the deadline', 600);
-      s = await hear('what do you say', 600);
-      s = await hear('I think so', 600);
-      record(T, 'Room conversation gets no reply and moves nothing', s.point.x === p0.x && s.point.y === p0.y && s.assistantLog.length === l0 && mic.spoken.length === n1 &&
+      s = await hear('okay so', 600);
+      record(T, 'Room conversation (long sentences, "okay so") gets no reply and moves nothing', s.point.x === p0.x && s.point.y === p0.y && s.assistantLog.length === l0 && mic.spoken.length === n1 &&
         /stayed quiet/.test(doc.getElementById('assistant-heard').textContent), `log ${l0} → ${s.assistantLog.length}, spoken ${mic.spoken.length - n1}, pointer unchanged ${s.point.x === p0.x}`);
+      s = await hear('what do you say', 700);
+      record(T, 'A short phrase it does not know gets a short answer (not silence), and moves nothing', s.narrationLine.startsWith('Sorry, I did not catch "what do you say"') &&
+        s.point.x === p0.x && s.point.y === p0.y, `"${s.narrationLine.slice(0, 50)}"`);
       s = await hear('Terra, flibbertigibbet', 700);
       record(T, 'Something said to Terra by name that it does not know gets "Sorry"', s.narrationLine.startsWith('Sorry, I did not catch "flibbertigibbet"'), `"${s.narrationLine.slice(0, 60)}"`);
       s = await hear('move right a bit', 900);
@@ -680,10 +682,53 @@
       await wait(2200);
       const s2 = w2.__jukebox.getState();
       const hint = w2.document.getElementById('assistant-status').textContent;
-      record(T, 'Stays on after loading a page, and says if the page cannot speak yet', s2.narrationLine === 'Terra is still listening.' && Boolean(mic2.active()) &&
-        /press a key or tap it once/.test(hint) && s2.live.startsWith('Terra is still listening'),
+      record(T, 'Stays on after loading a page (without talking over its start), and says if the page cannot speak yet', Boolean(mic2.active()) &&
+        /^Terra is listening, but this page may only speak after you press a key or tap it once/.test(hint) && !/still listening/.test(s2.narrationLine),
         `"${s2.narrationLine}", listening ${Boolean(mic2.active())}; note: "${hint.slice(0, 70)}…"`);
       w2.document.getElementById('talk-btn').click(); await wait(300);
+    }
+
+    // The listening guide: first thing when a map opens (sound allowed), or after one click or key press
+    async function testGuide() {
+      const T = '(listening guide)';
+      const prefsKey = 'terrasense-jukebox-prefs-v1';
+      const saved = localStorage.getItem(prefsKey);
+      localStorage.setItem(prefsKey, JSON.stringify({ ...(JSON.parse(saved || '{}')), voiceMode: 'voice' }));
+      const w = await load('../player.html?frame=sst');
+      const spoken = [];
+      w.__testUserActivation = true; // like arriving from the Gallery after a click
+      w.speechSynthesis.speak = (u) => { spoken.push(u.text); setTimeout(() => u.onstart && u.onstart(), 5); setTimeout(() => u.onend && u.onend(), 60); };
+      for (let i = 0; i < 80 && spoken.length < 5; i++) await wait(100);
+      const all = spoken.join(' | ');
+      record(T, 'A map opens with the guide: higher note = higher value, then the low, middle and high notes with values',
+        /^Sea Surface Temperature, .*How to listen: every place on the map plays a note\. The higher the note, the warmer it is/.test(spoken[0] || '') &&
+        /^Low note: about -?−?5 °C, the coolest end\.$/.test(spoken[1] || '') && /^Middle note: about 15 °C\.$/.test(spoken[2] || '') &&
+        /^High note: about 35 °C, the warmest end\.$/.test(spoken[3] || '') && /^Silence with one soft click means no data/.test(spoken[4] || ''),
+        all.slice(0, 330));
+      // Moving the mouse stops it
+      const n = spoken.length;
+      w.__jukebox.ask('play the guide'); await wait(300);
+      const wrap = w.document.getElementById('frame-wrap');
+      wrap.dispatchEvent(new w.PointerEvent('pointermove', { pointerType: 'mouse', clientX: wrap.getBoundingClientRect().left + 200, clientY: wrap.getBoundingClientRect().top + 150, bubbles: true }));
+      await wait(2500);
+      const after = spoken.slice(n);
+      record(T, '"Terra, play the guide" replays it; moving the mouse stops it and reads the value', /^Sea Surface Temperature/.test(after[0] || '') &&
+        !after.some((t) => /^Middle note/.test(t)) && after.some((t) => /^Sea surface temperature: /.test(t)), after.map((t) => t.slice(0, 40)).join(' | '));
+
+      // No click or key press yet: a prompt, and the first key press starts the sound and the guide
+      const w2 = await load('../player.html?frame=ndvi');
+      const spoken2 = [];
+      w2.speechSynthesis.speak = (u) => { spoken2.push(u.text); setTimeout(() => u.onstart && u.onstart(), 5); setTimeout(() => u.onend && u.onend(), 60); };
+      await wait(1300);
+      const prompt = w2.document.getElementById('sound-unlock');
+      const shown = Boolean(prompt && !prompt.hidden) && /Click anywhere or press any key/.test(prompt.textContent);
+      w2.__testUserActivation = true;
+      w2.document.dispatchEvent(new w2.KeyboardEvent('keydown', { key: 'x', bubbles: true }));
+      const guideLine = () => spoken2.find((t) => /^Land Vegetation \(NDVI\).*The higher the note, the greener it is/.test(t));
+      for (let i = 0; i < 30 && !guideLine(); i++) await wait(100);
+      record(T, 'Without a click yet: "click anywhere or press any key"; the first key press starts the guide', shown && prompt.hidden && Boolean(guideLine()),
+        `prompt shown ${shown}, then hidden ${prompt && prompt.hidden}; "${(guideLine() || spoken2.join(' | ')).slice(0, 90)}"`);
+      if (saved === null) localStorage.removeItem(prefsKey); else localStorage.setItem(prefsKey, saved);
     }
 
     // First visit: the voice question, on the Player
@@ -701,7 +746,7 @@
       const introText = open ? dlg.textContent : '';
       const spokenIntro = [];
       w.__testUserActivation = true;
-      w.speechSynthesis.speak = (u) => { spokenIntro.push(u.text); };
+      w.speechSynthesis.speak = (u) => { spokenIntro.push(u.text); setTimeout(() => u.onstart && u.onstart(), 5); };
       if (open) dlg.dispatchEvent(new KeyboardEvent('keydown', { key: 'h', bubbles: true }));
       await wait(100);
       record('(first visit)', 'Terra introduces itself and how to tell it what to do; any other key reads it aloud',
@@ -776,7 +821,7 @@
 
       // Voice mode: exactly one channel per announcement
       let spoken = [];
-      w.speechSynthesis.speak = (u) => spoken.push(u.text);
+      w.speechSynthesis.speak = (u) => { spoken.push(u.text); setTimeout(() => u.onstart && u.onstart(), 5); };
       w.speechSynthesis.cancel = () => {};
       record(id, 'Voice mode defaults to screen reader', st().prefs.voiceMode === 'screenreader' && doc.querySelector('input[value="screenreader"]').checked,
         'voiceMode = ' + st().prefs.voiceMode);
@@ -878,12 +923,13 @@
         st().prefs.volume === 30 && vol.getAttribute('aria-valuetext') === '30 percent' && st().audio.masterTarget <= S.maxGain,
         `+ → ${up.prefs.volume}% "${up.narrationLine}"; - → ${st().prefs.volume}%, valuetext "${vol.getAttribute('aria-valuetext')}"`);
 
-      // Mouse moves are silent for the screen reader by default
+      // Mouse moves: read when the pointer rests (the panel's value, place, nearest country, continent)
       const beforeMove = st().narrationLine;
       wrap.dispatchEvent(new w.PointerEvent('pointermove', { pointerType: 'mouse', clientX: wrap.getBoundingClientRect().left + 30, clientY: wrap.getBoundingClientRect().top + 30, bubbles: true }));
       await wait(S.narrationDelayMs + 200);
-      record(id, 'Mouse movement not announced by default', st().narrationLine === beforeMove && st().prefs.announceMoving === false,
-        `still "${st().narrationLine.slice(0, 40)}…"`);
+      record(id, 'Mouse movement is read when it rests: value, place, nearest country, continent', st().narrationLine !== beforeMove && st().prefs.announceHover === true &&
+        st().narrationLine.startsWith(meta.spokenName) && / (km|In |Just off|Far from land).*(Africa|Asia|Europe|America|Oceania|Antarctica)/.test(st().narrationLine),
+        `"${st().narrationLine.slice(0, 160)}"`);
 
       // Tour
       key(doc.body, 't'); await wait(100);
@@ -1000,6 +1046,7 @@
     }
     for (const id of frames) await guard(id, () => testAssistant(id));
     await guard('(first visit)', () => testWelcome());
+    await guard('(listening guide)', () => testGuide());
     await guard('(Terra on/off)', () => testMicrophone());
     await guard('(bad id)', () => testBadFrame());
 

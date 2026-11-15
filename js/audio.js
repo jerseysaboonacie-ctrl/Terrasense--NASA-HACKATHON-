@@ -81,7 +81,8 @@ export async function startAudio() {
     });
   }
   if (ctx.state === 'suspended') {
-    try { await ctx.resume(); } catch (e) { /* stays suspended */ }
+    // Without a click or key press first, the browser keeps it suspended (and resume() may never settle).
+    try { await Promise.race([ctx.resume(), new Promise((r) => setTimeout(r, 400))]); } catch (e) { /* stays suspended */ }
   }
   applyMasterGain();
   return ctx.state === 'running';
