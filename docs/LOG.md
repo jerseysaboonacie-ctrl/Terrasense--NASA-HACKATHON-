@@ -494,7 +494,7 @@ Tick these as you go and add a line under History with what you found.
 
 Newest first. Claude's entries name the commit so you can see exactly what changed.
 
-### 2026-11-15: Country and continent under the pointer; Terra's date, map switching, introduction (Claude, this commit)
+### 2026-11-15: Country and continent under the pointer; Terra's date, map switching, introduction (Claude, commit b70c526)
 - Panel: "Nearest country" and "Continent". Terra: today's date and time, "move me to the vegetation",
   "what maps are there", "what is NDVI", honest about outside questions. First visit: Terra introduces itself.
 - Tests: 369 of 369 Player checks, 80 of 80 page checks, 20 of 20 decoder self-tests.
