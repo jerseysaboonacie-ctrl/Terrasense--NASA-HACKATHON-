@@ -598,7 +598,7 @@ Tick these as you go and add a line under History with what you found.
 
 Newest first. Claude's entries name the commit so you can see exactly what changed.
 
-### 2026-11-15: No echo, no interrupting, map question first (Claude, this commit)
+### 2026-11-15: No echo, no interrupting, map question first (Claude, commit 1fa2504)
 - Microphone off while Terra talks; speech queued, never cut off; Gallery asks which map at once; the map opens
   with the starting point. 375 of 375 Player checks, 85 of 85 page checks.
 
