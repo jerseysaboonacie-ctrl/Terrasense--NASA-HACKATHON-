@@ -413,6 +413,46 @@
       s = await ask('screen reader mode', 300);
       record(id, 'Terra: changes the voice mode', vm === 'voice' && s.prefs.voiceMode === 'screenreader' && doc.querySelector('input[value="screenreader"]').checked,
         `${vm} → ${s.prefs.voiceMode}`);
+      // Under the pointer: nearest country and continent, not only latitude and longitude
+      const jpPx = toPx(139.7, 35.7); J.moveTo(jpPx.x, jpPx.y); await wait(150);
+      const onLand = [st().infoCountry, st().infoContinent];
+      const sea = toPx(-30, 0); J.moveTo(sea.x, sea.y); await wait(150);
+      const atSea = [st().infoCountry, st().infoContinent];
+      const sib = toPx(100, 60); J.moveTo(sib.x, sib.y); await wait(150);
+      const siberia = st().infoContinent;
+      record(id, 'Under the pointer: nearest country and continent', /^In Japan/.test(onLand[0]) && onLand[1] === 'Asia' &&
+        / km .* of /.test(atSea[0]) && / \(nearest land\)$/.test(atSea[1]) && siberia === 'Asia',
+        `Japan: "${onLand.join(' | ')}"; Atlantic: "${atSea.join(' | ')}"; Siberia: ${siberia}`);
+
+      // Terra: today's date and time from the clock; the map keeps its own date
+      s = await ask("what's today's date");
+      const today = new Date().toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
+      const dateOk = s.narrationLine.startsWith(`Today is ${today}`) && s.narrationLine.includes(meta.date);
+      s = await ask('what time is it');
+      const timeOk = /^It is \d{1,2}:\d\d (AM|PM), by this device's clock\.$/.test(s.narrationLine);
+      s = await ask('what date is this map');
+      record(id, "Terra: today's date and time; the map's own date", dateOk && timeOk && s.narrationLine.startsWith(`This frame: ${meta.date}`),
+        `"${s.narrationLine.slice(0, 60)}…"; date ${dateOk}, time ${timeOk}`);
+      s = await ask('what maps are there');
+      const listOk = s.narrationLine.startsWith(`There are ${allFrames.length} maps:`) && s.narrationLine.includes(`${meta.title} is open now`);
+      s = await ask('what is ndvi');
+      record(id, 'Terra: lists the maps; explains a map without switching to it', listOk && s.narrationLine.startsWith('NDVI, the Normalized') && w.location.search.includes('frame=' + id),
+        `list ${listOk}; "${s.narrationLine.slice(0, 50)}…"`);
+      s = await ask("what's the weather tomorrow");
+      record(id, 'Terra: honest about what it cannot look up', s.narrationLine.startsWith('I cannot do that: I am not connected to the internet'), `"${s.narrationLine.slice(0, 60)}…"`);
+      s = await ask('introduce yourself');
+      record(id, 'Terra: introduces itself', s.narrationLine.startsWith('Hi, I am Terra, the voice assistant'), `"${s.narrationLine.slice(0, 60)}…"`);
+
+      if (id === allFrames[0].id) {
+        // Switching maps from many phrasings (in the page)
+        const tries = [['move me to the vegetation', 'ndvi'], ['go to precipitation', 'precip'], ['switch to air temperature', 't2m'], ['open the sea temperature interface', 'sst'], ['rain', 'precip']];
+        const got = [];
+        for (const [q, want] of tries) { await J.ask(q); await wait(1500); got.push([q, new URLSearchParams(w.location.search).get('frame'), want]); }
+        s = await ask('precipitation', 900);
+        record(id, 'Terra: moves you to another map ("move me to the vegetation", "go to precipitation", "rain"…)',
+          got.every(([, g, want]) => g === want) && s.narrationLine.startsWith('Precipitation: Rain and Snow is already open'),
+          got.map(([q, g]) => `"${q}" → ${g}`).join('; ') + `; then "${s.narrationLine.slice(0, 45)}…"`);
+      }
       record(id, 'Terra: no script errors', w.__errors.length === 0, w.__errors.join(' | ') || 'none');
     }
 
@@ -639,6 +679,16 @@
       const focusIn = open && dlg.contains(doc.activeElement);
       const buttons = open ? [...dlg.querySelectorAll('button[data-mode]')].map((b) => b.textContent) : [];
       const narrBefore = w.__jukebox.getState().narrationLine;
+      const introText = open ? dlg.textContent : '';
+      const spokenIntro = [];
+      w.__testUserActivation = true;
+      w.speechSynthesis.speak = (u) => { spokenIntro.push(u.text); };
+      if (open) dlg.dispatchEvent(new KeyboardEvent('keydown', { key: 'h', bubbles: true }));
+      await wait(100);
+      record('(first visit)', 'Terra introduces itself and how to tell it what to do; any other key reads it aloud',
+        /^Hi, I'm Terra/.test(dlg ? dlg.querySelector('h2').textContent : '') && /Press V to switch me on/.test(introText) && /Open the vegetation map/.test(introText) &&
+        spokenIntro.join(' ').startsWith('Hi, I am Terra') && /how would you like to hear this site\? Press 1/.test(spokenIntro.join(' ')),
+        `title "${dlg && dlg.querySelector('h2').textContent}"; spoken: "${spokenIntro.join(' ').slice(0, 60)}…"`);
       if (open) dlg.dispatchEvent(new KeyboardEvent('keydown', { key: '3', bubbles: true }));
       await wait(100);
       const st = w.__jukebox.getState();
@@ -650,6 +700,11 @@
       const w2 = await load('../player.html?frame=sst');
       await wait(300);
       record('(first visit)', 'Not asked again on the next visit', !w2.document.querySelector('dialog.welcome-dialog'), 'no dialog');
+      const w3 = await load('../player.html?frame=sst&welcome');
+      await wait(900);
+      const again = w3.document.querySelector('dialog.welcome-dialog');
+      record('(first visit)', 'Shown again with ?welcome in the address', Boolean(again && again.open), `dialog ${Boolean(again && again.open)}`);
+      if (again) again.dispatchEvent(new KeyboardEvent('keydown', { key: '3', bubbles: true }));
       w2.document.getElementById('reset-btn').click();
     }
 

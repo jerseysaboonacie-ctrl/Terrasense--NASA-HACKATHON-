@@ -103,18 +103,46 @@ export function countryAt(countries, lon, lat) {
  *   "Far from land: about 1,800 km west of Chile, the nearest country."
  */
 export function describeNearby(countries, lon, lat) {
+  return whereIs(countries, lon, lat).sentence;
+}
+
+/**
+ * The continent a point of a country is on. Natural Earth gives one continent per country; the
+ * countries that span two are split roughly by longitude (approximate: the Ural Mountains at 60° E
+ * for Russia, the Bosporus for Turkey, the Suez Canal for Egypt, the Ural River for Kazakhstan).
+ */
+export function continentOf(country, lon, lat) {
+  if (!country) return null;
+  const n = country.name;
+  if (n === 'Russia') return lon > 60 || lon < -160 ? 'Asia' : 'Europe';
+  if (n === 'Turkey') return lon < 29.1 && lat > 40.5 ? 'Europe' : 'Asia';
+  if (n === 'Egypt') return lon > 32.4 && lat > 27.5 ? 'Asia' : 'Africa';
+  if (n === 'Kazakhstan') return lon < 51.5 ? 'Europe' : 'Asia';
+  return country.continent || null;
+}
+
+/**
+ * Where a point is, for the Player's panel and Where am I:
+ *   sentence   "In Egypt, near Israel." / "About 60 km west of Israel." (see describeNearby)
+ *   continent  "Africa" (on land), the nearest country's continent at sea, or null
+ *   atSea      true when the point is in no country
+ */
+export function whereIs(countries, lon, lat) {
   const here = countryAt(countries, lon, lat);
   if (here) {
     const other = nearestBorder(countries, lon, lat, here);
-    if (other && other.km < 60) return `In ${here.spoken}, near ${other.country.spoken}.`;
-    return `In ${here.spoken}.`;
+    const sentence = other && other.km < 60 ? `In ${here.spoken}, near ${other.country.spoken}.` : `In ${here.spoken}.`;
+    return { sentence, continent: continentOf(here, lon, lat), atSea: false };
   }
   const n = nearestBorder(countries, lon, lat, null);
-  if (!n) return '';
+  if (!n) return { sentence: '', continent: null, atSea: true };
   const dir = compass(n.lon, n.lat, lon, lat);
-  if (n.km < 25) return `Just off the coast of ${n.country.spoken}.`;
-  if (n.km < 1200) return `About ${roundKm(n.km)} km ${dir} of ${n.country.spoken}.`;
-  return `Far from land: about ${roundKm(n.km)} km ${dir} of ${n.country.spoken}, the nearest country.`;
+  const continent = continentOf(n.country, n.lon, n.lat);
+  let sentence;
+  if (n.km < 25) sentence = `Just off the coast of ${n.country.spoken}.`;
+  else if (n.km < 1200) sentence = `About ${roundKm(n.km)} km ${dir} of ${n.country.spoken}.`;
+  else sentence = `Far from land: about ${roundKm(n.km)} km ${dir} of ${n.country.spoken}, the nearest country.`;
+  return { sentence, continent, atSea: true };
 }
 
 // ---------------------------------------------------------------------------

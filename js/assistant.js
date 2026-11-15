@@ -24,7 +24,7 @@ import { loadPrefs, savePrefs } from './prefs.js';
 import { startAudio, isStarted, playCue, stopTone } from './audio.js';
 import { loadFrameList } from './decoder.js';
 import { normalise } from './places.js';
-import { announcePrefsChanged } from './welcome.js';
+import { announcePrefsChanged, askVoiceModeIfNeeded, afterChoice, TERRA_INTRO } from './welcome.js';
 import { SETTINGS as S } from './settings.js';
 
 /** The browser's speech recognition, looked up when needed (tests can supply one). */
@@ -120,8 +120,9 @@ const NO = ['no', 'nope', 'not now', 'no thanks', 'no thank you', 'never mind', 
  *   sayCallsHeard true if say() reports back through heard() (the Player), so replies are logged once
  *   toggles      extra buttons that switch Terra on and off too (the Player's top bar)
  *   openFrame    the Player switches frame in the page instead of loading a new page
+ *   currentFrame the Player: () => the open frame's meta (for "is already open" and today's date)
  */
-export function createAssistant({ container, say, commands = [], help = '', headingLevel = 2, sayCallsHeard = false, toggles = [], openFrame = null }) {
+export function createAssistant({ container, say, commands = [], help = '', headingLevel = 2, sayCallsHeard = false, toggles = [], openFrame = null, currentFrame = () => null }) {
   const h = `h${headingLevel}`;
   container.classList.add('assistant');
   container.setAttribute('aria-labelledby', 'assistant-heading');
@@ -258,6 +259,27 @@ export function createAssistant({ container, say, commands = [], help = '', head
     { name: 'who', match: (t) => has(t, 'who are you', 'what are you', 'your name', 'are you an ai', 'are you a robot'),
       run: () => 'I am Terra, the voice assistant for TerraSense Jukebox. I follow a set of spoken requests about this site and its maps. ' +
         'I am not a general AI: I only report what the map says, and values are approximate.' },
+    { name: 'introduce', match: (t) => has(t, 'introduce yourself', 'introduction', 'tell me about yourself', 'what are your features', 'what features', 'how do i use you', 'how does this site work', 'how does this work'),
+      run: () => ({ text: TERRA_INTRO, echo: false }) },
+    { name: 'welcome again', match: (t) => has(t, 'welcome again', 'first question', 'start again', 'start over', 'ask me again', 'change how i hear', 'change the voice setting'),
+      run: () => {
+        const shown = askVoiceModeIfNeeded((mode) => { if (mode !== 'off') reply(afterChoice(mode, ''), { echo: false }); }, { force: true });
+        return shown ? 'Here is my introduction and the first question again. Press 1, 2 or 3.' : 'It is already open.';
+      } },
+    { name: 'how are you', match: (t) => has(t, 'how are you', 'how are you doing', 'hows it going', 'how is it going', 'are you ok', 'are you okay'),
+      run: () => 'I am doing well, thank you. What would you like to explore?' },
+    { name: 'what is a map', match: (t) => has(t, 'what is', 'what does', 'whats', 'what are', 'tell me about', 'explain', 'meaning of', 'mean') && frameList.find((f) => (f.keywords || []).some((w) => has(t, normalise(w).trim()))),
+      run: (c, f) => `${f.about || f.title + '.'} This site's ${f.title} map: ${f.date}, from ${f.dataset}. Values are approximate, read from the map's colors.` },
+    { name: 'data source', match: (t) => has(t, 'where does the data come from', 'where is the data from', 'data source', 'source of the data', 'who made the map', 'is this nasa', 'is this from nasa', 'what is nasa', 'who is nasa'),
+      run: () => {
+        const cur = currentFrame();
+        return 'The maps are images from NASA\'s Scientific Visualization Studio, downloaded and served by this site. NASA is the United States space agency. ' +
+          (cur ? `This map: ${cur.dataset}. ` : '') + 'TerraSense Jukebox is a hackathon project, not endorsed by NASA.';
+      } },
+    { name: 'outside knowledge', match: (t) => has(t, 'weather', 'forecast', 'news', 'stock', 'score', 'search the web', 'search for', 'google', 'look up', 'wikipedia', 'who won', 'play music', 'play a song', 'set a timer', 'set an alarm', 'remind me'),
+      run: () => 'I cannot do that: I am not connected to the internet or to an AI service. I know this site, its NASA maps, places on them, and the date and time. Say help for examples.' },
+    { name: 'joke', match: (t) => has(t, 'joke', 'make me laugh', 'something funny'),
+      run: () => 'Why is the ocean so friendly? Because it always waves.' },
     { name: 'help', match: (t) => has(t, 'help', 'what can you do', 'what can i say', 'what do i say', 'commands', 'options'),
       run: () => ({ text: `${help} You can also say: open the gallery, read this page, use the built-in voice, repeat, or stop listening.`, echo: false }) },
     { name: 'voice mode', match: (t) => voiceModeFrom(t),
@@ -270,6 +292,8 @@ export function createAssistant({ container, say, commands = [], help = '', head
       run: (c, page) => { go(page.href); return `Opening ${page.name}.`; } },
     { name: 'open a frame', match: (t) => frameFrom(t),
       run: (c, f) => {
+        const cur = currentFrame();
+        if (cur && cur.id === f.id) return `${f.title} is already open. Say "what maps are there" to hear the others.`;
         if (openFrame) { openFrame(f); return; } // the Player: switch in the page, it says so itself
         go('player.html?frame=' + encodeURIComponent(f.id));
         return `Opening ${f.title} in the Player.`;
@@ -290,15 +314,70 @@ export function createAssistant({ container, say, commands = [], help = '', head
   let frameList = [];
   loadFrameList().then((f) => { frameList = f; }).catch(() => {});
 
-  /** A frame named with an "open" verb, or as "the X map". */
+  /**
+   * A frame (map) someone asks for: with a verb ("open / go to / move me to / switch to the vegetation"),
+   * as "the X map" (or data, view, page, interface), or just its name ("precipitation").
+   */
+  const FRAME_NOUNS = '(?: map| frame| data| dataset| view| page| interface| layer| screen| section| one| please)*';
   function frameFrom(t) {
-    const verb = has(t, 'open', 'show', 'show me', 'switch to', 'change to', 'load', 'use', 'play', 'go to', 'take me to', 'listen to');
+    const verb = has(t, 'open', 'show', 'show me', 'switch', 'switch to', 'change', 'change to', 'load', 'use', 'play', 'go to', 'take me to',
+      'listen to', 'move to', 'move me to', 'bring me to', 'bring up', 'i want', 'i would like', 'id like', 'lets', 'let me', 'can i', 'could i',
+      'can you', 'could you', 'look at', 'hear the', 'see the', 'explore', 'try the', 'navigate to', 'jump to', 'head to', 'over to');
     for (const f of frameList) {
       const words = (f.keywords || []).map((w) => normalise(w).trim());
-      if (words.some((w) => t.includes(` ${w} map `) || t.includes(` ${w} frame `) || (verb && t.includes(` ${w} `)))) return f;
+      if (words.some((w) => new RegExp(` ${w}${FRAME_NOUNS.replace('*', '+')} `).test(t) || (verb && t.includes(` ${w} `)) ||
+        new RegExp(`^ (?:the )?${w}${FRAME_NOUNS} $`).test(t))) return f;
     }
     return null;
   }
+
+  /** "There are 4 maps: ..." */
+  function listFrames() {
+    if (!frameList.length) return 'I could not load the list of maps.';
+    const names = frameList.map((f) => f.title);
+    const cur = currentFrame();
+    return `There are ${names.length} maps: ${names.slice(0, -1).join(', ')} and ${names[names.length - 1]}. ` +
+      `${cur ? cur.title + ' is open now. ' : ''}Say open and a name, for example "open the vegetation map".`;
+  }
+
+  /** Today's date and time from this device's clock (the maps have their own dates). */
+  function clockAnswer(t) {
+    const now = new Date();
+    const date = now.toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
+    const time = now.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
+    const wantsTime = has(t, 'time', 'clock', 'oclock', 'hour');
+    const wantsDate = has(t, 'date', 'day', 'today', 'todays', 'year', 'month');
+    const cur = currentFrame();
+    const map = cur ? ` This map's data is from ${cur.date}.` : '';
+    if (wantsTime && !wantsDate) return `It is ${time}, by this device's clock.`;
+    if (wantsDate && !wantsTime) return `Today is ${date}, by this device's clock.${map}`;
+    return `Today is ${date}, and the time is ${time}, by this device's clock.${map}`;
+  }
+
+  const asksClock = (t) => !has(t, 'map', 'frame', 'data', 'image', 'picture', 'measured', 'measurement', 'taken', 'made') &&
+    (has(t, 'today', 'todays', 'what time', 'the time', 'time is it', 'what day', 'which day', 'day is it', 'day of the week', 'what year',
+      'which year', 'what month', 'which month', 'current date', 'current time', 'date today', 'what date is it', 'whats the date', 'what is the date',
+      'tell me the date', 'tell me the time', 'the date please', 'time now', 'date and time') || /^ (the )?(date|time|day)( please)? $/.test(t));
+
+  // Asked before the page's own commands: the clock, and switching to another map.
+  const first = [
+    { name: 'today', match: (t) => asksClock(t), run: (c, m, t) => clockAnswer(t) },
+    { name: 'switch map', match: (t) => {
+        // "What is NDVI?" / "tell me about the rain map" asks about a map; it does not switch (see 'what is a map').
+        if (has(t, 'what is', 'whats', 'what does', 'what are', 'tell me about', 'explain', 'mean', 'meaning') &&
+          !has(t, 'open', 'switch', 'go to', 'take me', 'move', 'bring', 'show me')) return null;
+        const f = frameFrom(t), cur = currentFrame();
+        return f && !(cur && cur.id === f.id) ? f : null;
+      },
+      run: (c, f) => {
+        if (openFrame) { openFrame(f); return; } // the Player: switch in the page, it says so itself
+        go('player.html?frame=' + encodeURIComponent(f.id));
+        return `Opening ${f.title} in the Player.`;
+      } },
+    { name: 'list maps', match: (t) => has(t, 'what maps', 'which maps', 'list the maps', 'list maps', 'other maps', 'all maps', 'what other', 'available maps',
+        'how many maps', 'what can i explore', 'what data do you have', 'which data', 'what frames', 'which frames', 'what interfaces', 'other interfaces', 'what else is there'),
+      run: () => listFrames() },
+  ];
 
   function chunks(text, size = 600) {
     const parts = [];
@@ -368,13 +447,13 @@ export function createAssistant({ container, say, commands = [], help = '', head
       } else {
         ctx.pending = null;
         let done = false;
-        for (const cmd of [...commands, ...common]) {
+        for (const cmd of [...first, ...commands, ...common]) {
           const m = await cmd.match(t, text, ctx);
           if (m) { answer = await cmd.run(ctx, m, t, text); done = true; break; }
         }
         if (!done) {
           // Spoken: keep it short (it may have been a stray remark in the room).
-          answer = spoken ? { text: `Sorry, I did not catch "${text.trim()}". Say help for examples.`, echo: false }
+          answer = spoken ? { text: `Sorry, I did not catch "${text.trim()}". I can answer questions about these maps, places on them, and the date and time. Say help for examples.`, echo: false }
             : { text: `Sorry, I did not understand "${text.trim()}". ${help ? 'Try: ' + help : ''} Or say help.`, echo: false };
         }
       }
@@ -390,7 +469,7 @@ export function createAssistant({ container, say, commands = [], help = '', head
   async function understands(t, text) {
     if (PRESENCE.some((c) => c.match(t))) return true;
     if (ctx.pending && (has(t, ...YES) || has(t, ...NO))) return true;
-    for (const cmd of [...commands, ...common]) if (await cmd.match(t, text, ctx)) return true;
+    for (const cmd of [...first, ...commands, ...common]) if (await cmd.match(t, text, ctx)) return true;
     return false;
   }
 

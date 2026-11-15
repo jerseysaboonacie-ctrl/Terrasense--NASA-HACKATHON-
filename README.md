@@ -73,7 +73,15 @@ offered because none of our frames has dated versions yet; see Known limitations
   than `speechSynthesis.speaking` (which Chrome can leave stuck). Its name ("Terra, …", "hey Terra …") and
   "are you still listening?" are always understood. Spoken or typed requests
   such as "take me to Japan", "compare Brazil and Norway", "summary" (then a yes/no follow-up), "scan the
-  equator", "open the rain map", "read this page", "stop listening".
+  equator", "open the rain map", "move me to the vegetation", "go to precipitation", "what maps are there",
+  "what is today's date" (device clock), "what is NDVI" (from each frame's `about` in `data/frames.json`),
+  "introduce yourself", "read this page", "stop listening". Questions outside the site (weather, news) get
+  an honest "I am not connected to the internet or to an AI service".
+- **First visit**: Terra introduces itself and its features, then asks built-in voice / screen reader / text
+  only (`js/welcome.js`; spoken on the first key press or tap, as browsers require; `?welcome` shows it again).
+- **Under the pointer** shows the nearest country ("In Japan." / "About 300 km west of Chile.") and the
+  continent (on land; at sea the nearest land's, marked "nearest land"). Continents from Natural Earth;
+  Russia, Turkey, Egypt and Kazakhstan split roughly by longitude (`continentOf` in `js/places.js`).
   A fixed set of requests (`js/assistant.js`, `js/player-assistant.js`), not an AI service: a real AI model
   would need an API key and a server, which a static site cannot keep secret. Speech recognition is the
   browser's Web Speech API (online in Chrome and Edge; not in Firefox); typing works everywhere.

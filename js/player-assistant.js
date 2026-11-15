@@ -179,4 +179,5 @@ function normalise2(text) {
 }
 
 export const PLAYER_HELP = 'Where am I. Take me to Japan. What is the temperature in Spain. Go to the warmest. Next. ' +
-  'Compare here with the coolest. Compare Brazil and Norway. Summary. Scan the equator. Move north a bit. Louder. Tour. Demo.';
+  'Compare here with the coolest. Compare Brazil and Norway. Summary. Scan the equator. Move north a bit. Louder. Tour. Demo. ' +
+  'Open the vegetation map. Go to precipitation. What maps are there. What is NDVI. What is today\'s date.';

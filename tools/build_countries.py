@@ -96,6 +96,17 @@ def ring_ints(ring):
     return out if len(out) >= 8 else None
 
 
+
+def continent(pr):
+    """Natural Earth's continent. Islands it files under "Seven seas (open ocean)" get their UN region
+    (Seychelles: Africa, Maldives: Asia), except remote ocean territories, which get none."""
+    c = pr.get('CONTINENT') or ''
+    if not c.startswith('Seven seas'):
+        return c
+    if (pr.get('SUBREGION') or '').startswith('Seven seas'):
+        return None
+    return pr.get('REGION_UN') or None
+
 def main():
     src = json.load(open(SRC, encoding='utf-8'))
     countries = []
@@ -122,6 +133,7 @@ def main():
             'spoken': SPOKEN.get(name, name),
             'aliases': sorted({a.lower() for a in ALIASES.get(name, []) + [pr.get('NAME_LONG') or '', pr.get('ADMIN') or '']
                                if a and a.lower() != name.lower()}),
+            'continent': continent(pr),
             'label': [round(pr['LABEL_X'], 2), round(pr['LABEL_Y'], 2)],
             'bbox': [min(xs), min(ys), max(xs), max(ys)],
             'polys': rings,

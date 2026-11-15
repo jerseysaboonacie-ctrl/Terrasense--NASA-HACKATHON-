@@ -180,7 +180,16 @@
       await A.handle('help');
       const log1 = [...w.document.querySelectorAll('#assistant-log li')].map((li) => li.textContent);
       record('gallery.html', 'Terra answers "help" (typed)', log1[0] === 'You: help' && /Open the player/.test(log1[1] || ''), log1.join(' | ').slice(0, 160));
-      await A.handle('open the rain map');
+      await A.handle("what's today's date");
+      const last = () => [...w.document.querySelectorAll('#assistant-log li')].pop().textContent;
+      const todayStr = new Date().toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
+      record('gallery.html', "Terra: today's date", last() === `Terra: Today is ${todayStr}, by this device's clock.`, last());
+      await A.handle('go to the vegetation');
+      await wait(1500);
+      const vegUrl = iframe.contentWindow.location.href;
+      record('gallery.html', 'Terra: "go to the vegetation" opens the Player on that map', /player\.html\?frame=ndvi$/.test(vegUrl), vegUrl);
+      await load('../gallery.html');
+      await iframe.contentWindow.__assistant.handle('open the rain map');
       await wait(1500);
       const url = iframe.contentWindow.location.href;
       record('gallery.html', 'Terra: "open the rain map" opens the Player on precipitation', /player\.html\?frame=precip$/.test(url), url);
@@ -192,6 +201,8 @@
       const ok = dlg && dlg.open && dlg.contains(w.document.activeElement);
       if (dlg) dlg.dispatchEvent(new KeyboardEvent('keydown', { key: '2', bubbles: true }));
       const saved = JSON.parse(localStorage.getItem('terrasense-jukebox-prefs-v1') || '{}');
+      record('index.html', 'First visit: Terra introduces itself and its features, then asks', Boolean(dlg) && /^Hi, I'm Terra/.test(dlg.querySelector('h2').textContent) &&
+        /tell me what to do/.test(dlg.textContent) && /how would you like to hear this site/i.test(dlg.textContent), dlg ? dlg.querySelector('h2').textContent : 'no dialog');
       record('index.html', 'First visit asks the voice question; key 2 = screen reader', ok && !w.document.querySelector('dialog.welcome-dialog') && saved.voiceMode === 'screenreader',
         `open ${Boolean(dlg && dlg.open)}, voiceMode ${saved.voiceMode}`);
       localStorage.setItem(WELCOMED, '1');

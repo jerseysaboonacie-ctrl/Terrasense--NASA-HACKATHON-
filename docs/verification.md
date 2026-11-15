@@ -180,6 +180,19 @@ playback could not be used: the Mac cancels its own speaker sound from the micro
 | 14.6 | Automated checks | PASS | 346 of 346 Player checks (new: answers when words stop changing; "Sarah" and the name after other words; name in Chrome's other guesses; people talking non-stop; restart after a stall). 77 of 77 page checks. The stand-in recognizer now keeps a session's results like Chrome. |
 | 14.7 | A person speaking to Terra at a real microphone | NOT TESTED by us | Needs a person at the Mac. |
 
+## 15. Pointer panel places, Terra's new answers, Terra's introduction (added 2026-11-15)
+
+| # | Check | Result | Evidence |
+|---|---|---|---|
+| 15.1 | Under the pointer: nearest country and continent | PASS (all 4 frames) | Japan: "In Japan." / Asia. Atlantic (30° W, 0°): "About … km … of …" / "… (nearest land)". Siberia (100° E, 60° N): Asia, not Europe. Lookup 0.27 ms, at most once per screen frame. |
+| 15.2 | Continents of countries on two continents | PASS (spot checks) | Moscow Europe, Siberia Asia; Istanbul's European side Europe, Ankara area Asia; Sinai Asia, Cairo Africa. Approximate (split by longitude). |
+| 15.3 | Today's date and time | PASS | "Today is Sunday, 15 November 2026, by this device's clock. This map's data is from 12 Nov 2026." "What date is this map" still gives the map's date. |
+| 15.4 | Moving to another map | PASS | "move me to the vegetation", "go to precipitation", "switch to air temperature", "open the sea temperature interface", "rain": each opens that map in the page; "precipitation" on the precipitation map says it is already open. On the Gallery, "go to the vegetation" opens the Player on it. |
+| 15.5 | Other questions | PASS | Lists the maps; explains NDVI without switching; "what's the weather" gets the honest "not connected" answer; introduces itself. |
+| 15.6 | First visit: Terra's introduction, then the question | PASS | Dialog "Hi, I'm Terra" with examples; any other key speaks the introduction then the question; 1/2/3 still choose; `?welcome` shows it again. Desktop and 390 px phone screenshots: fits, scrolls on the phone. |
+| 15.7 | Automated checks | PASS | 369 of 369 Player checks, 80 of 80 page checks, 20 of 20 decoder self-tests. |
+| 15.8 | Spoken introduction heard by a person | NOT TESTED by us | Speech stubbed in tests. |
+
 ## Could not verify
 
 - The official challenge text and its resource links (5.4).

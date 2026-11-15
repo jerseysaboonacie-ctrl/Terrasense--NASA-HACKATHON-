@@ -15,10 +15,10 @@ import { describeResult, describeLayout, speak, speechSupported, stopSpeaking } 
 import { analyseFrame, describePattern, describeDifference } from './analysis.js';
 import { SETTINGS as S } from './settings.js';
 import { loadPrefs, savePrefs, clearPrefs, DEFAULTS } from './prefs.js';
-import { loadCountries, describeNearby } from './places.js';
+import { loadCountries, describeNearby, whereIs } from './places.js';
 import { createAssistant } from './assistant.js';
 import { playerCommands, PLAYER_HELP } from './player-assistant.js';
-import { askVoiceModeIfNeeded } from './welcome.js';
+import { askVoiceModeIfNeeded, afterChoice } from './welcome.js';
 
 const $ = (id) => document.getElementById(id);
 const els = {
@@ -32,6 +32,7 @@ const els = {
   wrap: $('frame-wrap'), canvas: $('frame-canvas'), cursor: $('cursor'),
   narration: $('narration-line'), infoVariable: $('info-variable'), infoValue: $('info-value'),
   infoPlace: $('info-place'), infoDate: $('info-date'), infoSwatch: $('info-swatch'),
+  infoCountry: $('info-country'), infoContinent: $('info-continent'),
   explainBtn: $('explain-btn'), explain: $('explain'), explainSteps: $('explain-steps'),
   scanBtn: $('scan-btn'), rowSelect: $('row-select'), overview: $('overview-toggle'),
   volume: $('volume'), volumeOut: $('volume-out'),
@@ -199,6 +200,7 @@ function showPoint({ announce: when = false, hold, force = false, prefix = '', s
   const d = describeResult(frame.meta, r, detail);
   els.infoValue.textContent = d.value;
   els.infoPlace.textContent = d.place;
+  showWhere(r);
   els.infoSwatch.replaceChildren();
   if (r.status === 'value') {
     els.infoSwatch.append(swatch(r.matchedColor), ' ' + describeLegendPosition(frame.meta, r.entry));
@@ -220,6 +222,28 @@ function showPoint({ announce: when = false, hold, force = false, prefix = '', s
   if (when === 'now') speakNow();
   else if (when === 'keys') narrateTimer = setTimeout(speakNow, S.keyRepeatMs);
   else if (when === 'later') narrateTimer = setTimeout(() => announce(sentence), S.narrationDelayMs);
+}
+
+// "Nearest country" and "Continent" in the panel. The borders load once, in the background; looking up
+// the nearest border takes a moment, so it runs at most once per screen frame, and only when the place changes.
+let countryList = null, whereKey = '', wherePending = null, whereFrame = 0;
+loadCountries().then((c) => { countryList = c; if (last) showWhere(last); })
+  .catch(() => { els.infoCountry.textContent = 'Country names could not be loaded.'; els.infoContinent.textContent = '–'; });
+
+function showWhere(r) {
+  if (!countryList || r.lon == null || r.lat == null) return;
+  wherePending = r;
+  if (whereFrame) return;
+  whereFrame = requestAnimationFrame(() => {
+    whereFrame = 0;
+    const p = wherePending;
+    const key = p.lon.toFixed(2) + ',' + p.lat.toFixed(2);
+    if (key === whereKey) return;
+    whereKey = key;
+    const w = whereIs(countryList, p.lon, p.lat);
+    els.infoCountry.textContent = w.sentence || '–';
+    els.infoContinent.textContent = !w.continent ? (w.atSea ? 'Open ocean' : '–') : w.atSea ? `${w.continent} (nearest land)` : w.continent;
+  });
 }
 
 /** Sound for one decode result: a tone for a value, silence plus one click for no data. */
@@ -1113,6 +1137,7 @@ async function openFrame(meta) {
   els.summaryBox.hidden = true; els.summaryText.textContent = '';
   els.explain.hidden = true; els.explainBtn.setAttribute('aria-expanded', 'false');
   els.infoValue.textContent = '–'; els.infoPlace.textContent = '–'; els.infoSwatch.textContent = '–';
+  els.infoCountry.textContent = '–'; els.infoContinent.textContent = '–'; whereKey = '';
   els.frameSelect.value = meta.id;
 
   const layout = describeLayout(meta);
@@ -1219,14 +1244,13 @@ async function init() {
     commands: playerCommands(assistantApi()), help: PLAYER_HELP,
     toggles: [$('terra-bar-btn')],
     openFrame: (f) => switchFrame(f.id),
+    currentFrame: () => (frame ? frame.meta : null),
   });
 
   // First visit: ask how to hear the site (welcome.js), then greet in that voice.
   askVoiceModeIfNeeded((mode) => {
     if (mode === 'off') return;
-    say(`${mode === 'voice' ? 'Built-in voice on.' : 'Screen reader mode.'} ${meta.title} is open. ` +
-      'Press V to switch on Terra, the assistant, then just say what you want, for example "where am I" or "take me to Japan". ' +
-      'Or press T for a tour, or use the Skip to the map link at the top of the page, then the arrow keys.');
+    say(afterChoice(mode, `${meta.title} is open. Press T for a tour, or use the Skip to the map link at the top of the page, then the arrow keys.`));
   });
 
   // Read-only hooks for the automated tests in tests/player-test.html.
@@ -1251,6 +1275,8 @@ async function init() {
       narrationLine: els.narration.textContent,
       infoValue: els.infoValue.textContent,
       infoPlace: els.infoPlace.textContent,
+      infoCountry: els.infoCountry.textContent,
+      infoContinent: els.infoContinent.textContent,
       live: els.live.textContent,
       scanning: Boolean(scan),
       prefs: { ...prefs },

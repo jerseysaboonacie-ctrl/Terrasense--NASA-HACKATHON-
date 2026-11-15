@@ -7,7 +7,7 @@ same format (newest first under **History**) and tick your tasks in **Your tasks
 Status words: **Done** (built and tested), **Partly done** (some of it exists, see notes),
 **Not started**, **Yours** (only a person can do it).
 
-Last updated: 2026-11-14 21:30 (+07), session 8 finished.
+Last updated: 2026-11-15 11:40 (+07), session 9 finished.
 
 ---
 
@@ -15,6 +15,40 @@ Last updated: 2026-11-14 21:30 (+07), session 8 finished.
 
 Live progress, newest session first, newest line at the bottom of each session. Times are the
 laptop's clock (+07). Each phase has an estimate; the heartbeat says when it actually started and finished.
+
+### Session 9: 2026-11-15 morning (finished)
+
+**Request (from you):** (1) Under the pointer, show the nearby country and the continent, not only latitude
+and longitude. (2) Terra answers more questions, such as today's date, and moves you to another map
+("the vegetation", "precipitation"). (3) On opening the site, Terra introduces itself and its features,
+then asks: built-in voice, screen reader, or text only.
+
+| Phase | What | Estimate | Status |
+|---|---|---|---|
+| 1 | Continent per country (Natural Earth), panel rows "Nearest country" and "Continent" | 30 min | Done (11:00 to 11:12) |
+| 2 | Terra: clock, map switching in many phrasings, list maps, explain a map, honest about the rest | 30 min | Done (11:12 to 11:17) |
+| 3 | First visit: Terra's introduction, spoken on the first key press or tap | 25 min | Done (11:10 to 11:17) |
+| 4 | Tests, screenshots, docs, log, commit | 30 min | Done (11:17 to 11:40) |
+
+- 11:00: Started. Natural Earth has a continent per country; added it to `data/countries.json`
+  (`tools/build_countries.py`). It files all of Russia under Europe, so Russia, Turkey, Egypt and
+  Kazakhstan are split roughly by longitude (Siberia: Asia). Remote ocean territories get none.
+- 11:12: Panel rows "Nearest country" ("In North Korea, near China.") and "Continent" ("Asia"; at sea the
+  nearest land's, marked "(nearest land)"; far out "Open ocean"). Lookup 0.27 ms, once per screen frame.
+- 11:16: Terra: "what's today's date" / "what time is it" (device clock; adds the map's own data date),
+  "move me to the vegetation", "go to precipitation", "switch to air temperature", "rain", "what maps are
+  there", "what is NDVI" (from a new `about` sentence per frame in `data/frames.json`), "introduce
+  yourself", "start again", "how are you", and an honest answer for weather, news and other outside
+  questions (no internet or AI service). Asked before the Player's own commands, so "go to the vegetation"
+  is not mistaken for a place.
+- 11:17: First visit: "Hi, I'm Terra" dialog with what the site does, how to tell Terra what to do (V, then
+  examples), then the question. Browsers block speech until a key press or tap, so Terra speaks on the
+  first key press or tap (1, 2, 3 still choose at once); choosing the built-in voice straight away makes
+  Terra give the introduction then. `?welcome` shows it again (you already answered it in this browser).
+- 11:35: Tests: 369 of 369 Player checks (new: panel places, clock, map list and explanation, honest
+  answer, introduction, switching from five phrasings, the dialog's introduction and `?welcome`),
+  80 of 80 page checks, 20 of 20 decoder self-tests. Screenshots at desktop and phone width.
+- Not tested: hearing the spoken introduction yourself (speech is stubbed in the tests).
 
 ### Session 8: 2026-11-14 night (finished)
 
@@ -439,6 +473,7 @@ Tick these as you go and add a line under History with what you found.
 - [ ] Screen reader test (about 20 min): VoiceOver (Mac: Cmd + F5), NVDA (Windows) or TalkBack (Android). Eyes closed: open the Player, take the tour (T), get the summary, jump to the warmest area, press W, walk into an edge, compare two places, change volume with minus and plus, mute, change frame. Try each Voice setting once. Note where you got lost, heard nothing, or heard two voices, and whether the letter keys reached the page.
 - [ ] By-eye check: open `decoder-test.html?frame=sst&fill=1` (then `t2m`, `ndvi`, `precip`), type the value you read from the colorbar for each row, and paste the Markdown export into `docs/accuracy-check.md`.
 - [ ] Check the Summary against the picture for each frame (does the "warmest" place look warmest?).
+- [ ] Hear Terra's introduction (1 min): open http://localhost:8931/?welcome in Chrome, press any letter key, listen, then press 1, 2 or 3. Tell Claude if it is too long.
 - [ ] Press "Check the microphone" in the Player (Chrome) and tell Claude exactly what it says.
 - [ ] Talk to Terra (about 2 min, Chrome at http://localhost:8931/player.html): press V, wait for "Terra is listening", then say "Terra, are you still listening?" and pause. If nothing happens, read Claude the line under the switch ("Hearing: …" or "Heard: …").
 - [ ] Before the demo: run `python3 tools/update_frames.py`, read the two date images it mentions, run the tests, commit.
@@ -458,6 +493,11 @@ Tick these as you go and add a line under History with what you found.
 ## History
 
 Newest first. Claude's entries name the commit so you can see exactly what changed.
+
+### 2026-11-15: Country and continent under the pointer; Terra's date, map switching, introduction (Claude, this commit)
+- Panel: "Nearest country" and "Continent". Terra: today's date and time, "move me to the vegetation",
+  "what maps are there", "what is NDVI", honest about outside questions. First visit: Terra introduces itself.
+- Tests: 369 of 369 Player checks, 80 of 80 page checks, 20 of 20 decoder self-tests.
 
 ### 2026-11-14: Terra answers with people talking nearby (Claude, commit 35d2919)
 - Found with Google's real recognizer on recorded requests: Terra waited for Chrome to finish a phrase,

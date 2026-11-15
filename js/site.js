@@ -2,7 +2,7 @@
 // the first-visit voice question (welcome.js) and Terra, the assistant
 // (assistant.js), placed right after the page's main heading.
 
-import { askVoiceModeIfNeeded } from './welcome.js';
+import { askVoiceModeIfNeeded, afterChoice } from './welcome.js';
 import { createAssistant, pageSay } from './assistant.js';
 
 const main = document.querySelector('main');
@@ -15,13 +15,12 @@ if (main && h1) {
   if (h1.parentElement === main) h1.after(box); else h1.parentElement.after(box);
   const assistant = createAssistant({
     container: box, say: pageSay, headingLevel: 2,
-    help: 'Open the player. Open the precipitation map. Read this page. Go to the gallery.',
+    help: 'Open the player. Open the vegetation map. Go to precipitation. What maps are there. What is today\'s date. Read this page. Go to the gallery.',
   });
   window.__assistant = assistant; // for the automated page tests
 }
 
 askVoiceModeIfNeeded((mode) => {
   if (mode === 'off') return;
-  pageSay(`${mode === 'voice' ? 'Built-in voice on.' : 'Screen reader mode.'} This is ${document.title}. ` +
-    'Press V to switch on Terra, the assistant, then just say what you want, for example "open the player" or "read this page".');
+  pageSay(afterChoice(mode, `This is the ${document.title} page.`));
 });

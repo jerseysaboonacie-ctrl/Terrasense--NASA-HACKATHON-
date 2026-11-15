@@ -383,7 +383,10 @@ button.big-button { border-radius: var(--radius); }
 .assistant-log li.terra { border-left: 4px solid var(--accent); }
 
 /* First-visit question: three big stacked buttons, easy to find by touch */
-.welcome-dialog { max-width: min(640px, calc(100vw - 32px)); }
+.welcome-dialog { max-width: min(640px, calc(100vw - 32px)); max-height: calc(100vh - 32px); overflow-y: auto; }
+.welcome-examples { margin: 0.3em 0 0.8em; padding-left: 1.4em; }
+.welcome-examples li { margin: 0.15em 0; }
+.welcome-question { font-size: 1.1rem; margin-top: 1em; }
 .welcome-choices { display: flex; flex-direction: column; gap: 12px; margin: 12px 0; }
 .welcome-choices .big-button { width: 100%; text-align: left; }
 
