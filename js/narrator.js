@@ -6,6 +6,8 @@
 import { describePlace } from './decoder.js';
 
 /** A rough region name from latitude, so narration says where, not just numbers. */
+import { terraLog } from './terra-log.js';
+
 export function regionName(lat) {
   const a = Math.abs(lat);
   const ns = lat >= 0 ? 'north' : 'south';
@@ -76,13 +78,16 @@ let speakingUntil = 0;    // time limit for `active`
 let speakStarted = 0;     // when the current speak() began
 const keep = [];          // references, so Chrome does not drop utterances (and their end events)
 let voice = null;
+let loggedStart = false;  // log the first time the voice really speaks on a page
 
 /** A local English voice if there is one (works offline and avoids network voices). */
 function pickVoice() {
   if (voice || !speechSupported()) return voice;
   const voices = window.speechSynthesis.getVoices();
-  voice = voices.find((v) => v.lang === 'en-US' && v.localService) ||
-    voices.find((v) => /^en/.test(v.lang) && v.localService) || voices.find((v) => /^en/.test(v.lang)) || null;
+  const NOVELTY = /^(Albert|Bad News|Bahh|Bells|Boing|Bubbles|Cellos|Good News|Jester|Organ|Superstar|Trinoids|Whisper|Wobble|Zarvox|Grandma|Grandpa|Junior|Ralph|Rocko)\b/;
+  const fine = voices.filter((v) => !NOVELTY.test(v.name));
+  voice = fine.find((v) => v.lang === 'en-US' && v.localService && v.default) || fine.find((v) => v.lang === 'en-US' && v.localService) ||
+    fine.find((v) => /^en/.test(v.lang) && v.localService) || fine.find((v) => /^en/.test(v.lang)) || null;
   return voice;
 }
 if (speechSupported()) window.speechSynthesis.addEventListener?.('voiceschanged', () => { voice = null; pickVoice(); });
@@ -129,8 +134,14 @@ export function speak(text, rate = 1, onEnd) {
   speakStarted = performance.now();
   // About 150 words a minute at rate 1, plus a margin.
   speakingUntil = performance.now() + (text.split(/\s+/).length / (2.5 * rate)) * 1000 + 3000;
+  // For Terra's log: does the voice actually start? (Chrome can stay silent: a stuck speech queue or a broken voice.)
+  let started = false;
+  setTimeout(() => {
+    if (gen === speechGen && !started && !synth.speaking) terraLog('speech did not start', { voice: (pickVoice() || {}).name || 'none', pending: synth.pending, voices: synth.getVoices().length });
+  }, 1500);
   parts.forEach((part, i) => {
     const u = new SpeechSynthesisUtterance(part);
+    u.onstart = () => { started = true; if (!loggedStart) { loggedStart = true; terraLog('speech works', { voice: u.voice ? u.voice.name : 'default' }); } };
     u.lang = 'en-US';
     u.rate = rate;
     const v = pickVoice();
@@ -141,7 +152,7 @@ export function speak(text, rate = 1, onEnd) {
       if (i === parts.length - 1) { active = 0; if (onEnd) onEnd(); }
     };
     u.onend = done;
-    u.onerror = done;
+    u.onerror = (e) => { if (e.error !== 'interrupted' && e.error !== 'canceled') terraLog('speech error', { error: e.error, voice: u.voice ? u.voice.name : 'default' }); done(); };
     keep.push(u);
     synth.speak(u);
   });

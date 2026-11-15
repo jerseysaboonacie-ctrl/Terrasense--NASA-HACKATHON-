@@ -79,6 +79,12 @@ offered because none of our frames has dated versions yet; see Known limitations
   an honest "I am not connected to the internet or to an AI service".
 - **First visit**: see "Where it starts" above (`greetOnGallery` in `js/welcome.js`). On other pages a first
   visit gets Terra's introduction and the voice question. Choosing a voice switches Terra's listening on.
+- **Which microphone**: Terra opens the microphone itself and hands it to Chrome's recognizer
+  (`recognition.start(track)`), because Chrome's own preferred microphone can be a virtual device
+  (screen-casting or meeting apps, e.g. "AirgoCast Audio (Virtual)") that sends silence. Automatic picks the
+  system default, the built-in or any real microphone, never a virtual one; the Microphone menu chooses
+  another (saved). A level bar shows the microphone hearing you. The Narrator menu (built-in voice / screen
+  reader / text only) and "Test the voice" are in Terra's panel on every page; novelty Mac voices are skipped.
 - **Microphone line** under Terra's switch: "off", "on. Listening", "hearing sound", "hearing speech",
   "heard you (5 words)", or the exact problem (blocked, no sound for 10 s, Chrome error, editor preview,
   Brave, Firefox, a `file://` page), so it is visible where listening stops. Version shown below it.

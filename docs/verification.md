@@ -207,6 +207,17 @@ playback could not be used: the Mac cancels its own speaker sound from the micro
 | 16.8 | Automated checks | PASS | 369 of 369 Player checks, 85 of 85 page checks. |
 | 16.9 | A person speaking to Terra | NOT TESTED by us | Needs you; the microphone log will show what happened. |
 
+## 17. Silent microphone: a virtual device chosen by Chrome (added 2026-11-15)
+
+| # | Check | Result | Evidence |
+|---|---|---|---|
+| 17.1 | Your Chrome, from Terra's microphone log | FOUND | Version 2026-11-15b, microphone allowed and opened, recognition sessions running, but for over a minute only "no-speech": not one sound or speech event. |
+| 17.2 | Cause | FOUND | Chrome's microphone preference on this Mac ranks "AirgoCast Audio (Virtual)" (a screen-casting driver) above the MacBook Air Microphone. The system default is the built-in microphone, input volume 50. |
+| 17.3 | Reproduced | PASS | Fresh Chrome profile with the same ranking: Chrome's default microphone is AirgoCast, level 0.0000, recognizer hears no sound. |
+| 17.4 | Fixed | PASS | Same profile, new code: Terra opens the MacBook Air Microphone, level bar moves (up to 38 %), recognizer reports sound and speech, voice speaks (Samantha). Test: with a virtual default device, Terra opens the built-in one; the menu marks the virtual one. |
+| 17.5 | Built-in voice on this Mac | PASS | Picked voice Samantha speaks (3.8 s for a test sentence). Novelty voices are never picked. Your own Chrome's voice: now logged ("speech works" / "did not start" / errors). |
+| 17.6 | Automated checks | PASS | 370 of 370 Player checks, 85 of 85 page checks; recorded voices 11 of 12. |
+
 ## Could not verify
 
 - The official challenge text and its resource links (5.4).

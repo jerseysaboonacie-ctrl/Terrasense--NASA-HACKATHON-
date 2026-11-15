@@ -481,8 +481,13 @@
       w.SpeechRecognition = FakeRecognition;
       w.__testUserActivation = true; // the page may speak (as after a key press)
       w.speechSynthesis.speak = (u) => { spoken.push(u.text); setTimeout(() => u.onend && u.onend(), voice.endAfterMs); };
-      try { Object.defineProperty(w.navigator.mediaDevices, 'getUserMedia', { configurable: true, value: async () => ({ getTracks: () => [{ stop() {} }] }) }); } catch (e) { /* none */ }
-      return { insts, spoken, voice, active: () => insts.filter((i) => i.started).pop() };
+      const gum = [];
+      try { Object.defineProperty(w.navigator.mediaDevices, 'getUserMedia', { configurable: true, value: async (c) => { gum.push(c); return { getTracks: () => [{ stop() {} }] }; } }); } catch (e) { /* none */ }
+      // Like the Mac where Terra heard nothing: a virtual device (AirgoCast) is the browser's default microphone.
+      const devices = [{ kind: 'audioinput', deviceId: 'default', label: 'Default - AirgoCast Audio (Virtual)' }, { kind: 'audioinput', deviceId: 'airgo', label: 'AirgoCast Audio (Virtual)' },
+        { kind: 'audioinput', deviceId: 'mba', label: 'MacBook Air Microphone (Built-in)' }, { kind: 'audiooutput', deviceId: 'spk', label: 'MacBook Air Speakers' }];
+      try { Object.defineProperty(w.navigator.mediaDevices, 'enumerateDevices', { configurable: true, value: async () => devices }); } catch (e) { /* none */ }
+      return { insts, spoken, voice, gum, active: () => insts.filter((i) => i.started).pop() };
     }
 
     async function testMicrophone() {
@@ -501,12 +506,20 @@
       const T = '(Terra on/off)';
       record(T, 'Voice setting is "screen reader" (the case that used to be silent)', st().prefs.voiceMode === 'screenreader', st().prefs.voiceMode);
 
-      key(doc.body, 'v'); await wait(900);
+      key(doc.body, 'v');
+      for (let i = 0; i < 30 && !(mic.active() && st().narrationLine.startsWith('Terra is listening.')); i++) await wait(100);
+      await wait(300);
       let s = st();
       const a1 = mic.active();
       record(T, 'V switches Terra on, says so out loud, listens continuously', pressed().join() === 'true,true' &&
         Boolean(a1) && a1.continuous === true && s.narrationLine.startsWith('Terra is listening.') && mic.spoken.some((t) => t.startsWith('Terra is listening.')),
         `pressed ${pressed()}, continuous ${a1 && a1.continuous}, spoken: "${(mic.spoken[mic.spoken.length - 1] || '').slice(0, 50)}…"`);
+
+      const opened = mic.gum.map((c) => (c.audio && c.audio.deviceId ? c.audio.deviceId.exact : 'browser default'));
+      const menu = [...doc.getElementById('mic-select').options].map((o) => o.text);
+      record(T, 'Listens to the real microphone, not a virtual one that is the browser\'s default', opened[opened.length - 1] === 'mba' &&
+        menu[0] === 'Automatic: MacBook Air Microphone (Built-in)' && menu.some((m) => /AirgoCast.*virtual, usually silent/.test(m)),
+        `opened ${opened.join(', ')}; menu: ${menu.join(' | ')}`);
 
       let n = mic.spoken.length;
       s = await hear('take me to Japan');

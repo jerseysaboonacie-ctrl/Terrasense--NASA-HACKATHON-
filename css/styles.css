@@ -376,6 +376,10 @@ button.big-button { border-radius: var(--radius); }
 .assistant { margin: 8px 0 12px; }
 .assistant h2, .assistant h3 { margin: 0 0 4px; }
 .assistant form input[type="text"] { flex: 1; min-width: 12em; font: inherit; padding: 6px 8px; border: 2px solid var(--border); border-radius: 6px; background: var(--bg); color: var(--text); }
+.mic-row { align-items: center; }
+.mic-meter { display: inline-block; width: 120px; height: 12px; border: 1px solid var(--border); border-radius: 6px; overflow: hidden; vertical-align: middle; background: var(--bg); }
+.mic-meter > span { display: block; height: 100%; width: 0%; background: #3fb950; transition: width 80ms linear; }
+@media (prefers-reduced-motion: reduce) { .mic-meter > span { transition: none; } }
 .mic-status { margin: 8px 0; padding: 6px 10px; border-radius: 6px; border-left: 4px solid var(--border); background: var(--bg); }
 .mic-status[data-kind="on"], .mic-status[data-kind="ok"] { border-left-color: #3fb950; }
 .mic-status[data-kind="warn"], .mic-status[data-kind="quiet"] { border-left-color: #d29922; }

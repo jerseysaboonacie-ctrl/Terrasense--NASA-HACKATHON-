@@ -5,7 +5,7 @@
 // /__terra-log, which saves it in .terra-log.jsonl. Never the words themselves, so nothing said
 // in the room is stored. On any other address (for example a public website) nothing is sent.
 
-export const TERRA_VERSION = '2026-11-15b';
+export const TERRA_VERSION = '2026-11-15c';
 
 const LOCAL = ['localhost', '127.0.0.1'].includes(location.hostname);
 let off = !LOCAL;

@@ -134,6 +134,20 @@ export function createAssistant({ container, say, commands = [], help = '', head
       <button type="button" id="talk-btn" class="terra-toggle" aria-pressed="false" accesskey="v">Terra listening (V)<span class="terra-state" aria-hidden="true">Off</span></button>
     </div>
     <p id="mic-status" class="mic-status small">Microphone: off. Press V or the switch above so Terra can hear you.</p>
+    <div class="control-row mic-row">
+      <label for="mic-select">Microphone</label>
+      <select id="mic-select"><option value="">Automatic (this computer's microphone)</option></select>
+      <span class="mic-meter" aria-hidden="true"><span id="mic-live"></span></span>
+    </div>
+    <div class="control-row">
+      <label for="narrator-select">Narrator</label>
+      <select id="narrator-select">
+        <option value="voice">Built-in voice: the page reads aloud</option>
+        <option value="screenreader">My screen reader reads it (the page stays silent)</option>
+        <option value="off">Text only</option>
+      </select>
+      <button type="button" id="voice-test-btn" class="secondary">Test the voice</button>
+    </div>
     <p id="assistant-heard" class="muted small" aria-hidden="true"></p>
     <div class="button-row">
       <button type="button" id="mic-check-btn" class="secondary">Check the microphone</button>
@@ -153,6 +167,7 @@ export function createAssistant({ container, say, commands = [], help = '', head
   const $ = (id) => container.querySelector('#' + id);
   const talkBtn = $('talk-btn'), form = $('ask-form'), input = $('ask-input'), wakeBox = $('wake-toggle');
   const aloudBox = $('aloud-toggle'), heardEl = $('assistant-heard'), micEl = $('mic-status');
+  const micSelect = $('mic-select'), micLive = $('mic-live'), narratorSelect = $('narrator-select'), voiceTestBtn = $('voice-test-btn');
   /** The visible "Microphone: ..." line: where listening has got to, so a problem can be seen. */
   const micState = (text, kind = '') => { micEl.textContent = 'Microphone: ' + text; micEl.dataset.kind = kind; };
   const checkBtn = $('mic-check-btn'), levelEl = $('mic-level');
@@ -533,11 +548,101 @@ export function createAssistant({ container, say, commands = [], help = '', head
     statusEl.textContent = listeningOn ? 'Terra is listening. Speak at any time; say "stop listening" or press V to switch it off.' : '';
   }
 
+  // --- Which microphone: Terra opens it itself and hands it to the recognizer ---------------------
+  // Chrome's recognizer otherwise uses Chrome's own preferred microphone, which can be a virtual device
+  // (screen casting, meeting or recording apps) that sends silence: then Terra hears nothing at all.
+  const VIRTUAL = /virtual|airgo|blackhole|soundflower|loopback|zoom|teams|parrot|krisp|obs |cast|aggregate|vb-audio|voicemeeter/i;
+  let micStream = null, micTrack = null, micDevice = null, meter = null, lastLoud = 0;
+
+  async function inputs() {
+    try { return (await navigator.mediaDevices.enumerateDevices()).filter((d) => d.kind === 'audioinput'); } catch (e) { return []; }
+  }
+  /** The chosen microphone, or automatically: the system's default, the built-in one, any real one. Never a virtual one. */
+  function chooseInput(list) {
+    const saved = loadPrefs().terraMic;
+    const real = list.filter((d) => !VIRTUAL.test(d.label));
+    return (saved && list.find((d) => d.deviceId === saved)) ||
+      real.find((d) => d.deviceId === 'default') || real.find((d) => /built-in|internal|macbook|microphone array/i.test(d.label)) ||
+      real[0] || list[0] || null;
+  }
+  const deviceName = (d) => (d && d.label ? d.label.replace(/^Default - /, '').replace(/\s*\([0-9a-f]{4}:[0-9a-f]{4}\)$/i, '') : 'the microphone');
+  function fillMicMenu(list, chosen) {
+    const saved = loadPrefs().terraMic;
+    micSelect.replaceChildren(new Option(`Automatic${chosen && !saved ? ': ' + deviceName(chosen) : ''}`, ''));
+    for (const d of list) {
+      if (d.deviceId === 'default' || d.deviceId === 'communications') continue;
+      micSelect.append(new Option(deviceName(d) + (VIRTUAL.test(d.label) ? ' (virtual, usually silent)' : ''), d.deviceId));
+    }
+    micSelect.value = saved && list.some((d) => d.deviceId === saved) ? saved : '';
+  }
+  function closeMic() {
+    if (meter) { meter.stop(); meter = null; }
+    if (micStream) micStream.getTracks().forEach((t) => t.stop());
+    micStream = null; micTrack = null;
+    micLive.style.width = '0%';
+  }
+  /** A live level bar, so you can see the microphone hearing you. */
+  function startMeter(stream) {
+    const AC = window.AudioContext || window.webkitAudioContext;
+    if (!AC) return;
+    const ac = new AC();
+    const an = ac.createAnalyser();
+    an.fftSize = 1024;
+    ac.createMediaStreamSource(stream).connect(an);
+    const buf = new Float32Array(an.fftSize);
+    let alive = true, frame = 0;
+    const resume = () => ac.state === 'suspended' && ac.resume().catch(() => {});
+    document.addEventListener('pointerdown', resume, { once: true });
+    document.addEventListener('keydown', resume, { once: true });
+    resume();
+    const tick = () => {
+      if (!alive) return;
+      an.getFloatTimeDomainData(buf);
+      let sum = 0;
+      for (let i = 0; i < buf.length; i++) sum += buf[i] * buf[i];
+      const rms = Math.sqrt(sum / buf.length);
+      if (rms > 0.004) lastLoud = performance.now();
+      micLive.style.width = Math.min(100, Math.round(rms * 600)) + '%';
+      frame = requestAnimationFrame(tick);
+    };
+    tick();
+    meter = { stop() { alive = false; cancelAnimationFrame(frame); ac.close().catch(() => {}); }, state: () => ac.state };
+  }
+  /** Open the chosen microphone (asking permission first if needed). Returns the audio track. */
+  async function openMic() {
+    closeMic();
+    let list = await inputs();
+    if (!list.some((d) => d.label)) { // no names before permission: ask once, then look again
+      const s0 = await navigator.mediaDevices.getUserMedia({ audio: true });
+      s0.getTracks().forEach((t) => t.stop());
+      list = await inputs();
+    }
+    micDevice = chooseInput(list);
+    micStream = await navigator.mediaDevices.getUserMedia({ audio: micDevice ? { deviceId: { exact: micDevice.deviceId } } : true });
+    micTrack = micStream.getAudioTracks ? micStream.getAudioTracks()[0] : null;
+    fillMicMenu(list, micDevice);
+    lastLoud = performance.now();
+    if (micStream.getAudioTracks) startMeter(micStream);
+    terraLog('microphone chosen', { device: deviceName(micDevice).slice(0, 60), virtual: VIRTUAL.test((micDevice && micDevice.label) || ''),
+      inputs: list.map((d) => deviceName(d).slice(0, 40) + (VIRTUAL.test(d.label) ? ' [virtual]' : '')).slice(0, 8), saved: Boolean(loadPrefs().terraMic) });
+    return micTrack;
+  }
+  micSelect.addEventListener('change', async () => {
+    const p = loadPrefs(); p.terraMic = micSelect.value; savePrefs(p);
+    if (!listeningOn) return;
+    try {
+      await openMic();
+      if (rec) { const r = rec; rec = null; retryAt = performance.now() + 50; try { r.abort(); } catch (e) { /* ended */ } }
+      micState(`switched to ${deviceName(micDevice)}. Speak, and watch the bar move.`, 'on');
+    } catch (err) { micState(`could not open that microphone (${err.name}). Choose another one.`, 'error'); }
+  });
+
   /** Switch Terra on or off (no announcement; see startListening for the full start). */
   function setOn(on) {
     listeningOn = on;
     try { on ? sessionStorage.setItem(ON_KEY, '1') : sessionStorage.removeItem(ON_KEY); } catch (e) { /* fine */ }
     if (!on && rec) { const r = rec; rec = null; try { r.abort(); } catch (e) { /* already stopped */ } }
+    if (!on) closeMic();
     if (!on) { cue('listenEnd'); if (micEl.dataset.kind !== 'error') micState('off. Press V or the switch above so Terra can hear you.'); }
     showState();
   }
@@ -562,10 +667,8 @@ export function createAssistant({ container, say, commands = [], help = '', head
     }
     if (state !== 'granted') reply('Your browser is asking to use the microphone. Choose Allow.', { echo: false, aloud: terraAloudSetting() });
     try {
-      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-      const tracks = stream.getAudioTracks ? stream.getAudioTracks() : [];
-      terraLog('microphone', { ok: true, muted: tracks[0] ? tracks[0].muted : null, tracks: tracks.length });
-      stream.getTracks().forEach((tr) => tr.stop());
+      await openMic();
+      terraLog('microphone', { ok: true, muted: micTrack ? micTrack.muted : null });
       return true;
     } catch (err) {
       terraLog('microphone', { ok: false, error: err.name });
@@ -703,8 +806,15 @@ export function createAssistant({ container, say, commands = [], help = '', head
     const on = (type, fn) => { if (r.addEventListener) r.addEventListener(type, fn); };
     on('start', () => terraLog('session start', { lang: r.lang }));
     on('audiostart', () => {
-      if (rec === r) micState('on. Listening: speak whenever you like.', 'on');
-      setTimeout(() => { if (rec === r && listeningOn && !heardSound && !speaking()) micState('on, but no sound has reached Chrome for 10 seconds. Is the right microphone chosen, and not muted? (Mac: System Settings, Sound, Input.)', 'warn'); }, 10000);
+      if (rec === r) micState(`on (${deviceName(micDevice)}). Listening: speak whenever you like; the bar moves when it hears you.`, 'on');
+      setTimeout(() => {
+        if (rec !== r || !listeningOn || speaking()) return;
+        const silent = meter ? performance.now() - lastLoud > 9000 : !heardSound;
+        if (silent) {
+          micState(`on, but no sound from ${deviceName(micDevice)} for 10 seconds. Choose another microphone in the menu below, or check it is not muted.`, 'warn');
+          terraLog('silent microphone', { device: deviceName(micDevice).slice(0, 60), meterState: meter ? meter.state() : 'none' });
+        }
+      }, 10000);
     });
     on('soundstart', () => { heardSound = true; if (rec === r) micState('hearing sound…', 'on'); terraLog('sound'); });
     on('speechend', () => { r.speechActive = false; });
@@ -719,7 +829,12 @@ export function createAssistant({ container, say, commands = [], help = '', head
       terraLog('words', { count: words.length, final: last.isFinal, name: nameIndex(words) >= 0 });
     });
     rec = r;
-    try { r.start(); } catch (err) { rec = null; retryAt = performance.now() + 1000; terraLog('start failed', { error: err.name }); }
+    try {
+      // The chosen microphone (Chrome 13x+ accepts an audio track); otherwise Chrome's own choice.
+      if (micTrack && micTrack.readyState === 'live') r.start(micTrack); else r.start();
+    } catch (err) {
+      try { r.start(); } catch (err2) { rec = null; retryAt = performance.now() + 1000; terraLog('start failed', { error: err2.name }); }
+    }
   }
 
   const ERROR_HELP = {
@@ -787,7 +902,8 @@ export function createAssistant({ container, say, commands = [], help = '', head
       // 1. Sound level for 4 seconds
       let peak = 0;
       try {
-        const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+        const track = await openMic(); // the same microphone Terra listens to
+        const stream = micStream;
         const ac = new (window.AudioContext || window.webkitAudioContext)();
         const an = ac.createAnalyser();
         an.fftSize = 1024;
@@ -802,10 +918,11 @@ export function createAssistant({ container, say, commands = [], help = '', head
           levelEl.value = Math.min(1, rms * 8);
           await new Promise((r) => setTimeout(r, 50));
         }
-        stream.getTracks().forEach((tr) => tr.stop());
         ac.close();
         levelEl.hidden = true;
-        results.push(peak > 0.01 ? 'Sound: yes, I can hear your microphone.' : 'Sound: no. The microphone is silent: check it is not muted, and that the right microphone is chosen in the system settings.');
+        const name = deviceName(micDevice);
+        results.push(peak > 0.01 ? `Sound: yes, I can hear ${name}.` : `Sound: no. ${name} is silent: choose another microphone in the Microphone menu, or check it is not muted.`);
+        terraLog('microphone check', { device: name.slice(0, 60), peak: Number(peak.toFixed(4)) });
         // 2. Then (not at the same time: on a Mac they can compete for the microphone) one round of speech recognition.
         say2('Now say something again.');
         await new Promise((r) => setTimeout(r, 300));
@@ -824,7 +941,7 @@ export function createAssistant({ container, say, commands = [], help = '', head
           };
           r.onerror = (e) => resolve({ error: e.error, text: finalText || interim });
           r.onend = () => resolve({ text: finalText || interim });
-          try { r.start(); } catch (err) { resolve({ error: err.name }); }
+          try { if (track && track.readyState === 'live') r.start(track); else r.start(); } catch (err) { try { r.start(); } catch (err2) { resolve({ error: err2.name }); } }
           setTimeout(() => { try { r.stop(); } catch (e) { /* ended */ } }, 7000);
         });
         const w = words;
@@ -833,6 +950,8 @@ export function createAssistant({ container, say, commands = [], help = '', head
         else if (w.error && w.error !== 'no-speech' && w.error !== 'aborted') results.push(`Speech recognition: error ${w.error}.`);
         else if (w.text && w.text.trim()) results.push(`Speech recognition: works. I heard: "${w.text.trim()}".`);
         else results.push('Speech recognition: I heard no words. Speak a little louder or closer, and try again.');
+        terraLog('microphone check words', { error: w.error || null, words: w.text ? splitWords(w.text).length : 0 });
+        closeMic();
       } catch (err) {
         results.push('The microphone could not be opened: ' + err.message);
       }
@@ -855,6 +974,25 @@ export function createAssistant({ container, say, commands = [], help = '', head
     handle(text);
   });
 
+  // Narrator (the voice mode), on every page, so it is clear whether the page reads aloud.
+  narratorSelect.value = loadPrefs().voiceMode;
+  narratorSelect.addEventListener('change', () => {
+    const p = loadPrefs(); p.voiceMode = narratorSelect.value; savePrefs(p); announcePrefsChanged();
+    terraLog('narrator', { mode: p.voiceMode });
+    if (p.voiceMode === 'voice') speak('Built-in voice on. I will read the page aloud.', p.speechRate);
+  });
+  voiceTestBtn.addEventListener('click', () => {
+    if (!speechSupported()) { micState('this browser has no built-in voice.', 'error'); return; }
+    let started = false;
+    speak('This is Terra\'s voice. If you can hear me, the sound works.', loadPrefs().speechRate, () => terraLog('voice test end', { started }));
+    const u = window.speechSynthesis;
+    setTimeout(() => {
+      started = u.speaking;
+      terraLog('voice test', { speaking: u.speaking, pending: u.pending, voices: u.getVoices().length });
+      if (!u.speaking && !u.pending) statusEl.textContent = 'Chrome did not start speaking. Check the volume, and that the Mac\'s sound output is the speakers or headphones you are using. If it stays silent, quit Chrome completely and open it again.';
+      else statusEl.textContent = 'Terra is speaking now. If you hear nothing, check the volume and the sound output (Mac: System Settings, Sound, Output).';
+    }, 900);
+  });
   aloudBox.checked = terraAloudSetting();
   aloudBox.disabled = !speechSupported();
   aloudBox.addEventListener('change', () => {
@@ -864,7 +1002,7 @@ export function createAssistant({ container, say, commands = [], help = '', head
   wakeBox.addEventListener('change', () => {
     const p = loadPrefs(); p.terraWakeWord = wakeBox.checked; savePrefs(p); announcePrefsChanged();
   });
-  window.addEventListener('terrasense-prefs-changed', () => { wakeBox.checked = loadPrefs().terraWakeWord; aloudBox.checked = terraAloudSetting(); });
+  window.addEventListener('terrasense-prefs-changed', () => { wakeBox.checked = loadPrefs().terraWakeWord; aloudBox.checked = terraAloudSetting(); narratorSelect.value = loadPrefs().voiceMode; });
 
   // V anywhere on the page (except while typing in a field or a dialog is open): Terra on / off.
   document.addEventListener('keydown', (e) => {
@@ -876,7 +1014,7 @@ export function createAssistant({ container, say, commands = [], help = '', head
     toggle();
   });
 
-  terraLog('page', { ...browserFacts(), version: TERRA_VERSION });
+  terraLog('page', { ...browserFacts(), version: TERRA_VERSION, narrator: loadPrefs().voiceMode, terraAloud: loadPrefs().terraAloud, canSpeak: canSpeakNow() });
   {
     const blocker = recognitionBlocker();
     if (blocker) { micState(blocker, 'error'); statusEl.textContent = blocker; }

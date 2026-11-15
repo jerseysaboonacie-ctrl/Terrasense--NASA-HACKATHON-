@@ -19,6 +19,7 @@ export const DEFAULTS = Object.freeze({
   reduceMotion: false,
   terraWakeWord: false,       // Terra answers only requests that start with "Terra"
   terraAloud: true,           // Terra answers out loud (built-in voice) when you talk to it
+  terraMic: '',               // the microphone Terra listens to ('' = automatic: the system's, never a virtual one)
 });
 
 const VALID = {

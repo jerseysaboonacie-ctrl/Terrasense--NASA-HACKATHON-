@@ -7,7 +7,7 @@ same format (newest first under **History**) and tick your tasks in **Your tasks
 Status words: **Done** (built and tested), **Partly done** (some of it exists, see notes),
 **Not started**, **Yours** (only a person can do it).
 
-Last updated: 2026-11-15 12:30 (+07), session 10 finished.
+Last updated: 2026-11-15 14:00 (+07), session 11 finished.
 
 ---
 
@@ -15,6 +15,30 @@ Last updated: 2026-11-15 12:30 (+07), session 10 finished.
 
 Live progress, newest session first, newest line at the bottom of each session. Times are the
 laptop's clock (+07). Each phase has an estimate; the heartbeat says when it actually started and finished.
+
+### Session 11: 2026-11-15 afternoon (finished)
+
+**Report (from you):** No narrator, and Terra cannot be heard, so you cannot tell whether the microphone works.
+
+| Phase | What | Estimate | Status |
+|---|---|---|---|
+| 1 | Read Terra's microphone log from your test; find the cause | 20 min | Done (13:24 to 13:35) |
+| 2 | Terra chooses the microphone itself; level bar; narrator menu; voice test; speech in the log | 40 min | Done (13:35 to 13:50) |
+| 3 | Reproduce your setup, test, docs, commit | 20 min | Done (13:50 to 14:00) |
+
+- 13:24: Your log (13:22, your Chrome, version 2026-11-15b): microphone allowed and opened, recognition running,
+  but only "no-speech" for over a minute: Chrome received no sound at all.
+- 13:30: Cause: Chrome's microphone preference ranks "AirgoCast Audio (Virtual)" first (a screen-casting
+  driver, installed in /Library/Audio/Plug-Ins/HAL). It sends silence. The Mac itself uses the built-in
+  microphone (input volume 50) and speakers (56, not muted). Read only Chrome's microphone settings.
+- 13:35: Built-in voice works in a normal Chrome on this Mac (Samantha). Your silent narrator is not
+  explained yet: the saved setting may be "screen reader" (silent page), or Chrome's voice did not start.
+- 13:50: Terra now opens the real microphone itself (never a virtual one) and gives it to the recognizer;
+  Microphone menu and level bar; Narrator menu and "Test the voice" on every page; the log records whether
+  speech starts. Reproduced your setup in a fresh profile: before, level 0 and no sound; now the built-in
+  microphone, the bar moves, sound and speech reach the recognizer.
+- 14:00: 370 of 370 Player checks, 85 of 85 page checks, recorded voices 11 of 12. Version 2026-11-15c.
+- Not tested: your own Chrome after the fix.
 
 ### Session 10: 2026-11-15 midday (finished)
 
@@ -502,6 +526,7 @@ Tick these as you go and add a line under History with what you found.
 - [ ] Screen reader test (about 20 min): VoiceOver (Mac: Cmd + F5), NVDA (Windows) or TalkBack (Android). Eyes closed: open the Player, take the tour (T), get the summary, jump to the warmest area, press W, walk into an edge, compare two places, change volume with minus and plus, mute, change frame. Try each Voice setting once. Note where you got lost, heard nothing, or heard two voices, and whether the letter keys reached the page.
 - [ ] By-eye check: open `decoder-test.html?frame=sst&fill=1` (then `t2m`, `ndvi`, `precip`), type the value you read from the colorbar for each row, and paste the Markdown export into `docs/accuracy-check.md`.
 - [ ] Check the Summary against the picture for each frame (does the "warmest" place look warmest?).
+- [ ] After session 11 (2 min): reload with Cmd+Shift+R, check Terra's panel says version 2026-11-15c, set Narrator to Built-in voice, press Test the voice, switch Terra on and watch the level bar while you talk, then tell Claude "check the log".
 - [ ] Talk to Terra after session 10 (2 min): reload http://localhost:8931 in Chrome (Cmd+Shift+R), answer the two questions, say "vegetation". Then tell Claude "check the log": the microphone log shows what Terra heard (counts only).
 - [ ] Hear Terra's introduction (1 min): open http://localhost:8931/?welcome in Chrome, press any letter key, listen, then press 1, 2 or 3. Tell Claude if it is too long.
 - [ ] Press "Check the microphone" in the Player (Chrome) and tell Claude exactly what it says.
@@ -523,6 +548,10 @@ Tick these as you go and add a line under History with what you found.
 ## History
 
 Newest first. Claude's entries name the commit so you can see exactly what changed.
+
+### 2026-11-15: Terra listens to the real microphone, not a silent virtual one (Claude, this commit)
+- Chrome preferred "AirgoCast Audio (Virtual)"; Terra now picks the microphone itself. Level bar, Microphone
+  and Narrator menus, Test the voice, speech in the log. 370 of 370 Player checks, 85 of 85 page checks.
 
 ### 2026-11-15: Start at the Gallery; Terra's microphone made visible (Claude, commit 96b3e4b)
 - Link visits go to the Gallery: Terra introduces itself, asks how to hear the site and which map; answer
