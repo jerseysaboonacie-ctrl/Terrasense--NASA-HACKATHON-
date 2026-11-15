@@ -1248,9 +1248,10 @@ async function init() {
   });
 
   // First visit: ask how to hear the site (welcome.js), then greet in that voice.
-  askVoiceModeIfNeeded((mode) => {
+  askVoiceModeIfNeeded(async (mode) => {
     if (mode === 'off') return;
-    say(afterChoice(mode, `${meta.title} is open. Press T for a tour, or use the Skip to the map link at the top of the page, then the arrow keys.`));
+    const on = await assistant.startListening({ quiet: true }); // so Terra can hear you straight away
+    say(afterChoice(mode, `${meta.title} is open. Press T for a tour, or use the Skip to the map link at the top of the page, then the arrow keys.`, on));
   });
 
   // Read-only hooks for the automated tests in tests/player-test.html.

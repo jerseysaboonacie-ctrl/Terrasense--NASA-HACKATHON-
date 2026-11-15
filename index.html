@@ -7,6 +7,16 @@
   <meta name="description" content="Explore NASA Earth Information Center visualizations by sound, touch or keyboard.">
   <link rel="stylesheet" href="css/styles.css">
   <script src="js/display.js"></script>
+  <script>
+    // Opened from a link, a bookmark or the address bar (not from another page of this site):
+    // start at the Gallery, where Terra introduces itself and asks which map to explore.
+    (function () {
+      try {
+        var from = document.referrer ? new URL(document.referrer).origin : '';
+        if (from !== location.origin && !/[?&]home\b/.test(location.search)) location.replace('gallery.html' + location.search);
+      } catch (e) { /* stay on Home */ }
+    })();
+  </script>
 </head>
 <body>
   <a class="skip-link" href="#main">Skip to content</a>

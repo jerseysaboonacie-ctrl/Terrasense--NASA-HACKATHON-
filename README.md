@@ -77,8 +77,11 @@ offered because none of our frames has dated versions yet; see Known limitations
   "what is today's date" (device clock), "what is NDVI" (from each frame's `about` in `data/frames.json`),
   "introduce yourself", "read this page", "stop listening". Questions outside the site (weather, news) get
   an honest "I am not connected to the internet or to an AI service".
-- **First visit**: Terra introduces itself and its features, then asks built-in voice / screen reader / text
-  only (`js/welcome.js`; spoken on the first key press or tap, as browsers require; `?welcome` shows it again).
+- **First visit**: see "Where it starts" above (`greetOnGallery` in `js/welcome.js`). On other pages a first
+  visit gets Terra's introduction and the voice question. Choosing a voice switches Terra's listening on.
+- **Microphone line** under Terra's switch: "off", "on. Listening", "hearing sound", "hearing speech",
+  "heard you (5 words)", or the exact problem (blocked, no sound for 10 s, Chrome error, editor preview,
+  Brave, Firefox, a `file://` page), so it is visible where listening stops. Version shown below it.
 - **Under the pointer** shows the nearest country ("In Japan." / "About 300 km west of Chile.") and the
   continent (on land; at sea the nearest land's, marked "nearest land"). Continents from Natural Earth;
   Russia, Turkey, Egypt and Kazakhstan split roughly by longitude (`continentOf` in `js/places.js`).
@@ -111,11 +114,23 @@ No build step and no internet needed once the files are on your computer.
 
 ```sh
 cd "Terrasense (NASA HACKATHON)"
-python3 -m http.server 8000
+python3 tools/serve.py          # http://localhost:8931
 ```
 
-Then open <http://localhost:8000>. The site must be served, not opened as a file:
-browsers block pixel reading on `file://` pages.
+Then open <http://localhost:8931> in Google Chrome. The site must be served, not opened as a file:
+browsers block pixel reading on `file://` pages. `tools/serve.py` is like `python3 -m http.server`, but sends
+`Cache-Control: no-cache` (so Chrome never keeps running an old copy of the JavaScript after an update) and
+keeps **Terra's microphone log**: on localhost only, the page reports what the speech recognizer does
+(switched on, permission, sound, speech, word counts, errors, which request Terra answered; never the words)
+to `.terra-log.jsonl` (ignored by git). Any static server works for everything else, including GitHub Pages.
+
+**Where it starts:** opened from a link, a bookmark or the address bar, the site goes to the Gallery
+(`index.html` forwards there; Home from inside the site stays on Home). There Terra introduces itself and
+what you can tell it, asks how you would like to hear the site (built-in voice, screen reader, text only),
+then asks which map to explore: sea surface temperature, air temperature, vegetation or precipitation
+(keys 1 to 4, the buttons, or by voice: Terra switches the microphone on at this point, so saying
+"vegetation" or "number three" opens it, even while Terra is still reading the choices). Once per visit
+(tab); `?welcome` shows it again.
 
 Open a frame directly with `player.html?frame=sst` (or `t2m`, `ndvi`, `precip`).
 

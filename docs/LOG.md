@@ -7,7 +7,7 @@ same format (newest first under **History**) and tick your tasks in **Your tasks
 Status words: **Done** (built and tested), **Partly done** (some of it exists, see notes),
 **Not started**, **Yours** (only a person can do it).
 
-Last updated: 2026-11-15 11:40 (+07), session 9 finished.
+Last updated: 2026-11-15 12:30 (+07), session 10 finished.
 
 ---
 
@@ -15,6 +15,35 @@ Last updated: 2026-11-15 11:40 (+07), session 9 finished.
 
 Live progress, newest session first, newest line at the bottom of each session. Times are the
 laptop's clock (+07). Each phase has an estimate; the heartbeat says when it actually started and finished.
+
+### Session 10: 2026-11-15 midday (finished)
+
+**Report and request (from you):** Terra still cannot hear anything. Opening the project from a link should go
+to the Gallery, where Terra introduces itself and asks which of the four maps you want to explore.
+
+| Phase | What | Estimate | Status |
+|---|---|---|---|
+| 1 | Find out which copy of the site you run; make listening visible (status line, log) | 30 min | Done (11:36 to 11:45) |
+| 2 | Start at the Gallery: introduction, voice question, map question, answer by voice | 40 min | Done (11:45 to 12:00) |
+| 3 | Real microphone and recorded-voice runs; fix what they show; tests | 30 min | Done (12:00 to 12:25) |
+| 4 | Docs, log, commit | 10 min | Done (12:30) |
+
+- 11:36: You confirmed: http://localhost:8931 in Google Chrome. But the server logged no visits from you
+  since 21:30 yesterday. It sent no cache rule, so Chrome could run an old copy of the JavaScript without
+  asking. New `tools/serve.py` (same address) sends "no-cache"; the page shows "Terra version 2026-11-15b".
+- 11:45: A "Microphone:" line under Terra's switch shows where listening has got to (off, listening, hearing
+  sound, hearing speech, heard you, or the exact problem). The page also reports these events to
+  `.terra-log.jsonl` via `tools/serve.py` (localhost only, counts only, never words), so I can read
+  what happened on your machine afterwards.
+- 12:00: Gallery start: `index.html` forwards link visits to the Gallery; Terra introduces itself, asks how to
+  hear the site, then which map (1 to 4, or say "vegetation" / "number three"; works while Terra is still
+  reading). Choosing a voice switches Terra's listening on, here and in the Player's first question.
+- 12:10: Real microphone, visible Chrome: listening works (sound and speech reported). But the log showed a
+  restart every 6 s in a quiet room, from yesterday's stall fix: someone starting to talk at that moment
+  lost their first words. Now restarts happen only when Chrome hears speech but sends no words for 8 s.
+- 12:25: Tests: 369 of 369 Player checks, 85 of 85 page checks (5 new for the Gallery start). Recorded voices
+  through Google's recognizer: 25 of 27 in quiet; 9 of 18 with people talking underneath.
+- Not tested: you speaking to Terra. Please try it; then I can read the microphone log.
 
 ### Session 9: 2026-11-15 morning (finished)
 
@@ -473,6 +502,7 @@ Tick these as you go and add a line under History with what you found.
 - [ ] Screen reader test (about 20 min): VoiceOver (Mac: Cmd + F5), NVDA (Windows) or TalkBack (Android). Eyes closed: open the Player, take the tour (T), get the summary, jump to the warmest area, press W, walk into an edge, compare two places, change volume with minus and plus, mute, change frame. Try each Voice setting once. Note where you got lost, heard nothing, or heard two voices, and whether the letter keys reached the page.
 - [ ] By-eye check: open `decoder-test.html?frame=sst&fill=1` (then `t2m`, `ndvi`, `precip`), type the value you read from the colorbar for each row, and paste the Markdown export into `docs/accuracy-check.md`.
 - [ ] Check the Summary against the picture for each frame (does the "warmest" place look warmest?).
+- [ ] Talk to Terra after session 10 (2 min): reload http://localhost:8931 in Chrome (Cmd+Shift+R), answer the two questions, say "vegetation". Then tell Claude "check the log": the microphone log shows what Terra heard (counts only).
 - [ ] Hear Terra's introduction (1 min): open http://localhost:8931/?welcome in Chrome, press any letter key, listen, then press 1, 2 or 3. Tell Claude if it is too long.
 - [ ] Press "Check the microphone" in the Player (Chrome) and tell Claude exactly what it says.
 - [ ] Talk to Terra (about 2 min, Chrome at http://localhost:8931/player.html): press V, wait for "Terra is listening", then say "Terra, are you still listening?" and pause. If nothing happens, read Claude the line under the switch ("Hearing: …" or "Heard: …").
@@ -493,6 +523,11 @@ Tick these as you go and add a line under History with what you found.
 ## History
 
 Newest first. Claude's entries name the commit so you can see exactly what changed.
+
+### 2026-11-15: Start at the Gallery; Terra's microphone made visible (Claude, this commit)
+- Link visits go to the Gallery: Terra introduces itself, asks how to hear the site and which map; answer
+  by voice. `tools/serve.py` (no-cache, microphone log); "Microphone:" status line; no restarts in quiet moments.
+- Tests: 369 of 369 Player checks, 85 of 85 page checks.
 
 ### 2026-11-15: Country and continent under the pointer; Terra's date, map switching, introduction (Claude, commit b70c526)
 - Panel: "Nearest country" and "Continent". Terra: today's date and time, "move me to the vegetation",

@@ -193,6 +193,20 @@ playback could not be used: the Mac cancels its own speaker sound from the micro
 | 15.7 | Automated checks | PASS | 369 of 369 Player checks, 80 of 80 page checks, 20 of 20 decoder self-tests. |
 | 15.8 | Spoken introduction heard by a person | NOT TESTED by us | Speech stubbed in tests. |
 
+## 16. Hearing: what reaches Terra, and starting at the Gallery (added 2026-11-15)
+
+| # | Check | Result | Evidence |
+|---|---|---|---|
+| 16.1 | Which copy of the site the browser runs | FOUND A RISK, FIXED | The old server (`python3 -m http.server`) sent no cache rule; from 21:30 to 11:36 it logged no visits at all, so a browser could have kept running older JavaScript. `tools/serve.py` sends `Cache-Control: no-cache`; the page shows "Terra version …". |
+| 16.2 | Restarts in quiet moments | FOUND A BUG, FIXED | A real-microphone run in visible Chrome showed the session restarting every 6 s in a quiet room (the stall rule from section 14). Someone starting to talk just then lost their first words. Now a restart only when Chrome hears speech but sends no words for 8 s, or after 60 s with no event. Test: quiet session kept, stalled one restarted. |
+| 16.3 | Real microphone, visible Chrome, normal "Allow", new Gallery flow | PASS | Landed on the Gallery from the bare address; after the voice choice Terra switched on; Chrome reported sound and speech; no errors. No words in that quiet minute. |
+| 16.4 | Saying the map's name or number at the Gallery question (real recognizer, virtual microphone) | PASS | "Vegetation" → Player on vegetation; "Number four" → precipitation; both said while Terra was still reading the choices. Terra stays on in the Player. |
+| 16.5 | Voice test after the changes | PASS / PARTLY | 25 of 27 in quiet; 9 of 18 with two people talking underneath (as before). |
+| 16.6 | Gallery greeting and landing | PASS | Link (no referrer) → Gallery; introduction, voice question (earlier answer marked), map question with four maps and "gallery first"; key 3 → vegetation; "number two" → air temperature; not repeated in the same visit; Home from inside stays Home. |
+| 16.7 | Microphone log | PASS | Events and counts only; checked: no transcript text in the file. |
+| 16.8 | Automated checks | PASS | 369 of 369 Player checks, 85 of 85 page checks. |
+| 16.9 | A person speaking to Terra | NOT TESTED by us | Needs you; the microphone log will show what happened. |
+
 ## Could not verify
 
 - The official challenge text and its resource links (5.4).

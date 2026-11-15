@@ -81,7 +81,8 @@ export const SETTINGS = {
   stillMs: 1800,            // Terra: words unchanged this long = the end of a spoken request (Chrome usually ends it itself after ~0.8 s)
   afterNameMs: 3000,        // Terra: after hearing its name, take the request this long later even if the room keeps talking
   longestPhraseMs: 10000,   // Terra: one phrase longer than this (people talking non-stop): start listening afresh
-  silentSessionMs: 6000,    // Terra: nothing from the recognizer for this long: start listening afresh (it can stall)
+  stalledMs: 8000,          // Terra: Chrome hears speech but sends no words for this long: it stalled, start afresh
+  idleSessionMs: 60000,     // Terra: no event at all for this long: start afresh (never during a quiet moment)
 
   // Optional vibration (Android browsers; not iPhone).
   vibration: { threshold: 0.9, pulseMs: 40 },

@@ -88,7 +88,9 @@ def main():
         sim.open('player.html?frame=sst', settle=3.0)
         sim.key('1', wait=1.0, report=False)   # the first question: built-in voice
         sim.eval('document.body.focus()')
-        sim.key('v', wait=3.0, report=False)   # Terra on
+        time.sleep(2.0)                        # choosing a voice switches Terra on by itself
+        if sim.eval("document.getElementById('talk-btn').getAttribute('aria-pressed')") != 'true':
+            sim.key('v', wait=3.0, report=False)   # Terra on
         if talk_clips:
             sim.eval(f'__vmic.talk({json.dumps(talk_clips)}, {talk})')
             print(f'Two people talking underneath, at {talk} of the request loudness')

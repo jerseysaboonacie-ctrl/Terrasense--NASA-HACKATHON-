@@ -26,6 +26,7 @@ import { loadFrameList } from './decoder.js';
 import { normalise } from './places.js';
 import { announcePrefsChanged, askVoiceModeIfNeeded, afterChoice, TERRA_INTRO } from './welcome.js';
 import { SETTINGS as S } from './settings.js';
+import { terraLog, browserFacts, recognitionBlocker, TERRA_VERSION } from './terra-log.js';
 
 /** The browser's speech recognition, looked up when needed (tests can supply one). */
 const getRecognition = () => window.SpeechRecognition || window.webkitSpeechRecognition;
@@ -132,6 +133,7 @@ export function createAssistant({ container, say, commands = [], help = '', head
     <div class="button-row">
       <button type="button" id="talk-btn" class="terra-toggle" aria-pressed="false" accesskey="v">Terra listening (V)<span class="terra-state" aria-hidden="true">Off</span></button>
     </div>
+    <p id="mic-status" class="mic-status small">Microphone: off. Press V or the switch above so Terra can hear you.</p>
     <p id="assistant-heard" class="muted small" aria-hidden="true"></p>
     <div class="button-row">
       <button type="button" id="mic-check-btn" class="secondary">Check the microphone</button>
@@ -145,11 +147,14 @@ export function createAssistant({ container, say, commands = [], help = '', head
       <button type="submit" class="secondary">Ask</button>
     </form>
     <p id="assistant-status" class="muted small" role="status"></p>
-    <ol id="assistant-log" class="assistant-log" aria-label="Conversation with Terra"></ol>`;
+    <ol id="assistant-log" class="assistant-log" aria-label="Conversation with Terra"></ol>
+    <p class="muted small terra-version">Terra version ${TERRA_VERSION}</p>`;
 
   const $ = (id) => container.querySelector('#' + id);
   const talkBtn = $('talk-btn'), form = $('ask-form'), input = $('ask-input'), wakeBox = $('wake-toggle');
-  const aloudBox = $('aloud-toggle'), heardEl = $('assistant-heard');
+  const aloudBox = $('aloud-toggle'), heardEl = $('assistant-heard'), micEl = $('mic-status');
+  /** The visible "Microphone: ..." line: where listening has got to, so a problem can be seen. */
+  const micState = (text, kind = '') => { micEl.textContent = 'Microphone: ' + text; micEl.dataset.kind = kind; };
   const checkBtn = $('mic-check-btn'), levelEl = $('mic-level');
   const allToggles = [talkBtn, ...toggles];
   const statusEl = $('assistant-status'), logEl = $('assistant-log');
@@ -171,6 +176,7 @@ export function createAssistant({ container, say, commands = [], help = '', head
   let skipRemember = false;  // reply() already decided whether to remember this text
   let forceUS = false;       // the browser's English variant was not supported: use en-US
   let errorsInARow = 0;      // unexplained recognition errors since the last result
+  let acceptWhileTalking = () => false; // set by a page: short answers to a question Terra is still reading out
   let capturing = false;    // log what the page says while a request runs
   let captureTimer = 0;
 
@@ -322,7 +328,8 @@ export function createAssistant({ container, say, commands = [], help = '', head
   function frameFrom(t) {
     const verb = has(t, 'open', 'show', 'show me', 'switch', 'switch to', 'change', 'change to', 'load', 'use', 'play', 'go to', 'take me to',
       'listen to', 'move to', 'move me to', 'bring me to', 'bring up', 'i want', 'i would like', 'id like', 'lets', 'let me', 'can i', 'could i',
-      'can you', 'could you', 'look at', 'hear the', 'see the', 'explore', 'try the', 'navigate to', 'jump to', 'head to', 'over to');
+      'can you', 'could you', 'look at', 'hear the', 'see the', 'explore', 'try the', 'navigate to', 'jump to', 'head to', 'over to',
+      'analyze', 'analyse', 'study', 'check out', 'learn about');
     for (const f of frameList) {
       const words = (f.keywords || []).map((w) => normalise(w).trim());
       if (words.some((w) => new RegExp(` ${w}${FRAME_NOUNS.replace('*', '+')} `).test(t) || (verb && t.includes(` ${w} `)) ||
@@ -416,8 +423,11 @@ export function createAssistant({ container, say, commands = [], help = '', head
     // Long sentences without "Terra" are conversation in the room, not requests (requests are short).
     if (spoken && !addressed && (wordCount > 8 || !(await understands(t, text)))) {
       heardEl.textContent = `Heard "${original}": not a request I know, so I stayed quiet. Start with "Terra" to ask me anything.`;
+      micState(`heard ${wordCount} words, but not a request I know, so I stayed quiet. Start with "Terra", for example "Terra, where am I?"`, 'quiet');
+      terraLog('quiet', { words: wordCount, reason: wordCount > 8 ? 'long, no name' : 'not a known request, no name' });
       return;
     }
+    if (spoken) micState(`heard you (${wordCount} words). Answering…`, 'ok');
     log('You', original);
     requestSpoken = spoken;
     capturing = true;
@@ -439,6 +449,7 @@ export function createAssistant({ container, say, commands = [], help = '', head
       // A pending yes/no question comes first.
       const presence = PRESENCE.find((c) => c.match(t));
       if (presence) {
+        if (spoken) terraLog('answer', { command: 'are you listening' });
         answer = presence.run();
       } else if (ctx.pending && (has(t, ...YES) || has(t, ...NO))) {
         const p = ctx.pending;
@@ -449,7 +460,7 @@ export function createAssistant({ container, say, commands = [], help = '', head
         let done = false;
         for (const cmd of [...first, ...commands, ...common]) {
           const m = await cmd.match(t, text, ctx);
-          if (m) { answer = await cmd.run(ctx, m, t, text); done = true; break; }
+          if (m) { if (spoken) terraLog('answer', { command: cmd.name, words: wordCount }); answer = await cmd.run(ctx, m, t, text); done = true; break; }
         }
         if (!done) {
           // Spoken: keep it short (it may have been a stray remark in the room).
@@ -527,7 +538,7 @@ export function createAssistant({ container, say, commands = [], help = '', head
     listeningOn = on;
     try { on ? sessionStorage.setItem(ON_KEY, '1') : sessionStorage.removeItem(ON_KEY); } catch (e) { /* fine */ }
     if (!on && rec) { const r = rec; rec = null; try { r.abort(); } catch (e) { /* already stopped */ } }
-    if (!on) cue('listenEnd');
+    if (!on) { cue('listenEnd'); if (micEl.dataset.kind !== 'error') micState('off. Press V or the switch above so Terra can hear you.'); }
     showState();
   }
 
@@ -544,6 +555,7 @@ export function createAssistant({ container, say, commands = [], help = '', head
     // Tell the user about the browser's permission question: it is easy to miss without sight.
     let state = 'unknown';
     try { state = (await navigator.permissions.query({ name: 'microphone' })).state; } catch (e) { /* not supported */ }
+    terraLog('permission', { state });
     if (state === 'denied') {
       reply('The microphone is blocked for this site. Allow it in the browser\'s site settings, then press V again. Or type your request in the box.', { aloud: terraAloudSetting() });
       return false;
@@ -551,9 +563,13 @@ export function createAssistant({ container, say, commands = [], help = '', head
     if (state !== 'granted') reply('Your browser is asking to use the microphone. Choose Allow.', { echo: false, aloud: terraAloudSetting() });
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      const tracks = stream.getAudioTracks ? stream.getAudioTracks() : [];
+      terraLog('microphone', { ok: true, muted: tracks[0] ? tracks[0].muted : null, tracks: tracks.length });
       stream.getTracks().forEach((tr) => tr.stop());
       return true;
     } catch (err) {
+      terraLog('microphone', { ok: false, error: err.name });
+      micState(err.name === 'NotFoundError' ? 'no microphone found.' : 'blocked by the browser. Click the microphone or lock icon in the address bar, allow the microphone, then press V.', 'error');
       if (err.name === 'NotFoundError') reply('No microphone was found. Connect one, or type your request in the box.', { aloud: terraAloudSetting() });
       else reply('The microphone is blocked. Allow microphone access for this site in the browser, then press V again. Or type your request in the box.', { aloud: terraAloudSetting() });
       return false;
@@ -561,15 +577,21 @@ export function createAssistant({ container, say, commands = [], help = '', head
   }
 
   /** Switch Terra on and say so. */
-  async function startListening({ resume = false } = {}) {
-    if (listeningOn) return;
-    if (!(await microphoneOk())) { setOn(false); return; }
+  async function startListening({ resume = false, quiet = false } = {}) {
+    if (listeningOn) return true;
+    const blocker = recognitionBlocker();
+    terraLog('switch on', { resume, quiet, blocker: blocker || null });
+    if (blocker) { micState(blocker, 'error'); reply(blocker, { aloud: terraAloudSetting() }); setOn(false); return false; }
+    micState('asking the browser for the microphone…');
+    if (!(await microphoneOk())) { setOn(false); return false; }
     stopTone();
     setOn(true);
+    micState('starting…');
     await cue('listenStart');
-    reply(resume ? 'Terra is still listening.' : 'Terra is listening. Say what you want, at any time. Say stop listening, or press V, to switch me off.', { echo: false });
+    if (!quiet) reply(resume ? 'Terra is still listening.' : 'Terra is listening. Say what you want, at any time. Say stop listening, or press V, to switch me off.', { echo: false });
     if (resume && terraAloudSetting() && !canSpeakNow()) statusEl.textContent = SPEAK_HINT;
     retryAt = performance.now() + 300;
+    return true;
   }
 
   /** Start one recognition session (Terra restarts it whenever it ends). */
@@ -603,13 +625,16 @@ export function createAssistant({ container, say, commands = [], help = '', head
       try { r.abort(); } catch (err) { /* already ended */ }
     };
     r.lastEvent = performance.now();
+    // Speech in progress: from Chrome's "speechstart", or words still arriving, until "speechend" or a final phrase.
+    // (Restarting in a quiet moment would cut off the first words of someone who starts talking just then.)
+    r.speechActive = false;
     r.restartIfStuck = () => {
       const now = performance.now();
       if (phraseSince && now - phraseSince > S.longestPhraseMs) {
         // Handle a request waiting in the long phrase first ("..., Terra, where am I"), then start afresh.
         if (attentionIndex(current.slice(used)) >= 0) take(true);
         restart();
-      } else if (now - r.lastEvent > S.silentSessionMs) restart();
+      } else if ((r.speechActive && now - r.lastEvent > S.stalledMs) || now - r.lastEvent > S.idleSessionMs) restart();
     };
     const take = (fromName) => {
       let ws = current.slice(used);
@@ -628,6 +653,7 @@ export function createAssistant({ container, say, commands = [], help = '', head
     r.onresult = (e) => {
       errorsInARow = 0;
       r.lastEvent = performance.now();
+      r.speechActive = !e.results[e.results.length - 1].isFinal;
       if (rec !== r) return; // a session Terra already replaced
       if (e.results.length <= finalsDone) finalsDone = Math.min(finalsDone, e.resultIndex); // a browser that starts the list again
       for (; finalsDone < e.results.length && e.results[finalsDone].isFinal; finalsDone++) {
@@ -671,10 +697,37 @@ export function createAssistant({ container, say, commands = [], help = '', head
         if (++errorsInARow === 3) reply(`Voice input keeps failing (${e.error}). Check the microphone, or type your request in the box.`, { aloud: terraAloudSetting() });
       }
     };
-    r.onend = () => { if (rec === r) rec = null; retryAt = Math.max(retryAt, performance.now() + 100); };
+    r.onend = () => { if (rec === r) rec = null; retryAt = Math.max(retryAt, performance.now() + 100); terraLog('session end'); };
+    // What Chrome's recognizer is doing, on the visible line and in the log (never the words).
+    let heardSound = false;
+    const on = (type, fn) => { if (r.addEventListener) r.addEventListener(type, fn); };
+    on('start', () => terraLog('session start', { lang: r.lang }));
+    on('audiostart', () => {
+      if (rec === r) micState('on. Listening: speak whenever you like.', 'on');
+      setTimeout(() => { if (rec === r && listeningOn && !heardSound && !speaking()) micState('on, but no sound has reached Chrome for 10 seconds. Is the right microphone chosen, and not muted? (Mac: System Settings, Sound, Input.)', 'warn'); }, 10000);
+    });
+    on('soundstart', () => { heardSound = true; if (rec === r) micState('hearing sound…', 'on'); terraLog('sound'); });
+    on('speechend', () => { r.speechActive = false; });
+    on('speechstart', () => { r.speechActive = true; r.lastEvent = Math.max(r.lastEvent, performance.now()); if (rec === r) micState('hearing speech…', 'on'); terraLog('speech'); });
+    on('error', (e) => {
+      terraLog('error', { error: e.error, message: e.message || '' });
+      if (!['no-speech', 'aborted'].includes(e.error)) micState(`error from Chrome's speech recognition: ${e.error}. ${ERROR_HELP[e.error] || ''}`, 'error');
+    });
+    on('result', (e) => {
+      const last = e.results[e.results.length - 1];
+      const words = splitWords(last[0].transcript);
+      terraLog('words', { count: words.length, final: last.isFinal, name: nameIndex(words) >= 0 });
+    });
     rec = r;
-    try { r.start(); } catch (err) { rec = null; retryAt = performance.now() + 1000; }
+    try { r.start(); } catch (err) { rec = null; retryAt = performance.now() + 1000; terraLog('start failed', { error: err.name }); }
   }
+
+  const ERROR_HELP = {
+    'not-allowed': 'The microphone is blocked: click the microphone or lock icon in the address bar and allow it.',
+    'service-not-allowed': 'Chrome\'s speech service is turned off for this page.',
+    'network': 'Chrome needs an internet connection for speech recognition.',
+    'audio-capture': 'No microphone could be opened.',
+  };
 
   /** One finished phrase from the microphone. */
   function onHeard(said) {
@@ -685,7 +738,10 @@ export function createAssistant({ container, say, commands = [], help = '', head
     const words = splitWords(text), at = attentionIndex(words);
     if (at > 0) text = words.slice(at).join(' ');
     const addressed = WAKE.test(normalise(text));
-    if (speaking()) {
+    if (speaking() && acceptWhileTalking(text)) {
+      // An answer to the question Terra is reading out (e.g. "vegetation" to "which map?"): interrupt it.
+      stopSpeaking();
+    } else if (speaking()) {
       // While Terra talks the microphone hears Terra too: only a request that starts with "Terra"
       // (and is not Terra's own words) gets through, and it interrupts Terra.
       if (!addressed || echoOfLast(text)) { heardEl.textContent = `Heard "${text}" while I was talking (ignored). Wait for me to finish, or start with "Terra".`; return; }
@@ -820,9 +876,12 @@ export function createAssistant({ container, say, commands = [], help = '', head
     toggle();
   });
 
-  if (!getRecognition()) {
-    statusEl.textContent = 'Voice input is not available in this browser (try Chrome, Edge or Safari). You can type your request below.';
+  terraLog('page', { ...browserFacts(), version: TERRA_VERSION });
+  {
+    const blocker = recognitionBlocker();
+    if (blocker) { micState(blocker, 'error'); statusEl.textContent = blocker; }
   }
+  micEl.title = 'Terra version ' + TERRA_VERSION;
 
   // Terra was on when this tab opened this page (e.g. "open the rain map"): stay on.
   let wasOn = false;
@@ -835,6 +894,7 @@ export function createAssistant({ container, say, commands = [], help = '', head
   return {
     handle, heard, toggle, startListening, ctx, answersAloud,
     get on() { return listeningOn; },
+    set acceptWhileTalking(fn) { acceptWhileTalking = fn || (() => false); },
     stop: () => setOn(false),
   };
 }

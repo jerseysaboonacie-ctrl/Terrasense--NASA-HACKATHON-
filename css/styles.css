@@ -376,6 +376,10 @@ button.big-button { border-radius: var(--radius); }
 .assistant { margin: 8px 0 12px; }
 .assistant h2, .assistant h3 { margin: 0 0 4px; }
 .assistant form input[type="text"] { flex: 1; min-width: 12em; font: inherit; padding: 6px 8px; border: 2px solid var(--border); border-radius: 6px; background: var(--bg); color: var(--text); }
+.mic-status { margin: 8px 0; padding: 6px 10px; border-radius: 6px; border-left: 4px solid var(--border); background: var(--bg); }
+.mic-status[data-kind="on"], .mic-status[data-kind="ok"] { border-left-color: #3fb950; }
+.mic-status[data-kind="warn"], .mic-status[data-kind="quiet"] { border-left-color: #d29922; }
+.mic-status[data-kind="error"] { border-left-color: #f85149; font-weight: 600; }
 .assistant-log { list-style: none; padding: 0; margin: 6px 0 0; max-height: 16em; overflow-y: auto; }
 .assistant-log:empty { display: none; }
 .assistant-log li { padding: 4px 8px; margin: 3px 0; border-radius: 6px; background: var(--bg); }

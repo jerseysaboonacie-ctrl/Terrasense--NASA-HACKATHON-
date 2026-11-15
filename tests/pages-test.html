@@ -208,6 +208,47 @@
       localStorage.setItem(WELCOMED, '1');
     }
 
+    // Opened from a link: the Gallery, where Terra introduces itself, asks how to hear the site, then which map
+    {
+      const GREETED = 'terrasense-greeted-v1';
+      sessionStorage.removeItem(GREETED);
+      iframe.referrerPolicy = 'no-referrer'; // like arriving from a link, a bookmark or the address bar
+      let w = await load('../index.html', 1500);
+      iframe.referrerPolicy = '';
+      const landed = w.location.pathname.endsWith('/gallery.html');
+      const dlg = w.document.querySelector('dialog.welcome-dialog');
+      const step1 = dlg ? dlg.querySelector('h2').textContent : '';
+      const intro = dlg ? dlg.textContent : '';
+      record('(link)', 'Opening the site from a link lands on the Gallery with Terra\'s introduction', landed && step1 === "Hi, I'm Terra" &&
+        /You can tell me what to do/.test(intro) && /how would you like to hear this site/i.test(intro) && /your choice last time/.test(intro),
+        `${w.location.pathname}; "${step1}"`);
+      if (dlg) dlg.dispatchEvent(new KeyboardEvent('keydown', { key: '2', bubbles: true }));
+      await wait(300);
+      const step2 = dlg && dlg.isConnected ? dlg.querySelector('h2').textContent : '';
+      const maps = dlg && dlg.isConnected ? [...dlg.querySelectorAll('button[data-frame]')].map((b) => b.textContent) : [];
+      record('(link)', 'Then asks which of the four maps to explore', step2 === 'What would you like to explore?' && maps.length === 5 &&
+        /Sea surface temperature/.test(maps[0]) && /Air temperature/.test(maps[1]) && /Vegetation/.test(maps[2]) && /Precipitation/.test(maps[3]) && /gallery first/.test(maps[4]),
+        `"${step2}": ${maps.map((m) => m.slice(0, 26)).join(' | ')}`);
+      await wait(800);
+      await w.__assistant.handle('number two');
+      for (let i = 0; i < 30 && !/player\.html/.test(iframe.contentWindow.location.href); i++) await wait(100);
+      record('(link)', 'Saying "number two" (or the map\'s name) opens that map', /player\.html\?frame=t2m$/.test(iframe.contentWindow.location.href), iframe.contentWindow.location.href);
+
+      sessionStorage.removeItem(GREETED);
+      w = await load('../gallery.html', 1200);
+      let d2 = w.document.querySelector('dialog.welcome-dialog');
+      if (d2) d2.dispatchEvent(new KeyboardEvent('keydown', { key: '2', bubbles: true }));
+      await wait(300);
+      if (d2) d2.dispatchEvent(new KeyboardEvent('keydown', { key: '3', bubbles: true }));
+      for (let i = 0; i < 30 && !/player\.html/.test(iframe.contentWindow.location.href); i++) await wait(100);
+      const byKey = iframe.contentWindow.location.href;
+      w = await load('../gallery.html', 800);
+      record('(link)', 'Key 3 opens Vegetation; not asked again in the same visit', /player\.html\?frame=ndvi$/.test(byKey) && !w.document.querySelector('dialog.welcome-dialog'),
+        `${byKey}; dialog again: ${Boolean(w.document.querySelector('dialog.welcome-dialog'))}`);
+      const fromInside = await load('../index.html', 600);
+      record('(link)', 'Home from inside the site stays on Home', fromInside.location.pathname.endsWith('/index.html'), fromInside.location.pathname);
+    }
+
     const failed = results.filter((r) => !r.pass).length;
     document.getElementById('summary').textContent = `${results.length} checks, ${failed} failed.`;
     document.title = 'TESTS DONE';
