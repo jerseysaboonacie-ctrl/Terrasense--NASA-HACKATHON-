@@ -574,7 +574,7 @@ Tick these as you go and add a line under History with what you found.
 
 Newest first. Claude's entries name the commit so you can see exactly what changed.
 
-### 2026-11-15: Listening guide, sound unlock, hover reads the panel, voice recovery (Claude, this commit)
+### 2026-11-15: Listening guide, sound unlock, hover reads the panel, voice recovery (Claude, commit 2696a03)
 - Each map opens with the pitch guide and its low, middle and high notes; hover reads value, place, country,
   continent; Terra answers short phrases; voice retries. 374 of 374 Player checks, 85 of 85 page checks.
 
