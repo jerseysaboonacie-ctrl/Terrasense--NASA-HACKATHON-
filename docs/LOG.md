@@ -598,6 +598,11 @@ Tick these as you go and add a line under History with what you found.
 
 Newest first. Claude's entries name the commit so you can see exactly what changed.
 
+### 2026-11-15: README section "Scientific foundation and accessibility" (Claude)
+- Your text added to the README after Status, with a link to Data sources. Checked against the code first:
+  pitch, stereo panning and the Scan button all exist. Earlier the same day: Claude co-author lines removed from
+  the whole history (force-pushed); the commit ids in this log were updated to the new ones.
+
 ### 2026-11-15: No echo, no interrupting, map question first (Claude, commit 5a91f0d)
 - Microphone off while Terra talks; speech queued, never cut off; Gallery asks which map at once; the map opens
   with the starting point. 375 of 375 Player checks, 85 of 85 page checks.

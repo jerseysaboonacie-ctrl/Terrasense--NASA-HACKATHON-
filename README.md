@@ -23,6 +23,44 @@ offered because none of our frames has dated versions yet; see Known limitations
 | 9. Scan (row and overview) | Done. Time stepping: not applicable yet |
 | 10. Pages, README, verification | Done ([docs/verification.md](docs/verification.md)) |
 
+## Scientific foundation and accessibility
+
+### Why NASA Earth data matters
+
+NASA Earth observation data helps us understand changes in our planet's environment, including
+ocean temperatures, atmospheric conditions, vegetation health, and precipitation patterns.
+TerraSense makes these environmental visualizations more accessible through interactive audio
+experiences.
+
+### NASA data and visualizations
+
+TerraSense uses NASA Earth Information Center visualizations covering:
+
+- Sea Surface Temperature (SST)
+- Air Temperature
+- Vegetation Health (NDVI)
+- Precipitation
+
+Where each one comes from is listed under [Data sources](#data-sources).
+
+### Data sonification
+
+TerraSense translates environmental data values into sound using audio mappings:
+
+- **Pitch:** represents variations in environmental values.
+- **Stereo positioning:** helps users perceive spatial differences.
+- **Audio scanning:** allows users to explore geographic patterns through sound.
+
+These mappings provide an alternative way to explore environmental information; they are not a
+replacement for scientific measurements or visualizations.
+
+### Accessibility impact
+
+TerraSense is designed to make Earth science exploration more inclusive, particularly for blind
+and low-vision users. By combining sonification, voice narration, keyboard navigation,
+screen-reader support, and interactive exploration, the project offers an alternative sensory
+experience for understanding NASA Earth data.
+
 ## Navigating without sight (Player)
 
 - **Start here** is the first section after the title, before the map: the Voice switch, Tour (T),
